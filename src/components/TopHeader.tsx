@@ -15,6 +15,7 @@ interface TopHeaderProps {
   setActiveTab: (tab: TabType) => void;
   toggleNotifReadState: (id: string) => void;
   triggerToast: (msg: string) => void;
+  onLogout: () => void;
 }
 
 export default function TopHeader({
@@ -30,6 +31,7 @@ export default function TopHeader({
   setActiveTab,
   toggleNotifReadState,
   triggerToast,
+  onLogout,
 }: TopHeaderProps) {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -40,7 +42,7 @@ export default function TopHeader({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737686] w-4 h-4" />
           <input
             type="text"
-            placeholder="TÃ¬m log lá»—i, cÃ´ng viá»‡c, booth..."
+            placeholder="Tìm lỗi, tính năng, booth,..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 bg-[#f3f3fe] border border-outline-variant rounded-full text-xs focus:outline-none focus:border-primary focus:bg-white transition-all placeholder:text-[#434655]"
@@ -212,6 +214,14 @@ export default function TopHeader({
         </div>
 
         <div className="h-6 w-px bg-outline-variant"></div>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          className="px-3 py-1.5 text-xs font-bold rounded-lg border border-outline-variant hover:bg-slate-50 text-[#191b23]"
+        >
+          Đăng xuất
+        </button>
 
         <div className="flex items-center gap-2 pl-1">
           <img

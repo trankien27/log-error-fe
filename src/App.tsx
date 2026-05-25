@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   ClipboardList,
   Users,
@@ -39,8 +40,67 @@ import ScheduleTab from './components/ScheduleTab';
 import SettingsTab from './components/SettingsTab';
 import Sidebar from './components/Sidebar';
 import TopHeader from './components/TopHeader';
+import AuthPage from './components/AuthPage';
 
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const pathToTab = (pathname: string): TabType => {
+    switch (pathname) {
+      case '/overview':
+        return 'overview';
+      case '/error-logs':
+        return 'error_logs';
+      case '/tasks':
+        return 'tasks';
+      case '/users':
+        return 'users';
+      case '/roles':
+        return 'roles';
+      case '/booths':
+        return 'booths';
+      case '/notifications':
+        return 'notifications';
+      case '/schedule':
+        return 'schedule';
+      case '/settings':
+        return 'settings';
+      default:
+        return 'overview';
+    }
+  };
+
+  const tabToPath = (tab: TabType): string => {
+    switch (tab) {
+      case 'overview':
+        return '/overview';
+      case 'error_logs':
+        return '/error-logs';
+      case 'tasks':
+        return '/tasks';
+      case 'users':
+        return '/users';
+      case 'roles':
+        return '/roles';
+      case 'booths':
+        return '/booths';
+      case 'notifications':
+        return '/notifications';
+      case 'schedule':
+        return '/schedule';
+      case 'settings':
+        return '/settings';
+      default:
+        return '/overview';
+    }
+  };
+
+  const activeTab = pathToTab(location.pathname);
+  const navigateToTab = (tab: TabType) => {
+    navigate(tabToPath(tab));
+  };
+
   // Password / OTP Security states
   const [settingsStage, setSettingsStage] = useState<'password' | 'otp' | 'success'>('password');
   const [settingsPasswordCurrent, setSettingsPasswordCurrent] = useState('');
@@ -65,9 +125,14 @@ export default function App() {
   const [newShiftStatus, setNewShiftStatus] = useState<'scheduled' | 'on_duty' | 'confirmed' | 'empty'>('scheduled');
 
   // Navigation & UI States
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authName, setAuthName] = useState('');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
 
   // Data States
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>(INITIAL_ERROR_LOGS);
@@ -202,6 +267,61 @@ export default function App() {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  const resetAuthForm = () => {
+    setAuthName('');
+    setAuthEmail('');
+    setAuthPassword('');
+    setAuthConfirmPassword('');
+  };
+
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!authEmail.trim() || !authPassword.trim()) {
+      triggerToast('Vui lòng nhập email và mật khẩu.');
+      return;
+    }
+
+    if (authMode === 'register') {
+      if (!authName.trim()) {
+        triggerToast('Vui lòng nhập họ tên.');
+        return;
+      }
+      if (authPassword !== authConfirmPassword) {
+        triggerToast('Mật khẩu xác nhận không khớp.');
+        return;
+      }
+
+      const existed = users.some(u => u.email.toLowerCase() === authEmail.toLowerCase());
+      if (existed) {
+        triggerToast('Email này đã tồn tại.');
+        return;
+      }
+
+      const newUser: User = {
+        id: `USR-${String(users.length + 1).padStart(3, '0')}`,
+        name: authName.trim(),
+        email: authEmail.trim(),
+        role: 'Staff',
+        status: 'Hoạt động',
+      };
+      setUsers(prev => [newUser, ...prev]);
+    }
+
+    setIsLoggedIn(true);
+    navigate('/overview');
+    setAuthMode('login');
+    resetAuthForm();
+    triggerToast(authMode === 'register' ? 'Đăng ký thành công.' : 'Đăng nhập thành công.');
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setIsQuickNotifModalOpen(false);
+    navigate('/auth');
+    triggerToast('Bạn đã đăng xuất.');
   };
 
   // Clipboard Copier
@@ -655,6 +775,31 @@ export default function App() {
   });
 
   const processedRecentActivities = INITIAL_ACTIVITIES;
+  if (!isLoggedIn && location.pathname !== '/auth') {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (isLoggedIn && location.pathname === '/auth') {
+    return <Navigate to="/overview" replace />;
+  }
+
+  if (!isLoggedIn && location.pathname === '/auth') {
+    return (
+      <AuthPage
+        authMode={authMode}
+        setAuthMode={setAuthMode}
+        authName={authName}
+        setAuthName={setAuthName}
+        authEmail={authEmail}
+        setAuthEmail={setAuthEmail}
+        authPassword={authPassword}
+        setAuthPassword={setAuthPassword}
+        authConfirmPassword={authConfirmPassword}
+        setAuthConfirmPassword={setAuthConfirmPassword}
+        handleAuthSubmit={handleAuthSubmit}
+      />
+    );
+  }
 
   return (
     <div className="bg-[#faf8ff] text-[#191b23] min-h-screen flex font-sans antialiased">
@@ -1828,7 +1973,7 @@ export default function App() {
         errorLogs={errorLogs}
         tasks={tasks}
         notifications={notifications}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigateToTab}
         setSearchQuery={setSearchQuery}
         setSelectedUserProfileUser={setSelectedUserProfileUser}
       />
@@ -1845,176 +1990,174 @@ export default function App() {
           quickNotifRef={quickNotifRef}
           setSelectedNotification={setSelectedNotification}
           setIsNotificationModalOpen={setIsNotificationModalOpen}
-          setActiveTab={setActiveTab}
+          setActiveTab={navigateToTab}
           toggleNotifReadState={toggleNotifReadState}
           triggerToast={triggerToast}
+          onLogout={handleLogout}
         />
 
 
         {/* Main Canvas Segment */}
         <main className="flex-1 p-6 space-y-6 overflow-y-auto">
-
-          {/* TAB 1: OVERVIEW SCREEN */}
-          {activeTab === 'overview' && (
-            <OverviewTab
-              overdueTasksCount={overdueTasksCount}
-              totalLogs={totalLogs}
-              pendingTasksCount={pendingTasksCount}
-              inProgressTasksCount={inProgressTasksCount}
-              totalUsers={totalUsers}
-              totalBooths={totalBooths}
-              tasks={tasks}
-              processedRecentActivities={processedRecentActivities}
-              setActiveTab={setActiveTab}
-              triggerToast={triggerToast}
+          <Routes>
+            <Route path="/" element={<Navigate to="/overview" replace />} />
+            <Route
+              path="/overview"
+              element={
+                <OverviewTab
+                  overdueTasksCount={overdueTasksCount}
+                  totalLogs={totalLogs}
+                  pendingTasksCount={pendingTasksCount}
+                  inProgressTasksCount={inProgressTasksCount}
+                  totalUsers={totalUsers}
+                  totalBooths={totalBooths}
+                  tasks={tasks}
+                  processedRecentActivities={processedRecentActivities}
+                  setActiveTab={navigateToTab}
+                  triggerToast={triggerToast}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 2: ERROR LOGS (Log lỗi) SCREEN */}
-          {activeTab === 'error_logs' && (
-            <ErrorLogsTab
-              filteredLogs={filteredLogs}
-              errorLogs={errorLogs}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              logStoreFilter={logStoreFilter}
-              setLogStoreFilter={setLogStoreFilter}
-              logBoothFilter={logBoothFilter}
-              setLogBoothFilter={setLogBoothFilter}
-              handleOpenLogModal={(log) => handleOpenLogModal(log)}
-              handleDeleteLog={handleDeleteLog}
-              triggerToast={triggerToast}
+            <Route
+              path="/error-logs"
+              element={
+                <ErrorLogsTab
+                  filteredLogs={filteredLogs}
+                  errorLogs={errorLogs}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  logStoreFilter={logStoreFilter}
+                  setLogStoreFilter={setLogStoreFilter}
+                  logBoothFilter={logBoothFilter}
+                  setLogBoothFilter={setLogBoothFilter}
+                  handleOpenLogModal={(log) => handleOpenLogModal(log)}
+                  handleDeleteLog={handleDeleteLog}
+                  triggerToast={triggerToast}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 3: KANBAN WORKFLOW (Công việc) SCREEN */}
-          {activeTab === 'tasks' && (
-            <TasksTab
-              tasks={tasks}
-              draggedTaskId={draggedTaskId}
-              dragOverColumn={dragOverColumn}
-              handleOpenTaskModal={handleOpenTaskModal}
-              setSelectedTaskDetails={setSelectedTaskDetails}
-              setTaskNotesInput={setTaskNotesInput}
-              handleDragStart={handleDragStart}
-              handleDragOver={handleDragOver}
-              handleDragLeave={handleDragLeave}
-              handleDrop={handleDrop}
-              moveTaskStatus={moveTaskStatus}
+            <Route
+              path="/tasks"
+              element={
+                <TasksTab
+                  tasks={tasks}
+                  draggedTaskId={draggedTaskId}
+                  dragOverColumn={dragOverColumn}
+                  handleOpenTaskModal={handleOpenTaskModal}
+                  setSelectedTaskDetails={setSelectedTaskDetails}
+                  setTaskNotesInput={setTaskNotesInput}
+                  handleDragStart={handleDragStart}
+                  handleDragOver={handleDragOver}
+                  handleDragLeave={handleDragLeave}
+                  handleDrop={handleDrop}
+                  moveTaskStatus={moveTaskStatus}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 4: USERS LIST (Người dùng) SCREEN */}
-          {activeTab === 'users' && (
-            <UsersTab
-              users={users}
-              setUsers={setUsers}
-              selectedUserProfileUser={selectedUserProfileUser}
-              setSelectedUserProfileUser={setSelectedUserProfileUser}
-              profileName={profileName}
-              setProfileName={setProfileName}
-              profilePhone={profilePhone}
-              setProfilePhone={setProfilePhone}
-              profileRole={profileRole}
-              setProfileRole={setProfileRole}
-              profileDept={profileDept}
-              setProfileDept={setProfileDept}
-              handleOpenUserModal={handleOpenUserModal}
-              handleDeleteUser={handleDeleteUser}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              userRoleFilter={userRoleFilter}
-              setUserRoleFilter={setUserRoleFilter}
-              filteredUsers={filteredUsers}
-              triggerToast={triggerToast}
+            <Route
+              path="/users"
+              element={
+                <UsersTab
+                  users={users}
+                  setUsers={setUsers}
+                  selectedUserProfileUser={selectedUserProfileUser}
+                  setSelectedUserProfileUser={setSelectedUserProfileUser}
+                  profileName={profileName}
+                  setProfileName={setProfileName}
+                  profilePhone={profilePhone}
+                  setProfilePhone={setProfilePhone}
+                  profileRole={profileRole}
+                  setProfileRole={setProfileRole}
+                  profileDept={profileDept}
+                  setProfileDept={setProfileDept}
+                  handleOpenUserModal={handleOpenUserModal}
+                  handleDeleteUser={handleDeleteUser}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  userRoleFilter={userRoleFilter}
+                  setUserRoleFilter={setUserRoleFilter}
+                  filteredUsers={filteredUsers}
+                  triggerToast={triggerToast}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 5: ROLES SCREEN */}
-          {activeTab === 'roles' && (
-            <RolesTab
-              roles={roles}
-              handleOpenRoleModal={handleOpenRoleModal}
+            <Route path="/roles" element={<RolesTab roles={roles} handleOpenRoleModal={handleOpenRoleModal} />} />
+            <Route
+              path="/booths"
+              element={
+                <BoothsTab
+                  filteredBooths={filteredBooths}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  copyToClipboard={copyToClipboard}
+                  handleOpenBoothModal={handleOpenBoothModal}
+                  handleDeleteBooth={handleDeleteBooth}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 6: BOOTHS MANAGEMENT SCREEN */}
-          {activeTab === 'booths' && (
-            <BoothsTab
-              filteredBooths={filteredBooths}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              copyToClipboard={copyToClipboard}
-              handleOpenBoothModal={handleOpenBoothModal}
-              handleDeleteBooth={handleDeleteBooth}
+            <Route
+              path="/notifications"
+              element={
+                <NotificationsTab
+                  notifications={notifications}
+                  toggleNotifReadState={toggleNotifReadState}
+                  setSelectedNotification={setSelectedNotification}
+                  setIsNotificationModalOpen={setIsNotificationModalOpen}
+                  triggerToast={triggerToast}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 7: SYSTEM NOTIFICATIONS (Thông báo) SCREEN */}
-          {activeTab === 'notifications' && (
-            <NotificationsTab
-              notifications={notifications}
-              toggleNotifReadState={toggleNotifReadState}
-              setSelectedNotification={setSelectedNotification}
-              setIsNotificationModalOpen={setIsNotificationModalOpen}
-              triggerToast={triggerToast}
+            <Route
+              path="/settings"
+              element={
+                <SettingsTab
+                  settingsStage={settingsStage}
+                  setSettingsStage={setSettingsStage}
+                  settingsPasswordCurrent={settingsPasswordCurrent}
+                  setSettingsPasswordCurrent={setSettingsPasswordCurrent}
+                  settingsPasswordNew={settingsPasswordNew}
+                  setSettingsPasswordNew={setSettingsPasswordNew}
+                  settingsPasswordConfirm={settingsPasswordConfirm}
+                  setSettingsPasswordConfirm={setSettingsPasswordConfirm}
+                  showCurrentPassword={showCurrentPassword}
+                  setShowCurrentPassword={setShowCurrentPassword}
+                  showNewPassword={showNewPassword}
+                  setShowNewPassword={setShowNewPassword}
+                  showConfirmNewPassword={showConfirmNewPassword}
+                  setShowConfirmNewPassword={setShowConfirmNewPassword}
+                  settingsOTPValues={settingsOTPValues}
+                  setSettingsOTPValues={setSettingsOTPValues}
+                  settingsOTPTimer={settingsOTPTimer}
+                  setSettingsOTPTimer={setSettingsOTPTimer}
+                  triggerToast={triggerToast}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 9: SETTINGS (Cài đặt bảo mật) SCREEN */}
-          {activeTab === 'settings' && (
-            <SettingsTab
-              settingsStage={settingsStage}
-              setSettingsStage={setSettingsStage}
-              settingsPasswordCurrent={settingsPasswordCurrent}
-              setSettingsPasswordCurrent={setSettingsPasswordCurrent}
-              settingsPasswordNew={settingsPasswordNew}
-              setSettingsPasswordNew={setSettingsPasswordNew}
-              settingsPasswordConfirm={settingsPasswordConfirm}
-              setSettingsPasswordConfirm={setSettingsPasswordConfirm}
-              showCurrentPassword={showCurrentPassword}
-              setShowCurrentPassword={setShowCurrentPassword}
-              showNewPassword={showNewPassword}
-              setShowNewPassword={setShowNewPassword}
-              showConfirmNewPassword={showConfirmNewPassword}
-              setShowConfirmNewPassword={setShowConfirmNewPassword}
-              settingsOTPValues={settingsOTPValues}
-              setSettingsOTPValues={setSettingsOTPValues}
-              settingsOTPTimer={settingsOTPTimer}
-              setSettingsOTPTimer={setSettingsOTPTimer}
-              triggerToast={triggerToast}
+            <Route
+              path="/schedule"
+              element={
+                <ScheduleTab
+                  shifts={shifts}
+                  users={users}
+                  scheduleTeamMode={scheduleTeamMode}
+                  setScheduleTeamMode={setScheduleTeamMode}
+                  scheduleSearchQuery={scheduleSearchQuery}
+                  setScheduleSearchQuery={setScheduleSearchQuery}
+                  scheduleRoleFilter={scheduleRoleFilter}
+                  setScheduleRoleFilter={setScheduleRoleFilter}
+                  setNewShiftDay={setNewShiftDay}
+                  setNewShiftType={setNewShiftType}
+                  setNewShiftStaffName={setNewShiftStaffName}
+                  setNewShiftStatus={setNewShiftStatus}
+                  setIsCreateShiftModalOpen={setIsCreateShiftModalOpen}
+                  setSelectedUserProfileUser={setSelectedUserProfileUser}
+                  setActiveTab={navigateToTab}
+                  triggerToast={triggerToast}
+                />
+              }
             />
-          )}
-
-
-          {/* TAB 8: SCHEDULE (Lịch làm việc / Shift Planner) SCREEN */}
-          {activeTab === 'schedule' && (
-            <ScheduleTab
-              shifts={shifts}
-              users={users}
-              scheduleTeamMode={scheduleTeamMode}
-              setScheduleTeamMode={setScheduleTeamMode}
-              scheduleSearchQuery={scheduleSearchQuery}
-              setScheduleSearchQuery={setScheduleSearchQuery}
-              scheduleRoleFilter={scheduleRoleFilter}
-              setScheduleRoleFilter={setScheduleRoleFilter}
-              setNewShiftDay={setNewShiftDay}
-              setNewShiftType={setNewShiftType}
-              setNewShiftStaffName={setNewShiftStaffName}
-              setNewShiftStatus={setNewShiftStatus}
-              setIsCreateShiftModalOpen={setIsCreateShiftModalOpen}
-              setSelectedUserProfileUser={setSelectedUserProfileUser}
-              setActiveTab={setActiveTab}
-              triggerToast={triggerToast}
-            />
-          )}
+            <Route path="*" element={<Navigate to="/overview" replace />} />
+          </Routes>
         </main>
       </div>
 
