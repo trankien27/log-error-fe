@@ -38,7 +38,7 @@ export default function Sidebar({
   setSearchQuery,
   setSelectedUserProfileUser,
 }: SidebarProps) {
-  const newLogsCount = errorLogs.filter(l => l.status === 'Má»›i').length;
+  const newLogsCount = errorLogs.filter(l => l.status === 'Mới').length;
   const pendingTasksCount = tasks.filter(t => t.status === 'pending').length;
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
@@ -67,13 +67,13 @@ export default function Sidebar({
           <li>
             <button onClick={() => navigateTo('overview')} className={navButtonClass(activeTab === 'overview')}>
               <LayoutDashboard className="w-4 h-4" />
-              <span>Tá»•ng quan</span>
+              <span>Tổng quan</span>
             </button>
           </li>
           <li>
             <button onClick={() => navigateTo('error_logs')} className={navButtonClass(activeTab === 'error_logs')}>
               <AlertTriangle className="w-4 h-4" />
-              <span>Log lá»—i</span>
+              <span>Log lỗi</span>
               {newLogsCount > 0 && (
                 <span className="ml-auto bg-error text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                   {newLogsCount}
@@ -84,7 +84,7 @@ export default function Sidebar({
           <li>
             <button onClick={() => navigateTo('tasks')} className={navButtonClass(activeTab === 'tasks')}>
               <ClipboardList className="w-4 h-4" />
-              <span>CÃ´ng viá»‡c</span>
+              <span>Công việc</span>
               {pendingTasksCount > 0 && (
                 <span className="ml-auto bg-[#2563eb] text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                   {pendingTasksCount}
@@ -95,13 +95,13 @@ export default function Sidebar({
           <li>
             <button onClick={() => navigateTo('users')} className={navButtonClass(activeTab === 'users')}>
               <Users className="w-4 h-4" />
-              <span>NgÆ°á»i dÃ¹ng</span>
+              <span>Người dùng</span>
             </button>
           </li>
           <li>
             <button onClick={() => navigateTo('roles')} className={navButtonClass(activeTab === 'roles')}>
               <Shield className="w-4 h-4" />
-              <span>Vai trÃ²</span>
+              <span>Vai trò</span>
             </button>
           </li>
           <li>
@@ -113,7 +113,7 @@ export default function Sidebar({
           <li>
             <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
               <Bell className="w-4 h-4" />
-              <span>ThÃ´ng bÃ¡o</span>
+              <span>Thông báo</span>
               {unreadNotificationsCount > 0 && (
                 <span className="ml-auto bg-[#ba1a1a] text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                   {unreadNotificationsCount}
@@ -124,13 +124,13 @@ export default function Sidebar({
           <li>
             <button onClick={() => navigateTo('schedule')} className={navButtonClass(activeTab === 'schedule')}>
               <Calendar className="w-4 h-4" />
-              <span>Lá»‹ch lÃ m viá»‡c</span>
+              <span>Lịch làm việc</span>
             </button>
           </li>
           <li>
             <button onClick={() => navigateTo('settings')} className={navButtonClass(activeTab === 'settings')}>
               <Settings className="w-4 h-4" />
-              <span>CÃ i Ä‘áº·t</span>
+              <span>Cài đặt</span>
             </button>
           </li>
         </ul>

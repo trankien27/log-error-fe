@@ -53,72 +53,7 @@ export default function App() {
   const [selectedUserProfileUser, setSelectedUserProfileUser] = useState<User | null>(null);
 
   // Schedule Shift states
-  const [shifts, setShifts] = useState<any[]>([
-    {
-      id: 'SFT-001',
-      dayOfWeek: 'T2',
-      shiftType: 'morning',
-      userName: 'Trần Văn Nam',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCf19wuTp7sv6x9pADPruTII3g4UFBNu_m17cE7ZShyK5gMM7wx5BRgQxa_JX_QigzNPtZ0Hsvanp0yPYNQrJYLHjyhSNdlbMxZMMB7fDcZzOfZUOBQPkFkr-C-3KkXGAIk94Ff4GaLV6hU5nGzC5XKj16Cj3C-Pzscz6_DEnDMQuBMtGWBPfmeKB4yZF2aK0xshp2wSitcu2Tr0xQuk6tvQrdaEeW347dLPZBhzq4N2z3oClFluj1ONP9T5sjYirKxp84SzbKM2SM',
-      status: 'scheduled'
-    },
-    {
-      id: 'SFT-002',
-      dayOfWeek: 'T2',
-      shiftType: 'morning',
-      userName: 'Lê Hoàng Bách',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDKBCqL7m8zbjvWQvLyo8Vq8aa2tj2gmUHKNQBgYITpfs9Ip8PNqta59i57WH3NBOeH0FtLHBJgzY_RHJmY8zTb3y9IJo0agzhNRHAxbdriSIyCEXjBFd0AmypgnFEC7MGGxezRQM-ZfPwJAJVNp5bZWKhuNy0zv4DaJ3e2IMDDC6Q6wotVcgCk5lM3Ec9mcaGH4-d8-Pi2SYXXexNNZIYlbTAle6UL0ThIDu2TrTKbJ4OUO7QG2hz1KLSO5j708n8-GTsfdXak3LU',
-      status: 'scheduled'
-    },
-    {
-      id: 'SFT-003',
-      dayOfWeek: 'T2',
-      shiftType: 'afternoon',
-      userName: 'Nguyễn Văn A',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC703_rsdHDf1TAbvoC45iFKVX4rcr3oh8immWJwqXOeRrFTHcLvjwbCBiOIm0ZtI9RTmsyih80Ow8IElEpdtzXZTuHwz8AuyIvUxbMm8_OezAoHT7jODhsg1tWGlG_1IOO9jn60IrzMWV8ntE7ASPHI06e08mJ6zQfpbbL7UyznoqJGsWbdLXbGO-qu5JIfJZby5C-r09jDddC0Na9d-RelWmO03qBS7IfCOFCh_ewaHJw_dcUwhwqaSru4KGPLD_sWIHTuKJROUY',
-      status: 'on_duty'
-    },
-    {
-      id: 'SFT-004',
-      dayOfWeek: 'T2',
-      shiftType: 'evening',
-      userName: 'Nguyễn Thị Mai',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA0ZTvgebGJmFrSzydrtfDNfXBHVWh7w1RLXUEvuCrFNjfzsb1u6nrgxxTsynOXg17slJ5h6oT-ZSLquSa9dVvn8SOS9qiEkMu4aB-WGsGTuW_FOqPgld30zRq8kMuXkiKntXv33r0jemWx_am7rc5bmg5L5prdd0GAVO9PopF75axxsXIw4KdaRBiCy0SQojPP5P3kGWVbPYmwm59epAMcavpSoKSqPX6FO468VSl9IMIzx7Hg2QVf3TwPhmG6MhpRcl_E_14hTHA',
-      status: 'confirmed'
-    },
-    {
-      id: 'SFT-005',
-      dayOfWeek: 'T2',
-      shiftType: 'evening',
-      userName: 'Nguyễn Văn A',
-      userAvatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC703_rsdHDf1TAbvoC45iFKVX4rcr3oh8immWJwqXOeRrFTHcLvjwbCBiOIm0ZtI9RTmsyih80Ow8IElEpdtzXZTuHwz8AuyIvUxbMm8_OezAoHT7jODhsg1tWGlG_1IOO9jn60IrzMWV8ntE7ASPHI06e08mJ6zQfpbbL7UyznoqJGsWbdLXbGO-qu5JIfJZby5C-r09jDddC0Na9d-RelWmO03qBS7IfCOFCh_ewaHJw_dcUwhwqaSru4KGPLD_sWIHTuKJROUY',
-      status: 'confirmed'
-    },
-    {
-      id: 'SFT-006',
-      dayOfWeek: 'T3',
-      shiftType: 'morning',
-      userName: 'Đặng Quốc Huy',
-      userAvatar: undefined,
-      status: 'scheduled'
-    },
-    {
-      id: 'SFT-007',
-      dayOfWeek: 'T3',
-      shiftType: 'afternoon',
-      userName: 'Phạm Hương',
-      userAvatar: undefined,
-      status: 'scheduled'
-    },
-    {
-      id: 'SFT-008',
-      dayOfWeek: 'T3',
-      shiftType: 'evening',
-      userName: '',
-      userAvatar: undefined,
-      status: 'empty'
-    }
-  ]);
+  const [shifts, setShifts] = useState<any[]>([]);
 
   const [scheduleTeamMode, setScheduleTeamMode] = useState<'team' | 'my'>('team');
   const [scheduleSearchQuery, setScheduleSearchQuery] = useState('');
@@ -126,7 +61,7 @@ export default function App() {
   const [isCreateShiftModalOpen, setIsCreateShiftModalOpen] = useState(false);
   const [newShiftDay, setNewShiftDay] = useState<'T2' | 'T3' | 'T4' | 'T5' | 'T6' | 'T7' | 'CN'>('T2');
   const [newShiftType, setNewShiftType] = useState<'morning' | 'afternoon' | 'evening'>('morning');
-  const [newShiftStaffName, setNewShiftStaffName] = useState('Nguyễn Văn A');
+  const [newShiftStaffName, setNewShiftStaffName] = useState('');
   const [newShiftStatus, setNewShiftStatus] = useState<'scheduled' | 'on_duty' | 'confirmed' | 'empty'>('scheduled');
 
   // Navigation & UI States
@@ -237,7 +172,7 @@ export default function App() {
   const [taskTitle, setTaskTitle] = useState('');
   const [taskStatusField, setTaskStatusField] = useState<'pending' | 'progress' | 'done'>('pending');
   const [taskDue, setTaskDue] = useState('Hôm nay');
-  const [taskAssignee, setTaskAssignee] = useState('Nguyễn Văn A');
+  const [taskAssignee, setTaskAssignee] = useState('');
   const [taskAttachments, setTaskAttachments] = useState<TaskAttachment[]>([]);
   const [isDetailDragging, setIsDetailDragging] = useState(false);
   const [isFormDragging, setIsFormDragging] = useState(false);
@@ -426,7 +361,7 @@ export default function App() {
       setTaskTitle('');
       setTaskStatusField('pending');
       setTaskDue('Hôm nay');
-      setTaskAssignee('Trần Văn Nam');
+      setTaskAssignee('');
       setTaskAttachments([]);
     }
     setIsTaskModalOpen(true);
@@ -761,7 +696,7 @@ export default function App() {
                   <input
                     type="text"
                     required
-                    placeholder="Nguyễn Văn A"
+                    placeholder="Nhập tên nhân sự"
                     value={logReporter}
                     onChange={e => setLogReporter(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"

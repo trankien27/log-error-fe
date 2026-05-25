@@ -48,6 +48,8 @@ export default function ScheduleTab({
   setActiveTab,
   triggerToast,
 }: ScheduleTabProps) {
+  const currentUserName = users[0]?.name || '';
+
   return (
     <div className="space-y-6 text-[#191b23] text-left">
       {/* Screen header */}
@@ -84,7 +86,7 @@ export default function ScheduleTab({
             onClick={() => {
               setNewShiftDay('T2');
               setNewShiftType('morning');
-              setNewShiftStaffName(users[0]?.name || 'Nguyễn Văn A');
+              setNewShiftStaffName(currentUserName);
               setNewShiftStatus('scheduled');
               setIsCreateShiftModalOpen(true);
             }}
@@ -145,7 +147,7 @@ export default function ScheduleTab({
             <button 
               onClick={() => {
                 setScheduleTeamMode('my');
-                triggerToast('Đang lọc ca cá nhân của Nguyễn Văn A!');
+                triggerToast('Đang lọc ca cá nhân của người dùng hiện tại!');
               }}
               className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 scheduleTeamMode === 'my' ? 'bg-white text-[#004ac6] shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -224,7 +226,7 @@ export default function ScheduleTab({
                   
                   // Match search query or filters
                   const matchingShifts = currentDayShifts.filter(s => {
-                    if (scheduleTeamMode === 'my' && s.userName !== 'Nguyễn Văn A') return false;
+                    if (scheduleTeamMode === 'my' && currentUserName && s.userName !== currentUserName) return false;
                     if (scheduleSearchQuery && !s.userName.toLowerCase().includes(scheduleSearchQuery.toLowerCase())) return false;
                     if (scheduleRoleFilter !== 'Tất cả vai trò') {
                       const linkedUser = users.find(u => u.name === s.userName);
@@ -310,7 +312,7 @@ export default function ScheduleTab({
                           onClick={() => {
                             setNewShiftDay(day as any);
                             setNewShiftType('morning');
-                            setNewShiftStaffName(users[0]?.name || 'Nguyễn Văn A');
+                            setNewShiftStaffName(currentUserName);
                             setNewShiftStatus('scheduled');
                             setIsCreateShiftModalOpen(true);
                           }}
@@ -340,7 +342,7 @@ export default function ScheduleTab({
                   
                   // Match search query or filters
                   const matchingShifts = currentDayShifts.filter(s => {
-                    if (scheduleTeamMode === 'my' && s.userName !== 'Nguyễn Văn A') return false;
+                    if (scheduleTeamMode === 'my' && currentUserName && s.userName !== currentUserName) return false;
                     if (scheduleSearchQuery && !s.userName.toLowerCase().includes(scheduleSearchQuery.toLowerCase())) return false;
                     if (scheduleRoleFilter !== 'Tất cả vai trò') {
                       const linkedUser = users.find(u => u.name === s.userName);
@@ -426,7 +428,7 @@ export default function ScheduleTab({
                           onClick={() => {
                             setNewShiftDay(day as any);
                             setNewShiftType('afternoon');
-                            setNewShiftStaffName(users[0]?.name || 'Nguyễn Văn A');
+                            setNewShiftStaffName(currentUserName);
                             setNewShiftStatus('scheduled');
                             setIsCreateShiftModalOpen(true);
                           }}
@@ -456,7 +458,7 @@ export default function ScheduleTab({
                   
                   // Match search query or filters
                   const matchingShifts = currentDayShifts.filter(s => {
-                    if (scheduleTeamMode === 'my' && s.userName !== 'Nguyễn Văn A') return false;
+                    if (scheduleTeamMode === 'my' && currentUserName && s.userName !== currentUserName) return false;
                     if (scheduleSearchQuery && !s.userName.toLowerCase().includes(scheduleSearchQuery.toLowerCase())) return false;
                     if (scheduleRoleFilter !== 'Tất cả vai trò') {
                       const linkedUser = users.find(u => u.name === s.userName);
@@ -542,7 +544,7 @@ export default function ScheduleTab({
                           onClick={() => {
                             setNewShiftDay(day as any);
                             setNewShiftType('evening');
-                            setNewShiftStaffName(users[0]?.name || 'Nguyễn Văn A');
+                            setNewShiftStaffName(currentUserName);
                             setNewShiftStatus('scheduled');
                             setIsCreateShiftModalOpen(true);
                           }}
