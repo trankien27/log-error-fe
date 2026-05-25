@@ -1,0 +1,6 @@
+{
+  "name": "IT Admin System",
+  "description": "Hệ thống quản lý hỗ trợ IT toàn diện với Dashboard, Log lỗi, Công việc (Kanban), Người dùng, Vai trò, Booth và Thông báo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
