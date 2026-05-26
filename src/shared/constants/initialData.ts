@@ -1,4 +1,9 @@
-import { ErrorLog, User, Role, Booth, Task, SystemNotification, Activity } from './types';
+import type { ErrorLog } from '@/features/errors/types/error.type';
+import type { User, Role } from '@/features/users/types/user.type';
+import type { Booth } from '@/features/booths/types/booth.type';
+import type { Task } from '@/features/tasks/types/task.type';
+import type { SystemNotification } from '@/features/notifications/types/notification.type';
+import type { Activity } from '@/shared/types/common.type';
 
 export const INITIAL_ERROR_LOGS: ErrorLog[] = [
   {
