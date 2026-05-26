@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Lock, Eye, EyeOff, Key, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle2, Save } from 'lucide-react';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
 export default function SettingsTab() {
@@ -10,14 +10,10 @@ export default function SettingsTab() {
     settingsPasswordCurrent,
     settingsPasswordNew,
     settingsPasswordConfirm,
-    settingsOTPValues,
-    settingsOTPTimer,
     setSettingsStage,
     setSettingsPasswordCurrent,
     setSettingsPasswordNew,
     setSettingsPasswordConfirm,
-    setSettingsOTPValues,
-    setSettingsOTPTimer,
     resetSecurityForm
   } = useAuthStore();
 
@@ -25,17 +21,6 @@ export default function SettingsTab() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
-
-  // OTP Countdown Timer effect
-  useEffect(() => {
-    let interval: any = null;
-    if (settingsStage === 'otp' && settingsOTPTimer > 0) {
-      interval = setInterval(() => {
-        setSettingsOTPTimer(prev => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [settingsStage, settingsOTPTimer]);
 
   const handlePasswordSubmit = () => {
     if (!settingsPasswordCurrent) {
@@ -50,21 +35,8 @@ export default function SettingsTab() {
       alert('Mật khẩu xác nhận không khớp nhau!');
       return;
     }
-    // Transition to OTP verification stage
-    setSettingsStage('otp');
-    setSettingsOTPTimer(59);
-    alert('Đã kích hoạt cấp mã OTP gửi về số máy liên kết +84 xxxxxxx34!');
-  };
-
-  const handleOTPSubmit = () => {
-    const fullOTP = settingsOTPValues.join('');
-    if (fullOTP.length < 6) {
-      alert('Mã OTP xác thực không đủ chuỗi 6 chữ số!');
-      return;
-    }
-    // Success stage transition and reset
     setSettingsStage('success');
-    alert('Mã OTP chính xác. Mật khẩu đồng bộ bảo mật thành công!');
+    alert('Mật khẩu đồng bộ bảo mật thành công!');
   };
 
   return (
@@ -72,7 +44,7 @@ export default function SettingsTab() {
       {/* Header section */}
       <div>
         <h2 className="text-xl font-bold text-gray-900 font-sans">Thiết lập bảo mật & Cài đặt hệ thống</h2>
-        <p className="text-xs text-gray-500 mt-1">Quản lý mật khẩu quản trị, đồng bộ khóa bảo mật phần cứng, cấu hình OTP đa lớp.</p>
+        <p className="text-xs text-gray-500 mt-1">Quản lý mật khẩu quản trị và cấu hình bảo mật tài khoản.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -85,7 +57,7 @@ export default function SettingsTab() {
           <div>
             <h3 className="text-sm font-extrabold text-gray-900 uppercase tracking-wider font-sans">Nguyên tắc bảo vệ tài khoản</h3>
             <p className="text-xs text-gray-500 leading-relaxed mt-2">
-              Mật khẩu điều hành cấp đặc quyền (Privileged Identity) bắt buộc phải đạt tiêu chuẩn SRE cấp độ cao, tích hợp OTP 6 chữ số gửi qua SMS để ngăn chặn tấn công giả mạo phiên giao dịch.
+              Mật khẩu điều hành cấp đặc quyền (Privileged Identity) cần đạt tiêu chuẩn bảo mật cao để giảm rủi ro truy cập trái phép vào hệ thống.
             </p>
           </div>
 
@@ -212,97 +184,14 @@ export default function SettingsTab() {
                   onClick={handlePasswordSubmit}
                   className="px-5 py-2.5 bg-[#004ac6] text-white hover:bg-primary-container rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>Gửi OTP xác thực</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <Save className="w-4 h-4" />
+                  <span>Lưu mật khẩu</span>
                 </button>
               </div>
             </motion.div>
           )}
 
-          {/* STAGE 2: OTP VERIFICATION */}
-          {settingsStage === 'otp' && (
-            <motion.div 
-              initial={{ opacity: 0, x: 10 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              className="space-y-6 text-center max-w-sm mx-auto py-4"
-            >
-              <div className="flex justify-center">
-                <div className="w-14 h-14 bg-[#ebefff] rounded-full flex items-center justify-center text-[#004ac6]">
-                  <Key className="w-7 h-7" />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <h4 className="text-base font-extrabold text-slate-900 font-sans">Nhập mã OTP Xác thực</h4>
-                <p className="text-[11px] text-slate-400">Chúng tôi vừa gửi mã OTP bảo mật 6 số qua số điện thoại liên kết.</p>
-              </div>
-
-              {/* 6 digits split input fields */}
-              <div className="flex justify-between gap-2.5">
-                {settingsOTPValues.map((val, idx) => (
-                  <input 
-                    key={idx}
-                    id={`settings-otp-box-${idx}`}
-                    type="text"
-                    maxLength={1}
-                    value={val}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[^0-9]/g, '');
-                      const copy = [...settingsOTPValues];
-                      copy[idx] = v;
-                      setSettingsOTPValues(copy);
-                      
-                      if (v && idx < 5) {
-                        document.getElementById(`settings-otp-box-${idx + 1}`)?.focus();
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Backspace' && !settingsOTPValues[idx] && idx > 0) {
-                        document.getElementById(`settings-otp-box-${idx - 1}`)?.focus();
-                      }
-                    }}
-                    className="w-11 h-12 border-2 border-outline-variant text-[#004ac6] text-center font-extrabold text-lg rounded-xl focus:border-[#004ac6] focus:outline-none bg-slate-50 focus:bg-white transition-all shadow-sm font-mono"
-                  />
-                ))}
-              </div>
-
-              <div className="space-y-4 font-sans">
-                <div className="text-[11px] font-bold text-slate-500">
-                  {settingsOTPTimer > 0 ? (
-                    <span>Gửi lại OTP sau <span className="font-mono text-[#004ac6]">{settingsOTPTimer} giây</span></span>
-                  ) : (
-                    <button 
-                      type="button"
-                      onClick={() => {
-                        setSettingsOTPTimer(59);
-                        alert('Đã gửi lại thành công mã xác thực OTP mới!');
-                      }}
-                      className="text-[#004ac6] hover:underline hover:text-black font-extrabold cursor-pointer"
-                    >
-                      Gửi lại mã OTP mới
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 w-full">
-                  <button 
-                    onClick={() => setSettingsStage('password')}
-                    className="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-lg transition-all cursor-pointer"
-                  >
-                    Quay lại
-                  </button>
-                  <button 
-                    onClick={handleOTPSubmit}
-                    className="flex-1 px-4 py-2 bg-[#004ac6] text-white hover:bg-primary-container text-xs font-bold rounded-lg transition-all shadow hover:shadow-md cursor-pointer"
-                  >
-                    Xác thực
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* STAGE 3: SUCCESS BLOCK */}
+          {/* STAGE 2: SUCCESS BLOCK */}
           {settingsStage === 'success' && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} 
@@ -318,7 +207,7 @@ export default function SettingsTab() {
               <div className="space-y-2">
                 <h4 className="text-xl font-black text-gray-950 font-sans">Mật khẩu đồng bộ thành công!</h4>
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  Yêu cầu đổi khóa phân quyền quản trị đã hoàn thành. Hệ thống kỹ thuật vận hành ghi nhận trạng thái từ cổng xác nhận OTP đa tầng.
+                  Yêu cầu đổi khóa phân quyền quản trị đã hoàn thành. Hệ thống kỹ thuật vận hành ghi nhận trạng thái bảo mật mới.
                 </p>
               </div>
 

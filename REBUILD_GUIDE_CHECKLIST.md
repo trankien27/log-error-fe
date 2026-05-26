@@ -85,7 +85,13 @@ VITE_API_BASE_URL="http://localhost:7000"
   - [ ] `src/features/settings/components`
   - [ ] `src/services/api`
   - [ ] `src/stores`
-  - [ ] `src/shared/types`
+  - [ ] `src/types.ts`
+
+Khong tao cac lop trung lap sau neu khong co nhu cau ro rang:
+
+- [ ] `src/features/*/hooks`
+- [ ] `src/features/*/api`
+- [ ] `src/features/*/types`
 
 ### Dau Ra
 
@@ -383,7 +389,6 @@ Frontend chap nhan ca `token` va `accessToken`.
   - [ ] recent activities tu `/activities/recent`
 - [ ] Settings
   - [ ] password stage
-  - [ ] OTP stage
   - [ ] success stage
 
 ---
@@ -469,4 +474,3 @@ Frontend chap nhan ca `token` va `accessToken`.
 - Khong nen quay lai localStorage mock trong service chinh.
 - Neu can demo tam, hay tao backend seed data hoac mock server rieng tai `localhost:7000`.
 - Cach nay giu frontend gan voi hanh vi thuc te va tranh sai lech khi tich hop backend that.
-

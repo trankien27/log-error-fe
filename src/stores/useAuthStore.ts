@@ -9,13 +9,11 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   
-  // Security OTP / Password change states
-  settingsStage: 'password' | 'otp' | 'success';
+  // Security password change states
+  settingsStage: 'password' | 'success';
   settingsPasswordCurrent: string;
   settingsPasswordNew: string;
   settingsPasswordConfirm: string;
-  settingsOTPValues: string[];
-  settingsOTPTimer: number;
 
   // Setters/Actions
   setAuthMode: (mode: 'login' | 'register') => void;
@@ -24,12 +22,10 @@ interface AuthState {
   logout: () => void;
   
   // Security settings actions
-  setSettingsStage: (stage: 'password' | 'otp' | 'success') => void;
+  setSettingsStage: (stage: 'password' | 'success') => void;
   setSettingsPasswordCurrent: (val: string) => void;
   setSettingsPasswordNew: (val: string) => void;
   setSettingsPasswordConfirm: (val: string) => void;
-  setSettingsOTPValues: (val: string[]) => void;
-  setSettingsOTPTimer: (val: number | ((prev: number) => number)) => void;
   resetSecurityForm: () => void;
 }
 
@@ -44,8 +40,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   settingsPasswordCurrent: '',
   settingsPasswordNew: '',
   settingsPasswordConfirm: '',
-  settingsOTPValues: ['', '', '', '', '', ''],
-  settingsOTPTimer: 59,
 
   setAuthMode: (authMode) => set({ authMode }),
 
@@ -82,17 +76,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setSettingsPasswordCurrent: (settingsPasswordCurrent) => set({ settingsPasswordCurrent }),
   setSettingsPasswordNew: (settingsPasswordNew) => set({ settingsPasswordNew }),
   setSettingsPasswordConfirm: (settingsPasswordConfirm) => set({ settingsPasswordConfirm }),
-  setSettingsOTPValues: (settingsOTPValues) => set({ settingsOTPValues }),
-  setSettingsOTPTimer: (val) => set((state) => ({
-    settingsOTPTimer: typeof val === 'function' ? val(state.settingsOTPTimer) : val
-  })),
 
   resetSecurityForm: () => set({
     settingsStage: 'password',
     settingsPasswordCurrent: '',
     settingsPasswordNew: '',
     settingsPasswordConfirm: '',
-    settingsOTPValues: ['', '', '', '', '', ''],
-    settingsOTPTimer: 59,
   })
 }));
