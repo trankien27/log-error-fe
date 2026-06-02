@@ -7,6 +7,7 @@ type BackendUser = Partial<User> & {
   lastName?: string;
   sub?: string;
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'?: string;
+  'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string;
 };
 
 type AuthResponse = BackendUser | {
@@ -39,6 +40,7 @@ function normalizeUser(user: BackendUser): User {
   const firstName = user.firstName || '';
   const lastName = user.lastName || '';
   const fullName = user.name || `${firstName} ${lastName}`.trim() || user.email || 'Người dùng';
+  const roleClaim = user.role || user['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
 
   return {
     id:
@@ -50,7 +52,9 @@ function normalizeUser(user: BackendUser): User {
       'current-user',
     name: fullName,
     email: user.email || '',
-    role: user.role || 'Staff',
+    role: roleClaim === 'Admin' || roleClaim === 'Manager' || roleClaim === 'IT Support' || roleClaim === 'Staff'
+      ? roleClaim
+      : 'Staff',
     status: user.status || 'Hoạt động',
     avatar: user.avatar,
     phone: user.phone,
