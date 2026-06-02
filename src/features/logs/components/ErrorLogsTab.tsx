@@ -1,6 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Download, Edit2, Eye, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
+import { lookupService } from '../../../services/api/lookupService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { ErrorGroup, ErrorLog, ErrorLogStatus, Severity } from '../../../types';
@@ -70,6 +72,7 @@ export default function ErrorLogsTab() {
     logs,
     searchQuery,
     logStoreFilter,
+    logBoothFilter,
     logStatusFilter,
     logMonthFilter,
     logErrorGroupFilter,
@@ -77,6 +80,7 @@ export default function ErrorLogsTab() {
     isLoading,
     setSearchQuery,
     setLogStoreFilter,
+    setLogBoothFilter,
     setLogStatusFilter,
     setLogMonthFilter,
     setLogErrorGroupFilter,
@@ -95,6 +99,8 @@ export default function ErrorLogsTab() {
   const [currentEditingLog, setCurrentEditingLog] = useState<ErrorLog | null>(null);
   const [receivedDate, setReceivedDate] = useState(toDateInputValue(new Date().toISOString()));
   const [store, setStore] = useState('CH Quận 1');
+  const [booth, setBooth] = useState('');
+  const [description, setDescription] = useState('');
   const [errorGroup, setErrorGroup] = useState<ErrorGroup>(1);
   const [status, setStatus] = useState<ErrorLogStatus>(1);
   const [severity, setSeverity] = useState<Severity>(2);
@@ -103,35 +109,40 @@ export default function ErrorLogsTab() {
   const [note, setNote] = useState('');
 
   const filteredLogs = getFilteredLogs();
-  const storeOptions = useMemo(() => {
-    const values = new Set(logs.map(log => log.store).filter(Boolean));
-    ['CH Quận 1', 'CH Quận 3', 'CH Gò Vấp', 'CH Quận 10'].forEach(value => values.add(value));
-    return Array.from(values);
-  }, [logs]);
-
   useEffect(() => {
     fetchLogs({
       store: logStoreFilter || undefined,
+      booth: logBoothFilter || undefined,
       status: logStatusFilter || undefined,
       month: logMonthFilter || undefined,
       errorGroup: logErrorGroupFilter || undefined,
       severity: logSeverityFilter || undefined,
     });
-  }, [fetchLogs, logStoreFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logSeverityFilter]);
+  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logSeverityFilter]);
 
   const getActiveQuery = () => ({
     store: logStoreFilter || undefined,
+    booth: logBoothFilter || undefined,
     status: logStatusFilter || undefined,
     month: logMonthFilter || undefined,
     errorGroup: logErrorGroupFilter || undefined,
     severity: logSeverityFilter || undefined,
   });
 
+  const loadStores = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
+    return lookupService.searchStores(query);
+  }, []);
+  const loadBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
+    return lookupService.searchBooths(query);
+  }, []);
+
   const handleOpenModal = (log: ErrorLog | null = null) => {
     if (log) {
       setCurrentEditingLog(log);
       setReceivedDate(toDateInputValue(log.receivedDate));
       setStore(log.store);
+      setBooth(log.booth || '');
+      setDescription(log.description || '');
       setErrorGroup(log.errorGroup);
       setStatus(log.status);
       setSeverity(log.severity);
@@ -142,6 +153,8 @@ export default function ErrorLogsTab() {
       setCurrentEditingLog(null);
       setReceivedDate(toDateInputValue(new Date().toISOString()));
       setStore('CH Quận 1');
+      setBooth('');
+      setDescription('');
       setErrorGroup(1);
       setStatus(1);
       setSeverity(2);
@@ -155,8 +168,8 @@ export default function ErrorLogsTab() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!receivedDate || !store.trim()) {
-      toast.error('Vui lòng nhập ngày tiếp nhận và cửa hàng.');
+    if (!receivedDate || !store.trim() || !description.trim()) {
+      toast.error('Vui lòng nhập ngày tiếp nhận, cửa hàng và mô tả lỗi.');
       return;
     }
 
@@ -168,8 +181,9 @@ export default function ErrorLogsTab() {
     const payload = {
       receivedDate: toApiDate(receivedDate),
       store: store.trim(),
+      booth: booth.trim(),
       errorGroup,
-      description: `${errorGroupLabels[errorGroup]} tại ${store.trim()}`,
+      description: description.trim(),
       processingFlow: 1 as const,
       preliminaryCause: preliminaryCause.trim(),
       solution: solution.trim(),
@@ -245,19 +259,30 @@ export default function ErrorLogsTab() {
       </div>
 
       <div className="bg-white rounded-xl border border-outline-variant p-4 shadow-sm text-left">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-7 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Cửa hàng</label>
-            <select
+            <LazySearchDropdown
               value={logStoreFilter}
-              onChange={e => setLogStoreFilter(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              {storeOptions.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
+              placeholder="Tất cả cửa hàng"
+              emptyText="Không tìm thấy cửa hàng."
+              loadOptions={loadStores}
+              pageSize={20}
+              onSelect={item => setLogStoreFilter(item.name)}
+              onClear={() => setLogStoreFilter('')}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Booth</label>
+            <LazySearchDropdown
+              value={logBoothFilter}
+              placeholder="Tất cả Booth"
+              emptyText="Không tìm thấy Booth."
+              loadOptions={loadBooths}
+              onSelect={item => setLogBoothFilter(item.name)}
+              onClear={() => setLogBoothFilter('')}
+            />
           </div>
 
           <div>
@@ -339,6 +364,7 @@ export default function ErrorLogsTab() {
               <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 select-none font-sans">
                 <th className="py-4 px-5 font-bold">Ngày tiếp nhận</th>
                 <th className="py-4 px-5 font-bold">Cửa hàng</th>
+                <th className="py-4 px-5 font-bold">Mô tả lỗi</th>
                 <th className="py-4 px-5 font-bold">Nhóm lỗi</th>
                 <th className="py-4 px-5 font-bold">Trạng thái</th>
                 <th className="py-4 px-5 font-bold">Mức độ</th>
@@ -348,13 +374,13 @@ export default function ErrorLogsTab() {
             <tbody className="divide-y divide-[#f1f5f9]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center font-bold text-gray-400">
+                  <td colSpan={7} className="py-10 text-center font-bold text-gray-400">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center font-bold text-gray-400">
+                  <td colSpan={7} className="py-10 text-center font-bold text-gray-400">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
@@ -363,6 +389,9 @@ export default function ErrorLogsTab() {
                   <tr key={log.id} className="hover:bg-[#faf8ff] transition-colors">
                     <td className="py-4 px-5 text-gray-700 font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
                     <td className="py-4 px-5 font-semibold text-gray-900">{log.store}</td>
+                    <td className="py-4 px-5 text-gray-700 max-w-xs">
+                      <span className="line-clamp-2">{log.description || 'N/A'}</span>
+                    </td>
                     <td className="py-4 px-5 text-gray-700">{errorGroupLabels[log.errorGroup]}</td>
                     <td className="py-4 px-5">
                       <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getStatusClass(log.status)}`}>
@@ -438,12 +467,24 @@ export default function ErrorLogsTab() {
                 </div>
                 <div>
                   <label className="block font-medium mb-1">Cửa hàng *</label>
-                  <input
-                    type="text"
-                    required
+                  <LazySearchDropdown
                     value={store}
-                    onChange={e => setStore(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                    placeholder="Chọn cửa hàng..."
+                    emptyText="Không tìm thấy cửa hàng."
+                    loadOptions={loadStores}
+                    pageSize={20}
+                    onSelect={item => setStore(item.name)}
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Booth</label>
+                  <LazySearchDropdown
+                    value={booth}
+                    placeholder="Chọn Booth..."
+                    emptyText="Không tìm thấy Booth."
+                    loadOptions={loadBooths}
+                    onSelect={item => setBooth(item.name)}
+                    onClear={() => setBooth('')}
                   />
                 </div>
               </div>
@@ -485,6 +526,18 @@ export default function ErrorLogsTab() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1">Mô tả lỗi *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Nhập mô tả lỗi chi tiết..."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                />
               </div>
 
               <div>
@@ -560,6 +613,10 @@ export default function ErrorLogsTab() {
               <div>
                 <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cửa hàng</span>
                 <p className="font-semibold text-gray-900">{selectedLogDetails.store}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Booth</span>
+                <p className="font-semibold text-gray-900">{selectedLogDetails.booth || 'N/A'}</p>
               </div>
               <div>
                 <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nhóm lỗi</span>

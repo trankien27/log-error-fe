@@ -9,6 +9,7 @@ export interface ErrorLog {
   receivedDate: string;
   month: number;
   store: string;
+  booth?: string | null;
   errorGroup: ErrorGroup;
   description: string;
   processingFlow: ProcessingFlow;
@@ -46,6 +47,21 @@ export interface Booth {
   name: string;
   ultraviewId: string;
   relatedStores: string;
+}
+
+export interface LookupItem {
+  id: string | number;
+  code?: string;
+  name: string;
+  lastSyncedAt?: string;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  totalItems: number;
+  totalPages: number;
+  pageIndex: number;
+  pageSize: number;
 }
 
 export interface TaskAttachment {

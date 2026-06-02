@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Plus, Search, Copy, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
+import { lookupService } from '../../../services/api/lookupService';
 import { useBoothsStore } from '../../../stores/useBoothsStore';
 import { Booth } from '../../../types';
 
@@ -26,6 +28,12 @@ export default function BoothsTab() {
   const [boothStoresField, setBoothStoresField] = useState('');
 
   const filteredBooths = getFilteredBooths();
+  const loadBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
+    return lookupService.searchBooths(query);
+  }, []);
+  const loadStores = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
+    return lookupService.searchStores(query);
+  }, []);
 
   const handleOpenBoothModal = (b: Booth | null = null) => {
     if (b) {
@@ -205,6 +213,21 @@ export default function BoothsTab() {
               <button onClick={() => setIsBoothModalOpen(false)} className="text-gray-400 hover:text-gray-655 font-bold cursor-pointer">&#x2715;</button>
             </div>
             <form onSubmit={handleSaveBoothSubmit} className="space-y-4 text-sm">
+              <div>
+                <label className="block font-medium mb-1">Chọn Booth từ hệ thống</label>
+                <LazySearchDropdown
+                  value={boothNameField}
+                  placeholder="Tìm Booth theo mã hoặc tên..."
+                  emptyText="Không tìm thấy Booth."
+                  loadOptions={loadBooths}
+                  onSelect={item => {
+                    setBoothIdField(String(item.id));
+                    setBoothNameField(item.name);
+                    setBoothUltraviewField(item.code || boothUltraviewField);
+                  }}
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Mã trạm (ID) *</label>
@@ -243,12 +266,13 @@ export default function BoothsTab() {
               </div>
               <div>
                 <label className="block font-medium mb-1">Địa điểm / Cửa hàng liên quan</label>
-                <input
-                  type="text"
-                  placeholder="Store Quận 1, Store Quận 3..."
+                <LazySearchDropdown
                   value={boothStoresField}
-                  onChange={e => setBoothStoresField(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  placeholder="Chọn cửa hàng..."
+                  emptyText="Không tìm thấy cửa hàng."
+                  loadOptions={loadStores}
+                  pageSize={20}
+                  onSelect={item => setBoothStoresField(item.name)}
                 />
               </div>
               <div className="flex justify-end gap-2 pt-4">

@@ -10,6 +10,7 @@ interface LogsState {
 
   searchQuery: string;
   logStoreFilter: string;
+  logBoothFilter: string;
   logStatusFilter: '' | ErrorLogStatus;
   logMonthFilter: '' | number;
   logErrorGroupFilter: '' | ErrorGroup;
@@ -20,6 +21,7 @@ interface LogsState {
 
   setSearchQuery: (query: string) => void;
   setLogStoreFilter: (store: string) => void;
+  setLogBoothFilter: (booth: string) => void;
   setLogStatusFilter: (status: '' | ErrorLogStatus) => void;
   setLogMonthFilter: (month: '' | number) => void;
   setLogErrorGroupFilter: (group: '' | ErrorGroup) => void;
@@ -45,6 +47,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
 
   searchQuery: '',
   logStoreFilter: '',
+  logBoothFilter: '',
   logStatusFilter: '',
   logMonthFilter: '',
   logErrorGroupFilter: '',
@@ -55,6 +58,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
   setLogStoreFilter: (logStoreFilter) => set({ logStoreFilter }),
+  setLogBoothFilter: (logBoothFilter) => set({ logBoothFilter }),
   setLogStatusFilter: (logStatusFilter) => set({ logStatusFilter }),
   setLogMonthFilter: (logMonthFilter) => set({ logMonthFilter }),
   setLogErrorGroupFilter: (logErrorGroupFilter) => set({ logErrorGroupFilter }),
@@ -151,6 +155,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       logs,
       searchQuery,
       logStoreFilter,
+      logBoothFilter,
       logStatusFilter,
       logMonthFilter,
       logErrorGroupFilter,
@@ -165,12 +170,13 @@ export const useLogsStore = create<LogsState>((set, get) => ({
             .some(value => String(value).toLowerCase().includes(normalizedQuery))
         : true;
       const storeMatch = logStoreFilter ? log.store === logStoreFilter : true;
+      const boothMatch = logBoothFilter ? log.booth === logBoothFilter : true;
       const statusMatch = logStatusFilter ? log.status === logStatusFilter : true;
       const monthMatch = logMonthFilter ? log.month === logMonthFilter : true;
       const groupMatch = logErrorGroupFilter ? log.errorGroup === logErrorGroupFilter : true;
       const severityMatch = logSeverityFilter ? log.severity === logSeverityFilter : true;
 
-      return searchMatch && storeMatch && statusMatch && monthMatch && groupMatch && severityMatch;
+      return searchMatch && storeMatch && boothMatch && statusMatch && monthMatch && groupMatch && severityMatch;
     });
   },
 }));

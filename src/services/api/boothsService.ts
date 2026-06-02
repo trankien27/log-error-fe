@@ -1,9 +1,16 @@
-import { Booth } from '../../types';
+import { Booth, LookupItem, PagedResult } from '../../types';
 import { apiClient } from './apiClient';
 
 export const boothsService = {
   getAll: async (): Promise<Booth[]> => {
-    return apiClient.get<Booth[]>('/booths');
+    const result = await apiClient.get<PagedResult<LookupItem>>('/api/booths?pageIndex=0&pageSize=50');
+
+    return result.items.map(item => ({
+      id: String(item.id),
+      name: item.name,
+      ultraviewId: item.code || String(item.id),
+      relatedStores: '',
+    }));
   },
 
   save: async (booth: Booth, isEdit: boolean): Promise<Booth> => {

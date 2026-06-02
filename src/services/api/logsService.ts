@@ -5,6 +5,7 @@ export type ErrorLogQuery = {
   status?: ErrorLogStatus;
   month?: number;
   store?: string;
+  booth?: string;
   errorGroup?: ErrorGroup;
   severity?: Severity;
 };
@@ -12,6 +13,7 @@ export type ErrorLogQuery = {
 export type ErrorLogPayload = {
   receivedDate: string;
   store: string;
+  booth?: string;
   errorGroup: ErrorGroup;
   description: string;
   processingFlow: ProcessingFlow;
