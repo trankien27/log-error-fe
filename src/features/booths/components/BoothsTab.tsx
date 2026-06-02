@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Search, Copy, Edit2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useBoothsStore } from '../../../stores/useBoothsStore';
 import { Booth } from '../../../types';
 
@@ -7,6 +8,7 @@ export default function BoothsTab() {
   const {
     booths,
     searchQuery,
+    isLoading,
     isBoothModalOpen,
     currentEditingBooth,
     setSearchQuery,
@@ -45,7 +47,7 @@ export default function BoothsTab() {
   const handleSaveBoothSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!boothNameField.trim() || !boothUltraviewField.trim()) {
-      alert('Vui lòng điền đủ Tên Booth và ID Ultraview.');
+      toast.error('Vui lòng điền đủ Tên Booth và ID Ultraview.');
       return;
     }
 
@@ -56,19 +58,34 @@ export default function BoothsTab() {
       relatedStores: boothStoresField.trim()
     };
 
-    await saveBooth(payload, !!currentEditingBooth);
-    setIsBoothModalOpen(false);
+    try {
+      await saveBooth(payload, !!currentEditingBooth);
+      toast.success(currentEditingBooth ? 'Cập nhật Booth thành công.' : 'Thêm Booth thành công.');
+      setIsBoothModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lưu Booth.');
+    }
   };
 
   const handleDeleteBoothClick = async (id: string) => {
-    if (confirm(`Bạn chắc chắn muốn loại bỏ trạm/booth hỗ trợ này? ID: ${id}`)) {
-      await deleteBooth(id);
-    }
+    toast.warning(`Xóa Booth ${id}?`, {
+      action: {
+        label: 'Xóa',
+        onClick: async () => {
+          try {
+            await deleteBooth(id);
+            toast.success('Đã xóa Booth.');
+          } catch (err: any) {
+            toast.error(err.message || 'Không thể xóa Booth.');
+          }
+        },
+      },
+    });
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert(`Đã sao chép UltraView ID: ${text}`);
+    toast.success(`Đã sao chép UltraView ID: ${text}`);
   };
 
   return (
@@ -116,7 +133,13 @@ export default function BoothsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f5f9]">
-              {filteredBooths.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
+                    Đang tải dữ liệu Booth...
+                  </td>
+                </tr>
+              ) : filteredBooths.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
                     Không tìm thấy booth nào khớp với điều kiện tìm kiếm.
@@ -238,9 +261,10 @@ export default function BoothsTab() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Xác nhận
+                  {isLoading ? 'Đang lưu...' : 'Xác nhận'}
                 </button>
               </div>
             </form>

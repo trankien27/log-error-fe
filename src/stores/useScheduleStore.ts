@@ -52,6 +52,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   },
 
   saveShift: async (shift) => {
+    set({ isLoading: true, error: null });
     try {
       const saved = await scheduleService.save(shift);
       set((state) => {
@@ -59,21 +60,25 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
         const updated = exists
           ? state.shifts.map(s => s.id === saved.id ? saved : s)
           : [...state.shifts, saved];
-        return { shifts: updated };
+        return { shifts: updated, isLoading: false };
       });
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   deleteShift: async (id) => {
+    set({ isLoading: true, error: null });
     try {
       await scheduleService.delete(id);
       set((state) => ({
-        shifts: state.shifts.filter(s => s.id !== id)
+        shifts: state.shifts.filter(s => s.id !== id),
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   }
 }));

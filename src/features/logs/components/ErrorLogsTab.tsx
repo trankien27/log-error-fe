@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { ErrorLog } from '../../../types';
 
@@ -9,6 +10,7 @@ export default function ErrorLogsTab() {
     logStoreFilter,
     logBoothFilter,
     searchQuery,
+    isLoading,
     setLogStoreFilter,
     setLogBoothFilter,
     setSearchQuery,
@@ -55,7 +57,7 @@ export default function ErrorLogsTab() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!logTitle.trim() || !logReporter.trim()) {
-      alert('Vui lòng điền đủ tên lỗi và người báo.');
+      toast.error('Vui lòng điền đủ tên lỗi và người báo.');
       return;
     }
 
@@ -69,18 +71,34 @@ export default function ErrorLogsTab() {
       attachment: Math.random() > 0.5
     };
 
-    if (currentEditingLog) {
-      await updateLog(currentEditingLog.id, payload);
-    } else {
-      await addLog(payload);
+    try {
+      if (currentEditingLog) {
+        await updateLog(currentEditingLog.id, payload);
+        toast.success('Cập nhật log lỗi thành công.');
+      } else {
+        await addLog(payload);
+        toast.success('Tạo log lỗi thành công.');
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lưu log lỗi.');
     }
-    setIsModalOpen(false);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm(`Bạn chắc chắn muốn xóa log lỗi này không? ID: ${id}`)) {
-      await deleteLog(id);
-    }
+    toast.warning(`Xóa log lỗi ${id}?`, {
+      action: {
+        label: 'Xóa',
+        onClick: async () => {
+          try {
+            await deleteLog(id);
+            toast.success('Đã xóa log lỗi.');
+          } catch (err: any) {
+            toast.error(err.message || 'Không thể xóa log lỗi.');
+          }
+        },
+      },
+    });
   };
 
   return (
@@ -95,7 +113,7 @@ export default function ErrorLogsTab() {
           onClick={() => handleOpenModal()}
           className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
         >
-          <Plus className="w-4 h-4" /> Đăng ký log lỗi
+          <Plus className="w-4 h-4" /> Log lỗi
         </button>
       </div>
 
@@ -169,7 +187,13 @@ export default function ErrorLogsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f5f9]">
-              {filteredLogs.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="py-10 text-center font-sans font-bold text-gray-400">
+                    Đang tải dữ liệu log lỗi...
+                  </td>
+                </tr>
+              ) : filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-10 text-center font-sans font-bold text-gray-400">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
@@ -247,8 +271,8 @@ export default function ErrorLogsTab() {
           <div className="flex gap-1 select-none">
             <button className="px-2.5 py-1 border border-outline-variant text-[11px] hover:bg-white rounded disabled:opacity-40 cursor-pointer" disabled>Trước</button>
             <button className="px-3 py-1 border border-[#004ac6] bg-[#dbe1ff] text-[#00174b] text-[11px] font-bold rounded cursor-pointer">1</button>
-            <button className="px-3 py-1 border border-outline-variant text-[11px] hover:bg-white rounded cursor-pointer" onClick={() => alert('Dữ liệu chỉ hiển thị trang 1 trong bản demo')}>2</button>
-            <button className="px-2.5 py-1 border border-outline-variant text-[11px] hover:bg-white rounded cursor-pointer" onClick={() => alert('Tính năng phân trang sẽ hoạt động khi có nhiều bản ghi lớn.')}>Sau</button>
+            <button className="px-3 py-1 border border-outline-variant text-[11px] hover:bg-white rounded cursor-pointer" onClick={() => toast.info('Dữ liệu chỉ hiển thị trang 1 trong bản demo.')}>2</button>
+            <button className="px-2.5 py-1 border border-outline-variant text-[11px] hover:bg-white rounded cursor-pointer" onClick={() => toast.info('Tính năng phân trang sẽ hoạt động khi có nhiều bản ghi lớn.')}>Sau</button>
           </div>
         </div>
       </div>
@@ -356,9 +380,10 @@ export default function ErrorLogsTab() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer animate-pulse-subtle"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer animate-pulse-subtle disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Lưu thay đổi
+                  {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>

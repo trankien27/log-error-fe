@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Eye, EyeOff, CheckCircle2, Save } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
 export default function SettingsTab() {
@@ -24,19 +25,19 @@ export default function SettingsTab() {
 
   const handlePasswordSubmit = () => {
     if (!settingsPasswordCurrent) {
-      alert('Vui lòng nhập mật khẩu hiện tại!');
+      toast.error('Vui lòng nhập mật khẩu hiện tại.');
       return;
     }
     if (settingsPasswordNew.length < 6) {
-      alert('Mật khẩu mới phải dài tối thiểu 6 ký tự!');
+      toast.error('Mật khẩu mới phải dài tối thiểu 6 ký tự.');
       return;
     }
     if (settingsPasswordNew !== settingsPasswordConfirm) {
-      alert('Mật khẩu xác nhận không khớp nhau!');
+      toast.error('Mật khẩu xác nhận không khớp nhau.');
       return;
     }
     setSettingsStage('success');
-    alert('Mật khẩu đồng bộ bảo mật thành công!');
+    toast.success('Mật khẩu đồng bộ bảo mật thành công.');
   };
 
   return (

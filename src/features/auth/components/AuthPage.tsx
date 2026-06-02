@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
 export default function AuthPage() {
   const navigate = useNavigate();
 
   // Zustand State subscription
-  const { authMode, setAuthMode, login, register, error } = useAuthStore();
+  const { authMode, setAuthMode, login, register, isLoading } = useAuthStore();
 
   // Local Form states (instead of global stores to avoid input lag)
   const [authName, setAuthName] = useState('');
@@ -18,24 +19,25 @@ export default function AuthPage() {
     e.preventDefault();
 
     if (!authEmail.trim() || !authPassword.trim()) {
-      alert('Vui lòng nhập email và mật khẩu.');
+      toast.error('Vui lòng nhập email và mật khẩu.');
       return;
     }
 
     try {
       if (authMode === 'register') {
         if (!authName.trim()) {
-          alert('Vui lòng nhập họ tên.');
+          toast.error('Vui lòng nhập họ tên.');
           return;
         }
         if (authPassword !== authConfirmPassword) {
-          alert('Mật khẩu xác nhận không khớp.');
+          toast.error('Mật khẩu xác nhận không khớp.');
           return;
         }
         await register(authName.trim(), authEmail.trim(), authPassword);
       } else {
         await login(authEmail.trim(), authPassword);
       }
+      toast.success(authMode === 'login' ? 'Đăng nhập thành công.' : 'Đăng ký thành công.');
       // Successful auth - redirect to dashboard
       navigate('/overview');
       setAuthName('');
@@ -43,7 +45,7 @@ export default function AuthPage() {
       setAuthPassword('');
       setAuthConfirmPassword('');
     } catch (err: any) {
-      alert(err.message || 'Xác thực không thành công.');
+      toast.error(err.message || 'Xác thực không thành công.');
     }
   };
 
@@ -109,9 +111,10 @@ export default function AuthPage() {
           )}
           <button
             type="submit"
-            className="w-full py-2.5 bg-[#004ac6] text-white rounded-lg text-sm font-bold hover:bg-primary-container cursor-pointer transition-all active:scale-95 shadow"
+            disabled={isLoading}
+            className="w-full py-2.5 bg-[#004ac6] text-white rounded-lg text-sm font-bold hover:bg-primary-container cursor-pointer transition-all active:scale-95 shadow disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
+            {isLoading ? 'Đang xử lý...' : authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
           </button>
         </form>
       </div>

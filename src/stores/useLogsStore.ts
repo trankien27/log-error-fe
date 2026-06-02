@@ -61,33 +61,42 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   },
 
   addLog: async (logData) => {
+    set({ isLoading: true, error: null });
     try {
       const newLog = await logsService.create(logData);
-      set((state) => ({ logs: [newLog, ...state.logs] }));
+      set((state) => ({ logs: [newLog, ...state.logs], isLoading: false }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   updateLog: async (id, fields) => {
+    set({ isLoading: true, error: null });
     try {
-      const updatedLog = await logsService.update(id, fields);
+      const existingLog = get().logs.find(log => log.id === id);
+      const updatedLog = await logsService.update(id, { ...existingLog, ...fields });
       set((state) => ({
-        logs: state.logs.map(l => l.id === id ? updatedLog : l)
+        logs: state.logs.map(l => l.id === id ? updatedLog : l),
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   deleteLog: async (id) => {
+    set({ isLoading: true, error: null });
     try {
       await logsService.delete(id);
       set((state) => ({
-        logs: state.logs.filter(l => l.id !== id)
+        logs: state.logs.filter(l => l.id !== id),
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 

@@ -49,6 +49,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
 
   saveTask: async (taskData) => {
+    set({ isLoading: true, error: null });
     try {
       const saved = await tasksService.save(taskData);
       set((state) => {
@@ -56,59 +57,73 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         return {
           tasks: exists 
             ? state.tasks.map(t => t.id === saved.id ? saved : t) 
-            : [...state.tasks, saved]
+            : [...state.tasks, saved],
+          isLoading: false
         };
       });
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   updateTaskStatus: async (id, newStatus) => {
+    set({ isLoading: true, error: null });
     try {
       const updated = await tasksService.updateStatus(id, newStatus);
       set((state) => ({
         tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails
+        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   updateTaskNotes: async (id, notes) => {
+    set({ isLoading: true, error: null });
     try {
       const updated = await tasksService.updateNotes(id, notes);
       set((state) => ({
         tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails
+        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   addAttachment: async (id, file) => {
+    set({ isLoading: true, error: null });
     try {
       const updated = await tasksService.addAttachment(id, file);
       set((state) => ({
         tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails
+        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   deleteAttachment: async (id, fileName) => {
+    set({ isLoading: true, error: null });
     try {
       const updated = await tasksService.deleteAttachment(id, fileName);
       set((state) => ({
         tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails
+        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   }
 }));

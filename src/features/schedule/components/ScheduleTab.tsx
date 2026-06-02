@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Download, Copy, Plus, AlertCircle, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { useScheduleStore } from '../../../stores/useScheduleStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
 
@@ -10,6 +11,7 @@ export default function ScheduleTab() {
   // Zustand State subscriptions
   const {
     shifts,
+    isLoading,
     scheduleTeamMode,
     scheduleSearchQuery,
     scheduleRoleFilter,
@@ -51,18 +53,22 @@ export default function ScheduleTab() {
       status: newShiftStatus
     };
     
-    await saveShift(newShiftObj);
-    setIsCreateShiftModalOpen(false);
-    alert(`Đã điều phối ca trực thành công cho ${newShiftStaffName}!`);
+    try {
+      await saveShift(newShiftObj);
+      setIsCreateShiftModalOpen(false);
+      toast.success(`Đã điều phối ca trực thành công cho ${newShiftStaffName}.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lập ca trực.');
+    }
   };
 
   const exportSchedule = () => {
-    alert('Đã xuất lịch làm việc dạng báo cáo Excel (XLSX) thành công!');
+    toast.success('Đã xuất lịch làm việc dạng báo cáo Excel (XLSX) thành công.');
   };
 
   const copyScheduleLink = () => {
     navigator.clipboard.writeText(window.location.href);
-    alert('Đã sao chép liên kết chia sẻ lịch tuần này vào bộ nhớ tạm!');
+    toast.success('Đã sao chép liên kết chia sẻ lịch tuần này vào bộ nhớ tạm.');
   };
 
   return (
@@ -152,7 +158,7 @@ export default function ScheduleTab() {
             <button 
               onClick={() => {
                 setScheduleTeamMode('my');
-                alert('Đang lọc ca cá nhân của người dùng hiện tại!');
+                toast.info('Đang lọc ca cá nhân của người dùng hiện tại.');
               }}
               className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
                 scheduleTeamMode === 'my' ? 'bg-white text-[#004ac6] shadow-sm' : 'text-slate-500 hover:text-slate-800'
@@ -165,9 +171,9 @@ export default function ScheduleTab() {
 
           {/* Week selector card UI */}
           <div className="flex items-center gap-1.5 bg-[#f3f3fe] border border-outline-variant px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700">
-            <button type="button" onClick={() => alert('Chuyển sang tuần trước!')} className="hover:text-[#004ac6] transition-colors"><ChevronLeft className="w-4 h-4 cursor-pointer" /></button>
+            <button type="button" onClick={() => toast.info('Chuyển sang tuần trước.')} className="hover:text-[#004ac6] transition-colors"><ChevronLeft className="w-4 h-4 cursor-pointer" /></button>
             <span className="px-1 font-mono">12/10 - 18/10</span>
-            <button type="button" onClick={() => alert('Chuyển sang tuần sau!')} className="hover:text-[#004ac6] transition-colors"><ChevronRight className="w-4 h-4 cursor-pointer" /></button>
+            <button type="button" onClick={() => toast.info('Chuyển sang tuần sau.')} className="hover:text-[#004ac6] transition-colors"><ChevronRight className="w-4 h-4 cursor-pointer" /></button>
           </div>
         </div>
 
@@ -300,7 +306,7 @@ export default function ScheduleTab() {
                                           setSelectedUserProfileUser(staffUser);
                                           navigate('/users');
                                         } else {
-                                          alert('Dữ liệu nhân sự chi tiết sẽ được tải vào hồ sơ!');
+                                          toast.info('Dữ liệu nhân sự chi tiết sẽ được tải vào hồ sơ.');
                                         }
                                       }}
                                       className="text-[9px] text-[#004ac6] font-bold hover:underline cursor-pointer"
@@ -420,9 +426,10 @@ export default function ScheduleTab() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#004ac6] hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-[#004ac6] hover:bg-primary-container text-white rounded-lg text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Plus className="w-4 h-4" /> Lập ca trực
+                  <Plus className="w-4 h-4" /> {isLoading ? 'Đang lập...' : 'Lập ca trực'}
                 </button>
               </div>
             </form>

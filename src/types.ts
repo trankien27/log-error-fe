@@ -1,6 +1,7 @@
 export interface ErrorLog {
   id: string;
   title: string;
+  description?: string;
   reporter: string;
   reportTime: string;
   store: string;

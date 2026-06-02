@@ -1,14 +1,25 @@
 import React from 'react';
 import { Send, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useNotificationStore } from '../../../stores/useNotificationStore';
 
 export default function NotificationsTab() {
   const {
     notifications,
+    isLoading,
     setIsNotificationModalOpen,
     toggleReadState,
     setSelectedNotification
   } = useNotificationStore();
+
+  const handleToggleReadState = async (id: string) => {
+    try {
+      await toggleReadState(id);
+      toast.success('Đã cập nhật trạng thái đọc.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể cập nhật thông báo.');
+    }
+  };
 
   return (
     <div className="space-y-6 text-left animate-fadeIn">
@@ -20,6 +31,7 @@ export default function NotificationsTab() {
         </div>
         <button
           onClick={() => setIsNotificationModalOpen(true)}
+          disabled={isLoading}
           className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
         >
           <Send className="w-4 h-4" /> Gửi thông báo
@@ -29,12 +41,16 @@ export default function NotificationsTab() {
       {/* Simple helper tabs filter */}
       <div className="flex gap-2 p-1 bg-white border border-outline-variant rounded-xl shadow-sm w-fit font-sans">
         <button className="px-4 py-1.5 bg-[#d0e1fb] text-[#00174b] text-xs font-bold rounded-lg pointer-events-none">Tất cả thông báo</button>
-        <button className="px-4 py-1.5 text-gray-500 hover:bg-slate-50 text-xs font-medium rounded-lg cursor-pointer" onClick={() => alert(`Có ${notifications.filter(n => !n.isRead).length} thông báo chưa đọc.`)}>Chưa đọc ({notifications.filter(n => !n.isRead).length})</button>
+        <button className="px-4 py-1.5 text-gray-500 hover:bg-slate-50 text-xs font-medium rounded-lg cursor-pointer" onClick={() => toast.info(`Có ${notifications.filter(n => !n.isRead).length} thông báo chưa đọc.`)}>Chưa đọc ({notifications.filter(n => !n.isRead).length})</button>
       </div>
 
       {/* Notification list block */}
       <div className="space-y-4">
-        {notifications.length === 0 ? (
+        {isLoading ? (
+          <p className="text-center font-sans font-bold text-gray-400 py-12 bg-white rounded-xl border">
+            Đang tải thông báo...
+          </p>
+        ) : notifications.length === 0 ? (
           <p className="text-center font-sans font-bold text-gray-400 py-12 bg-white rounded-xl border">
             Không có thông báo nào trong hệ thống.
           </p>
@@ -44,7 +60,7 @@ export default function NotificationsTab() {
               key={notif.id}
               onClick={() => {
                 if (!notif.isRead) {
-                  toggleReadState(notif.id);
+                  handleToggleReadState(notif.id);
                 }
                 setSelectedNotification(notif);
               }}
@@ -87,7 +103,7 @@ export default function NotificationsTab() {
 
                   <span className="text-[10px] text-gray-400 hover:underline cursor-pointer ml-auto font-sans" onClick={(e) => {
                     e.stopPropagation();
-                    toggleReadState(notif.id);
+                    handleToggleReadState(notif.id);
                   }}>
                     {notif.isRead ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'}
                   </span>

@@ -75,6 +75,7 @@ export const useUsersStore = create<UsersState>((set, get) => ({
   },
 
   saveUser: async (userData) => {
+    set({ isLoading: true, error: null });
     try {
       const savedUser = await usersService.saveUser(userData);
       set((state) => {
@@ -86,36 +87,42 @@ export const useUsersStore = create<UsersState>((set, get) => ({
         // Also update selected profile if it is the edited user
         const updatedProfile = state.selectedUserProfileUser?.id === savedUser.id ? savedUser : state.selectedUserProfileUser;
 
-        return { users: updatedUsers, selectedUserProfileUser: updatedProfile };
+        return { users: updatedUsers, selectedUserProfileUser: updatedProfile, isLoading: false };
       });
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   deleteUser: async (id) => {
+    set({ isLoading: true, error: null });
     try {
       await usersService.deleteUser(id);
       set((state) => ({
         users: state.users.filter(u => u.id !== id),
-        selectedUserProfileUser: state.selectedUserProfileUser?.id === id ? null : state.selectedUserProfileUser
+        selectedUserProfileUser: state.selectedUserProfileUser?.id === id ? null : state.selectedUserProfileUser,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   saveRole: async (role, isEdit) => {
+    set({ isLoading: true, error: null });
     try {
       const savedRole = await usersService.saveRole(role, isEdit);
       set((state) => {
         const updatedRoles = isEdit
           ? state.roles.map(r => r.name === savedRole.name ? savedRole : r)
           : [...state.roles, savedRole];
-        return { roles: updatedRoles };
+        return { roles: updatedRoles, isLoading: false };
       });
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 

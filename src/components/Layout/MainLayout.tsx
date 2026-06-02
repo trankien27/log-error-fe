@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 /// <reference types="react" />
 import { Outlet } from 'react-router-dom';
 import { Bell, Clock, CheckCircle, Check, Trash2, Users, Send } from 'lucide-react';
+import { toast } from 'sonner';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
 import { useNotificationStore } from '../../stores/useNotificationStore';
@@ -19,7 +20,8 @@ export default function MainLayout() {
     setSelectedNotification,
     toggleReadState,
     deleteNotification,
-    sendBroadcast 
+    sendBroadcast,
+    isLoading
   } = useNotificationStore();
 
   const { users, fetchUsersAndRoles } = useUsersStore();
@@ -48,23 +50,52 @@ export default function MainLayout() {
   const handleSendNotification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!notifTitle.trim() || !notifContent.trim()) {
-      alert('Vui lòng nhập tối thiểu Tiêu đề và Nội dung thông báo.');
+      toast.error('Vui lòng nhập tối thiểu Tiêu đề và Nội dung thông báo.');
       return;
     }
 
     if (!notifAllUsers && notifSelectedUsers.length === 0) {
-      alert('Vui lòng chọn ít nhất một người nhận hoặc chọn Thông báo toàn thể.');
+      toast.error('Vui lòng chọn ít nhất một người nhận hoặc chọn Thông báo toàn thể.');
       return;
     }
 
     const audience = notifAllUsers ? 'Toàn thể user' : notifSelectedUsers.join(', ');
-    await sendBroadcast(notifTitle, notifContent, notifClass, notifTag, audience);
-    
-    setIsNotificationModalOpen(false);
-    setNotifTitle('');
-    setNotifContent('');
-    setNotifAllUsers(true);
-    setNotifSelectedUsers([]);
+    try {
+      await sendBroadcast(notifTitle, notifContent, notifClass, notifTag, audience);
+      toast.success('Đã gửi thông báo.');
+      setIsNotificationModalOpen(false);
+      setNotifTitle('');
+      setNotifContent('');
+      setNotifAllUsers(true);
+      setNotifSelectedUsers([]);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể gửi thông báo.');
+    }
+  };
+
+  const handleToggleReadState = async (id: string) => {
+    try {
+      await toggleReadState(id);
+      toast.success('Đã cập nhật trạng thái đọc.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể cập nhật thông báo.');
+    }
+  };
+
+  const handleDeleteNotification = (id: string) => {
+    toast.warning('Xóa thông báo này khỏi lịch sử hệ thống?', {
+      action: {
+        label: 'Xóa',
+        onClick: async () => {
+          try {
+            await deleteNotification(id);
+            toast.success('Đã xóa thông báo.');
+          } catch (err: any) {
+            toast.error(err.message || 'Không thể xóa thông báo.');
+          }
+        },
+      },
+    });
   };
 
   return (
@@ -154,7 +185,8 @@ export default function MainLayout() {
 
               <div className="flex items-center justify-between pt-4 border-t border-[#e2e8f0]">
                 <button
-                  onClick={() => toggleReadState(selectedNotification.id)}
+                  onClick={() => handleToggleReadState(selectedNotification.id)}
+                  disabled={isLoading}
                   className={`flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg border transition-all select-none cursor-pointer ${
                     selectedNotification.isRead
                       ? 'border-primary/30 text-primary bg-primary/5 hover:bg-primary/10'
@@ -174,12 +206,9 @@ export default function MainLayout() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      if (confirm('Bạn có chắc chắn muốn xóa thông báo này khỏi lịch sử hệ thống?')) {
-                        deleteNotification(selectedNotification.id);
-                      }
-                    }}
-                    className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                    onClick={() => handleDeleteNotification(selectedNotification.id)}
+                    disabled={isLoading}
+                    className="flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-4 h-4" /> Xóa bản tin
                   </button>
@@ -342,9 +371,10 @@ export default function MainLayout() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container flex items-center gap-1.5 cursor-pointer"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-4 h-4" /> Gửi thông báo ngay
+                  <Send className="w-4 h-4" /> {isLoading ? 'Đang gửi...' : 'Gửi thông báo ngay'}
                 </button>
               </div>
             </form>

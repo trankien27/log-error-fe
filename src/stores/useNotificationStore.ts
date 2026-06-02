@@ -43,6 +43,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   sendBroadcast: async (title, content, type, tag, audience) => {
+    set({ isLoading: true, error: null });
     try {
       const newNotif = await notificationsService.create({
         title,
@@ -51,34 +52,41 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         tagName: audience,
         tagType: type === 'warning' ? 'Urgent' : 'Info'
       });
-      set((state) => ({ notifications: [newNotif, ...state.notifications] }));
+      set((state) => ({ notifications: [newNotif, ...state.notifications], isLoading: false }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   toggleReadState: async (id) => {
+    set({ isLoading: true, error: null });
     try {
       const updated = await notificationsService.toggleReadState(id);
       set((state) => ({
         notifications: state.notifications.map(n => n.id === id ? updated : n),
         // Update selected detail if currently viewing
-        selectedNotification: state.selectedNotification?.id === id ? updated : state.selectedNotification
+        selectedNotification: state.selectedNotification?.id === id ? updated : state.selectedNotification,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   deleteNotification: async (id) => {
+    set({ isLoading: true, error: null });
     try {
       await notificationsService.delete(id);
       set((state) => ({
         notifications: state.notifications.filter(n => n.id !== id),
-        selectedNotification: state.selectedNotification?.id === id ? null : state.selectedNotification
+        selectedNotification: state.selectedNotification?.id === id ? null : state.selectedNotification,
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   }
 }));

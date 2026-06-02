@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Clock, Paperclip, CheckCircle, Edit2, Trash2, X, Paperclip as PaperclipIcon, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTasksStore } from '../../../stores/useTasksStore';
 import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
 import { Task, TaskAttachment } from '../../../types';
@@ -7,6 +8,7 @@ import { Task, TaskAttachment } from '../../../types';
 export default function TasksTab() {
   const {
     tasks,
+    isLoading,
     saveTask,
     updateTaskStatus,
     updateTaskNotes,
@@ -59,7 +61,7 @@ export default function TasksTab() {
   const handleSaveTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskTitle.trim()) {
-      alert('Vui lòng điền tiêu đề công việc.');
+      toast.error('Vui lòng điền tiêu đề công việc.');
       return;
     }
 
@@ -73,12 +75,18 @@ export default function TasksTab() {
       notes: currentEditingTask?.notes || ''
     };
 
-    if (currentEditingTask) {
-      await saveTask({ ...payload, id: currentEditingTask.id });
-    } else {
-      await saveTask(payload);
+    try {
+      if (currentEditingTask) {
+        await saveTask({ ...payload, id: currentEditingTask.id });
+        toast.success('Cập nhật tác vụ thành công.');
+      } else {
+        await saveTask(payload);
+        toast.success('Tạo tác vụ thành công.');
+      }
+      setIsTaskModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lưu tác vụ.');
     }
-    setIsTaskModalOpen(false);
   };
 
   const handleAddAttachmentClick = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,17 +103,48 @@ export default function TasksTab() {
     };
 
     if (selectedTaskDetails) {
-      await addAttachment(selectedTaskDetails.id, newFile);
+      try {
+        await addAttachment(selectedTaskDetails.id, newFile);
+        toast.success('Đã thêm tệp đính kèm.');
+      } catch (err: any) {
+        toast.error(err.message || 'Không thể thêm tệp đính kèm.');
+      }
     } else {
       setTaskAttachments(prev => [...prev, newFile]);
+      toast.success('Đã thêm tệp vào form.');
     }
   };
 
   const handleDeleteAttachmentClick = async (fileName: string) => {
     if (selectedTaskDetails) {
-      await deleteAttachment(selectedTaskDetails.id, fileName);
+      try {
+        await deleteAttachment(selectedTaskDetails.id, fileName);
+        toast.success('Đã xóa tệp đính kèm.');
+      } catch (err: any) {
+        toast.error(err.message || 'Không thể xóa tệp đính kèm.');
+      }
     } else {
       setTaskAttachments(prev => prev.filter(att => att.name !== fileName));
+      toast.success('Đã xóa tệp khỏi form.');
+    }
+  };
+
+  const handleUpdateTaskStatus = async (id: string, status: 'pending' | 'progress' | 'done') => {
+    try {
+      await updateTaskStatus(id, status);
+      toast.success('Đã cập nhật trạng thái tác vụ.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể cập nhật trạng thái.');
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedTaskDetails) return;
+    try {
+      await updateTaskNotes(selectedTaskDetails.id, taskNotesInput);
+      toast.success('Đã lưu ghi chú.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lưu ghi chú.');
     }
   };
 
@@ -204,7 +243,8 @@ export default function TasksTab() {
                     
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => updateTaskStatus(task.id, 'progress')}
+                        onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
+                        disabled={isLoading}
                         className="text-[10px] border border-blue-200 text-[#004ac6] hover:bg-blue-50 px-2 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
                       >
                         Bắt đầu &rarr;
@@ -295,13 +335,15 @@ export default function TasksTab() {
                     
                     <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => updateTaskStatus(task.id, 'pending')}
+                        onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                        disabled={isLoading}
                         className="text-[10px] text-gray-400 hover:text-gray-600 font-medium cursor-pointer"
                       >
                         Hoãn
                       </button>
                       <button
-                        onClick={() => updateTaskStatus(task.id, 'done')}
+                        onClick={() => handleUpdateTaskStatus(task.id, 'done')}
+                        disabled={isLoading}
                         className="text-[10px] bg-emerald-600 text-white font-bold hover:bg-emerald-700 px-2 py-1 rounded whitespace-nowrap shadow-sm active:scale-95 transition-transform cursor-pointer"
                       >
                         Đã xong &check;
@@ -378,7 +420,8 @@ export default function TasksTab() {
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => updateTaskStatus(task.id, 'progress')}
+                        onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
+                        disabled={isLoading}
                         className="text-[10px] border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 px-1.5 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
                       >
                         Mở lại
@@ -497,9 +540,10 @@ export default function TasksTab() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Lưu tác vụ
+                  {isLoading ? 'Đang lưu...' : 'Lưu tác vụ'}
                 </button>
               </div>
             </form>
@@ -592,12 +636,11 @@ export default function TasksTab() {
                 />
                 <div className="flex justify-end">
                   <button
-                    onClick={() => {
-                      updateTaskNotes(selectedTaskDetails.id, taskNotesInput);
-                    }}
-                    className="bg-[#004ac6] hover:bg-primary-container text-white text-[11px] font-bold px-3.5 py-1.5 rounded-lg shadow-sm cursor-pointer select-none active:scale-95 transition-transform"
+                    onClick={handleSaveNotes}
+                    disabled={isLoading}
+                    className="bg-[#004ac6] hover:bg-primary-container text-white text-[11px] font-bold px-3.5 py-1.5 rounded-lg shadow-sm cursor-pointer select-none active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Lưu ghi chú
+                    {isLoading ? 'Đang lưu...' : 'Lưu ghi chú'}
                   </button>
                 </div>
               </div>

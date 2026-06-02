@@ -32,7 +32,8 @@ export default function TopHeader() {
     if (location.pathname === '/booths') return boothSearch;
     return '';
   };
-
+  const currentUser = useAuthStore(s => s.currentUser);
+  
   const setSearchQuery = (query: string) => {
     useLogsStore.getState().setSearchQuery(query);
     useUsersStore.getState().setSearchQuery(query);
@@ -59,6 +60,14 @@ export default function TopHeader() {
   }, [isQuickNotifModalOpen]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+  const displayName = currentUser?.name || currentUser?.email || 'Người dùng';
+  const avatarInitials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(-2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase();
 
   const handleLogoutClick = () => {
     logout();
@@ -253,12 +262,18 @@ export default function TopHeader() {
         </button>
 
         <div className="flex items-center gap-2 pl-1">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJxIxM-pTaq-TrY6WNyhAKjLFP2Es54BgSU2qI5i13RoIkH50fE93ywO2E0I_7dwtlyIQsfmiEDHmuqhOmO7kf4gXGSOa0RzX8K9DS9IvUvIiJkEdzFPiR_uD5CBuyEy5sZEL_vd-X1B8Jkbk11HNQpa8ORFqQFbZTCAoZClWjZAQcA_G2DP-I4CbQA1Q1fY4oHRK-U-eeSN4dFf35awAUhqzBxKD80S1ZLBAvULgZylMmBhqKrhW-r6NycH9rf2ASb9mVIT2zemA"
-            alt="Profile Avatar"
-            className="w-8 h-8 rounded-full border border-outline-variant object-cover hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-          />
-          <span className="text-xs font-semibold text-[#191b23] hidden md:inline">Admin User</span>
+          {currentUser?.avatar ? (
+            <img
+              src={currentUser.avatar}
+              alt="Profile Avatar"
+              className="w-8 h-8 rounded-full border border-outline-variant object-cover hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full border border-outline-variant bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black hover:ring-2 hover:ring-primary transition-all cursor-pointer">
+              {avatarInitials || 'U'}
+            </div>
+          )}
+          <span className="text-xs font-semibold text-[#191b23] hidden md:inline">{displayName}</span>
         </div>
       </div>
     </header>

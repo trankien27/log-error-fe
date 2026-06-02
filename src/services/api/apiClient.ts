@@ -1,5 +1,7 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:7000').replace(/\/$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://localhost:7168').replace(/\/$/, '');
 export const AUTH_TOKEN_KEY = 'auth_token';
+export const REFRESH_TOKEN_KEY = 'refresh_token';
+export const AUTH_USER_KEY = 'auth_user';
 
 type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;

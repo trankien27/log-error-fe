@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowUp, AlertTriangle, ClipboardList, Users, Store, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { useTasksStore } from '../../../stores/useTasksStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
@@ -222,7 +223,7 @@ export default function OverviewTab() {
         <div className="px-5 py-4 border-b border-outline-variant flex justify-between items-center bg-gray-50">
           <h3 className="text-sm font-bold text-[#191b23]">Hoạt động gần đây</h3>
           <button 
-            onClick={() => alert('Tất cả lịch sử tác vụ đã được đồng bộ chuẩn chỉnh.')} 
+            onClick={() => toast.info('Tất cả lịch sử tác vụ đã được đồng bộ chuẩn chỉnh.')} 
             className="text-xs font-bold text-[#004ac6] hover:underline cursor-pointer"
           >
             Xem tất cả &rarr;

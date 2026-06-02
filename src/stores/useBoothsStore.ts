@@ -51,27 +51,32 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
   },
 
   saveBooth: async (booth, isEdit) => {
+    set({ isLoading: true, error: null });
     try {
       const savedBooth = await boothsService.save(booth, isEdit);
       set((state) => {
         const updated = isEdit
           ? state.booths.map(b => b.id === savedBooth.id ? savedBooth : b)
           : [...state.booths, savedBooth];
-        return { booths: updated };
+        return { booths: updated, isLoading: false };
       });
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 
   deleteBooth: async (id) => {
+    set({ isLoading: true, error: null });
     try {
       await boothsService.delete(id);
       set((state) => ({
-        booths: state.booths.filter(b => b.id !== id)
+        booths: state.booths.filter(b => b.id !== id),
+        isLoading: false
       }));
     } catch (err: any) {
-      set({ error: err.message });
+      set({ error: err.message, isLoading: false });
+      throw err;
     }
   },
 

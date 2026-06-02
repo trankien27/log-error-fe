@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User } from '../types';
 import { authService } from '../services/api/authService';
+import { AUTH_TOKEN_KEY, AUTH_USER_KEY } from '../services/api/apiClient';
 
 interface AuthState {
   isLoggedIn: boolean;
@@ -29,9 +30,18 @@ interface AuthState {
   resetSecurityForm: () => void;
 }
 
+function getStoredUser(): User | null {
+  try {
+    const user = localStorage.getItem(AUTH_USER_KEY);
+    return user ? JSON.parse(user) : null;
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
-  isLoggedIn: false,
-  currentUser: null,
+  isLoggedIn: Boolean(localStorage.getItem(AUTH_TOKEN_KEY)),
+  currentUser: getStoredUser(),
   authMode: 'login',
   isLoading: false,
   error: null,
@@ -58,7 +68,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   register: async (name, email, password) => {
     set({ isLoading: true, error: null });
     try {
-      const user = await authService.register(name, email, password);
+      const [firstName, ...lastNameParts] = name.trim().split(/\s+/);
+      const user = await authService.register(firstName, lastNameParts.join(' '), email, password);
       set({ isLoggedIn: true, currentUser: user, isLoading: false });
       return user;
     } catch (err: any) {

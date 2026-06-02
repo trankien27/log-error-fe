@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { Role } from '../../../types';
 
 export default function RolesTab() {
   const {
     roles,
+    isLoading,
     isRoleModalOpen,
     setIsRoleModalOpen,
     currentEditingRole,
@@ -36,7 +38,7 @@ export default function RolesTab() {
   const handleSaveRoleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roleName.trim() || !roleDesc.trim()) {
-      alert('Vui lòng điền đủ tên vai trò và mô tả.');
+      toast.error('Vui lòng điền đủ tên vai trò và mô tả.');
       return;
     }
 
@@ -47,8 +49,13 @@ export default function RolesTab() {
       userCount: currentEditingRole?.userCount || 0
     };
 
-    await saveRole(payload, !!currentEditingRole);
-    setIsRoleModalOpen(false);
+    try {
+      await saveRole(payload, !!currentEditingRole);
+      toast.success(currentEditingRole ? 'Cập nhật vai trò thành công.' : 'Thêm vai trò thành công.');
+      setIsRoleModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lưu vai trò.');
+    }
   };
 
   return (
@@ -210,9 +217,10 @@ export default function RolesTab() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Lưu dữ liệu
+                  {isLoading ? 'Đang lưu...' : 'Lưu dữ liệu'}
                 </button>
               </div>
             </form>

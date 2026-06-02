@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { toast } from 'sonner';
 import {
   Users as UsersIcon,
   Camera,
@@ -26,6 +27,7 @@ export default function UsersTab() {
     users,
     searchQuery,
     userRoleFilter,
+    isLoading,
     selectedUserProfileUser,
     isUserModalOpen,
     currentEditingUser,
@@ -83,7 +85,7 @@ export default function UsersTab() {
   const handleSaveUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userName.trim() || !userEmail.trim()) {
-      alert('Vui lòng điền đủ tên và địa chỉ email.');
+      toast.error('Vui lòng điền đủ tên và địa chỉ email.');
       return;
     }
 
@@ -94,34 +96,54 @@ export default function UsersTab() {
       status: userStatus
     };
 
-    if (currentEditingUser) {
-      await saveUser({ ...payload, id: currentEditingUser.id });
-    } else {
-      await saveUser(payload);
+    try {
+      if (currentEditingUser) {
+        await saveUser({ ...payload, id: currentEditingUser.id });
+        toast.success('Cập nhật người dùng thành công.');
+      } else {
+        await saveUser(payload);
+        toast.success('Thêm người dùng thành công.');
+      }
+      setIsUserModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể lưu người dùng.');
     }
-    setIsUserModalOpen(false);
   };
 
   const handleDeleteUserClick = async (id: string) => {
-    if (confirm(`Bạn chắc chắn muốn loại bỏ người dùng này không? ID: ${id}`)) {
-      await deleteUser(id);
-    }
+    toast.warning(`Xóa người dùng ${id}?`, {
+      action: {
+        label: 'Xóa',
+        onClick: async () => {
+          try {
+            await deleteUser(id);
+            toast.success('Đã xóa người dùng.');
+          } catch (err: any) {
+            toast.error(err.message || 'Không thể xóa người dùng.');
+          }
+        },
+      },
+    });
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUserProfileUser) return;
     
-    await saveUser({
-      id: selectedUserProfileUser.id,
-      name: profileName,
-      email: selectedUserProfileUser.email,
-      role: profileRole,
-      status: selectedUserProfileUser.status,
-      phone: profilePhone,
-      department: profileDept
-    });
-    alert('Cập nhật thông tin hồ sơ thành công!');
+    try {
+      await saveUser({
+        id: selectedUserProfileUser.id,
+        name: profileName,
+        email: selectedUserProfileUser.email,
+        role: profileRole,
+        status: selectedUserProfileUser.status,
+        phone: profilePhone,
+        department: profileDept
+      });
+      toast.success('Cập nhật thông tin hồ sơ thành công.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể cập nhật hồ sơ.');
+    }
   };
 
   return (
@@ -162,7 +184,7 @@ export default function UsersTab() {
               </div>
             )}
             <div 
-              onClick={() => alert('Thay đổi ảnh đại diện sẽ được hỗ trợ trong phiên bản kết nối Cloud Storage!')}
+              onClick={() => toast.info('Thay đổi ảnh đại diện sẽ được hỗ trợ trong phiên bản kết nối Cloud Storage.')}
               className="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
             >
               <Camera className="w-4 h-4 mb-0.5" />
@@ -284,10 +306,11 @@ export default function UsersTab() {
                 </button>
                 <button 
                   type="submit"
-                  className="px-5 py-2 bg-[#004ac6] text-white hover:bg-primary-container rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  disabled={isLoading}
+                  className="px-5 py-2 bg-[#004ac6] text-white hover:bg-primary-container rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Lưu thay đổi</span>
+                  <span>{isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                 </button>
               </div>
             </form>
@@ -422,7 +445,13 @@ export default function UsersTab() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f1f5f9]">
-                {filteredUsers.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
+                      Đang tải dữ liệu người dùng...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
                       Không tìm thấy nhân viên nào khớp với điều kiện lọc.
@@ -515,7 +544,7 @@ export default function UsersTab() {
             <div className="flex gap-1 select-none">
               <button className="px-3 py-1 border border-outline-variant hover:bg-white text-[11px] rounded transition-all cursor-pointer">Trước</button>
               <button className="px-3 py-1 border border-primary bg-primary text-white text-[11px] rounded font-bold cursor-pointer">1</button>
-              <button className="px-3 py-1 border border-outline-variant hover:bg-white text-[11px] rounded cursor-pointer" onClick={() => alert('Tất cả địa chỉ thư mục đã được đồng bộ hóa!')}>Sau</button>
+              <button className="px-3 py-1 border border-outline-variant hover:bg-white text-[11px] rounded cursor-pointer" onClick={() => toast.info('Tất cả địa chỉ thư mục đã được đồng bộ hóa.')}>Sau</button>
             </div>
           </div>
         </div>
@@ -589,9 +618,10 @@ export default function UsersTab() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer"
+                    disabled={isLoading}
+                    className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Xác nhận
+                    {isLoading ? 'Đang lưu...' : 'Xác nhận'}
                   </button>
                 </div>
               </form>
