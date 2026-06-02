@@ -8,6 +8,7 @@ import { useUsersStore } from '../../../stores/useUsersStore';
 import { useBoothsStore } from '../../../stores/useBoothsStore';
 import { Activity } from '../../../types';
 import { activitiesService } from '../../../services/api/activitiesService';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function OverviewTab() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ export default function OverviewTab() {
   const { tasks } = useTasksStore();
   const { users } = useUsersStore();
   const { booths } = useBoothsStore();
+  const currentUser = useAuthStore(s => s.currentUser);
 
   // Calculations for dashboard
   const totalLogs = logs.length;
@@ -40,7 +42,7 @@ export default function OverviewTab() {
       {/* Top Banner with Local Info */}
       <div className="bg-gradient-to-r from-[#004ac6] to-[#2563eb] text-white p-6 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm animate-fadeIn">
         <div>
-          <h2 className="text-xl font-bold font-sans">Xin chào, Admin User!</h2>
+          <h2 className="text-xl font-bold font-sans">Xin chào, {currentUser?.name}!</h2>
           <p className="text-xs text-white/80 mt-1">Hệ thống ghi nhận hoạt động trơn tru. Có {overdueTasksCount} công việc quá hạn cần lưu tâm.</p>
         </div>
         <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg border border-white/20 select-none">
