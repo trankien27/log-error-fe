@@ -1,114 +1,90 @@
-import { ErrorLog } from '../../types';
-import { apiClient } from './apiClient';
+import { ErrorGroup, ErrorLog, ErrorLogStatus, ProcessingFlow, Severity } from '../../types';
+import { apiClient, API_BASE_URL, AUTH_TOKEN_KEY } from './apiClient';
 
-type BackendErrorLogStatus = 'Open' | 'InProgress' | 'Resolved' | 'Closed';
-
-type BackendErrorLog = {
-  id: string;
-  name?: string;
-  title?: string;
-  errorDate?: string;
-  reportTime?: string;
-  store: string;
-  booth: string;
-  description?: string;
-  reporterId?: string;
-  reporterName?: string;
-  reporter?: string;
-  status?: BackendErrorLogStatus;
-  severity?: ErrorLog['severity'];
-  attachment?: boolean;
+export type ErrorLogQuery = {
+  status?: ErrorLogStatus;
+  month?: number;
+  store?: string;
+  errorGroup?: ErrorGroup;
+  severity?: Severity;
 };
 
-type ErrorLogPayload = {
-  name: string;
-  errorDate: string;
+export type ErrorLogPayload = {
+  receivedDate: string;
   store: string;
-  booth: string;
+  errorGroup: ErrorGroup;
   description: string;
-  reporterId?: string;
+  processingFlow: ProcessingFlow;
+  preliminaryCause?: string;
+  solution?: string;
+  severity: Severity;
+  assignedToId: string;
+  note?: string;
+  status?: ErrorLogStatus;
 };
 
-const statusToBackend: Record<ErrorLog['status'], BackendErrorLogStatus> = {
-  'Mới': 'Open',
-  'Đang xử lý': 'InProgress',
-  'Đã đóng': 'Closed',
-};
+function buildQuery(params: ErrorLogQuery = {}) {
+  const searchParams = new URLSearchParams();
 
-const statusFromBackend: Record<BackendErrorLogStatus, ErrorLog['status']> = {
-  Open: 'Mới',
-  InProgress: 'Đang xử lý',
-  Resolved: 'Đã đóng',
-  Closed: 'Đã đóng',
-};
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
 
-function toErrorLog(log: BackendErrorLog): ErrorLog {
-  const title = log.name || log.title || log.description || '';
-
-  return {
-    id: log.id,
-    title,
-    description: log.description || title,
-    reporter: log.reporterName || log.reporter || log.reporterId || 'N/A',
-    reportTime: log.errorDate || log.reportTime || '',
-    store: log.store,
-    booth: log.booth,
-    attachment: log.attachment ?? false,
-    status: log.status ? statusFromBackend[log.status] : 'Mới',
-    severity: log.severity || 'Cảnh báo',
-  };
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
 }
 
-function toPayload(log: Partial<ErrorLog>): ErrorLogPayload {
-  return {
-    name: log.title || '',
-    errorDate: log.reportTime || new Date().toISOString(),
-    store: log.store || '',
-    booth: log.booth || '',
-    description: log.description || log.title || '',
-  };
+function getFileName(response: Response) {
+  const contentDisposition = response.headers.get('Content-Disposition');
+  const match = contentDisposition?.match(/filename\*?=(?:UTF-8'')?["']?([^"';]+)["']?/i);
+  return match ? decodeURIComponent(match[1]) : 'BaoCaoLoi.xlsx';
 }
 
 export const logsService = {
-  getAll: async (status?: BackendErrorLogStatus): Promise<ErrorLog[]> => {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    const logs = await apiClient.get<BackendErrorLog[]>(`/api/error-logs${query}`);
-    return logs.map(toErrorLog);
+  getAll: async (query?: ErrorLogQuery): Promise<ErrorLog[]> => {
+    return apiClient.get<ErrorLog[]>(`/api/error-logs${buildQuery(query)}`);
   },
 
-  create: async (log: Omit<ErrorLog, 'id' | 'reportTime'>): Promise<ErrorLog> => {
-    const createdLog = await apiClient.post<BackendErrorLog>('/api/error-logs', toPayload(log));
-
-    if (log.status && log.status !== 'Mới') {
-      const updatedLog = await apiClient.patch<BackendErrorLog>(
-        `/api/error-logs/${encodeURIComponent(createdLog.id)}/status`,
-        { status: statusToBackend[log.status] }
-      );
-      return toErrorLog(updatedLog);
-    }
-
-    return toErrorLog(createdLog);
+  create: async (log: ErrorLogPayload): Promise<ErrorLog> => {
+    const { status, ...createPayload } = log;
+    return apiClient.post<ErrorLog>('/api/error-logs', createPayload);
   },
 
-  update: async (id: string, updatedFields: Partial<ErrorLog>): Promise<ErrorLog> => {
-    const updatedLog = await apiClient.put<BackendErrorLog>(
-      `/api/error-logs/${encodeURIComponent(id)}`,
-      toPayload(updatedFields)
-    );
+  update: async (id: string, log: ErrorLogPayload): Promise<ErrorLog> => {
+    return apiClient.put<ErrorLog>(`/api/error-logs/${encodeURIComponent(id)}`, log);
+  },
 
-    if (updatedFields.status) {
-      const statusLog = await apiClient.patch<BackendErrorLog>(
-        `/api/error-logs/${encodeURIComponent(id)}/status`,
-        { status: statusToBackend[updatedFields.status] }
-      );
-      return toErrorLog(statusLog);
-    }
-
-    return toErrorLog(updatedLog);
+  updateStatus: async (id: string, status: ErrorLogStatus): Promise<ErrorLog> => {
+    return apiClient.patch<ErrorLog>(`/api/error-logs/${encodeURIComponent(id)}/status`, { status });
   },
 
   delete: async (id: string): Promise<boolean> => {
     await apiClient.delete<void>(`/api/error-logs/${encodeURIComponent(id)}`);
     return true;
-  }
+  },
+
+  exportExcel: async (query?: ErrorLogQuery): Promise<{ blob: Blob; fileName: string }> => {
+    const headers = new Headers();
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/error-logs/export${buildQuery(query)}`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Không thể xuất file Excel. Status: ${response.status}`);
+    }
+
+    return {
+      blob: await response.blob(),
+      fileName: getFileName(response),
+    };
+  },
 };

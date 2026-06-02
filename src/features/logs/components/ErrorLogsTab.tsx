@@ -1,74 +1,182 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Download, Edit2, Eye, Plus, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
-import { ErrorLog } from '../../../types';
+import { ErrorGroup, ErrorLog, ErrorLogStatus, Severity } from '../../../types';
+
+const errorGroupLabels: Record<ErrorGroup, string> = {
+  1: 'Phần cứng',
+  2: 'Phần mềm',
+  3: 'Khác',
+};
+
+const statusLabels: Record<ErrorLogStatus, string> = {
+  1: 'Đang xử lý',
+  2: 'Đã gửi Dev',
+  3: 'Theo dõi sau xử lý',
+};
+
+const severityLabels: Record<Severity, string> = {
+  1: 'Thấp',
+  2: 'Trung bình',
+  3: 'Cao',
+};
+
+const errorGroupOptions = Object.entries(errorGroupLabels).map(([value, label]) => ({
+  value: Number(value) as ErrorGroup,
+  label,
+}));
+
+const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({
+  value: Number(value) as ErrorLogStatus,
+  label,
+}));
+
+const severityOptions = Object.entries(severityLabels).map(([value, label]) => ({
+  value: Number(value) as Severity,
+  label,
+}));
+
+function toDateInputValue(date: string) {
+  if (!date) return '';
+  return date.slice(0, 10);
+}
+
+function toApiDate(date: string) {
+  return `${date}T00:00:00`;
+}
+
+function formatDate(date: string) {
+  if (!date) return 'N/A';
+  return new Intl.DateTimeFormat('vi-VN').format(new Date(date));
+}
+
+function getStatusClass(status: ErrorLogStatus) {
+  if (status === 1) return 'bg-blue-50 text-blue-700 border-blue-100';
+  if (status === 2) return 'bg-orange-50 text-orange-700 border-orange-100';
+  return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+}
+
+function getSeverityClass(severity: Severity) {
+  if (severity === 3) return 'bg-red-50 text-red-700 border-red-100';
+  if (severity === 2) return 'bg-amber-50 text-amber-700 border-amber-100';
+  return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+}
 
 export default function ErrorLogsTab() {
+  const currentUser = useAuthStore(s => s.currentUser);
   const {
     logs,
-    logStoreFilter,
-    logBoothFilter,
     searchQuery,
+    logStoreFilter,
+    logStatusFilter,
+    logMonthFilter,
+    logErrorGroupFilter,
+    logSeverityFilter,
     isLoading,
-    setLogStoreFilter,
-    setLogBoothFilter,
     setSearchQuery,
+    setLogStoreFilter,
+    setLogStatusFilter,
+    setLogMonthFilter,
+    setLogErrorGroupFilter,
+    setLogSeverityFilter,
     addLog,
     updateLog,
     deleteLog,
-    getFilteredLogs
+    fetchLogs,
+    exportLogs,
+    getFilteredLogs,
+    isExporting,
   } = useLogsStore();
 
-  // Local Modal Form states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLogDetails, setSelectedLogDetails] = useState<ErrorLog | null>(null);
   const [currentEditingLog, setCurrentEditingLog] = useState<ErrorLog | null>(null);
-
-  const [logTitle, setLogTitle] = useState('');
-  const [logReporter, setLogReporter] = useState('');
-  const [logStore, setLogStore] = useState('CH Quận 1');
-  const [logBooth, setLogBooth] = useState('Quầy Thu Ngân 1');
-  const [logStatus, setLogStatus] = useState<'Mới' | 'Đang xử lý' | 'Đã đóng'>('Mới');
-  const [logSeverity, setLogSeverity] = useState<'Lỗi nghiêm trọng' | 'Bình thường' | 'Cảnh báo'>('Cảnh báo');
+  const [receivedDate, setReceivedDate] = useState(toDateInputValue(new Date().toISOString()));
+  const [store, setStore] = useState('CH Quận 1');
+  const [errorGroup, setErrorGroup] = useState<ErrorGroup>(1);
+  const [status, setStatus] = useState<ErrorLogStatus>(1);
+  const [severity, setSeverity] = useState<Severity>(2);
+  const [preliminaryCause, setPreliminaryCause] = useState('');
+  const [solution, setSolution] = useState('');
+  const [note, setNote] = useState('');
 
   const filteredLogs = getFilteredLogs();
+  const storeOptions = useMemo(() => {
+    const values = new Set(logs.map(log => log.store).filter(Boolean));
+    ['CH Quận 1', 'CH Quận 3', 'CH Gò Vấp', 'CH Quận 10'].forEach(value => values.add(value));
+    return Array.from(values);
+  }, [logs]);
+
+  useEffect(() => {
+    fetchLogs({
+      store: logStoreFilter || undefined,
+      status: logStatusFilter || undefined,
+      month: logMonthFilter || undefined,
+      errorGroup: logErrorGroupFilter || undefined,
+      severity: logSeverityFilter || undefined,
+    });
+  }, [fetchLogs, logStoreFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logSeverityFilter]);
+
+  const getActiveQuery = () => ({
+    store: logStoreFilter || undefined,
+    status: logStatusFilter || undefined,
+    month: logMonthFilter || undefined,
+    errorGroup: logErrorGroupFilter || undefined,
+    severity: logSeverityFilter || undefined,
+  });
 
   const handleOpenModal = (log: ErrorLog | null = null) => {
     if (log) {
       setCurrentEditingLog(log);
-      setLogTitle(log.title);
-      setLogReporter(log.reporter);
-      setLogStore(log.store);
-      setLogBooth(log.booth);
-      setLogStatus(log.status);
-      setLogSeverity(log.severity);
+      setReceivedDate(toDateInputValue(log.receivedDate));
+      setStore(log.store);
+      setErrorGroup(log.errorGroup);
+      setStatus(log.status);
+      setSeverity(log.severity);
+      setPreliminaryCause(log.preliminaryCause || '');
+      setSolution(log.solution || '');
+      setNote(log.note || '');
     } else {
       setCurrentEditingLog(null);
-      setLogTitle('');
-      setLogReporter('');
-      setLogStore('CH Quận 1');
-      setLogBooth('Quầy Thu Ngân 1');
-      setLogStatus('Mới');
-      setLogSeverity('Cảnh báo');
+      setReceivedDate(toDateInputValue(new Date().toISOString()));
+      setStore('CH Quận 1');
+      setErrorGroup(1);
+      setStatus(1);
+      setSeverity(2);
+      setPreliminaryCause('');
+      setSolution('');
+      setNote('');
     }
     setIsModalOpen(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!logTitle.trim() || !logReporter.trim()) {
-      toast.error('Vui lòng điền đủ tên lỗi và người báo.');
+
+    if (!receivedDate || !store.trim()) {
+      toast.error('Vui lòng nhập ngày tiếp nhận và cửa hàng.');
+      return;
+    }
+
+    if (!currentUser?.id) {
+      toast.error('Không tìm thấy user đang đăng nhập để gán IT phụ trách.');
       return;
     }
 
     const payload = {
-      title: logTitle.trim(),
-      reporter: logReporter.trim(),
-      store: logStore,
-      booth: logBooth,
-      status: logStatus,
-      severity: logSeverity,
-      attachment: Math.random() > 0.5
+      receivedDate: toApiDate(receivedDate),
+      store: store.trim(),
+      errorGroup,
+      description: `${errorGroupLabels[errorGroup]} tại ${store.trim()}`,
+      processingFlow: 1 as const,
+      preliminaryCause: preliminaryCause.trim(),
+      solution: solution.trim(),
+      severity,
+      assignedToId: currentEditingLog?.assignedToId || currentUser.id,
+      note: note.trim(),
+      status,
     };
 
     try {
@@ -85,13 +193,13 @@ export default function ErrorLogsTab() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    toast.warning(`Xóa log lỗi ${id}?`, {
+  const handleDelete = (log: ErrorLog) => {
+    toast.warning(`Xóa log lỗi ${log.errorCode || log.id}?`, {
       action: {
         label: 'Xóa',
         onClick: async () => {
           try {
-            await deleteLog(id);
+            await deleteLog(log.id);
             toast.success('Đã xóa log lỗi.');
           } catch (err: any) {
             toast.error(err.message || 'Không thể xóa log lỗi.');
@@ -101,66 +209,120 @@ export default function ErrorLogsTab() {
     });
   };
 
+  const handleExport = async () => {
+    try {
+      await exportLogs(getActiveQuery());
+      toast.success('Đã xuất file Excel.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xuất file Excel.');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Screen title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900 font-sans">Danh sách log lỗi hệ thống</h2>
-          <p className="text-xs text-gray-500 mt-1">Khai báo, phân tích và theo dõi trạng thái các lỗi kỹ thuật phát sinh tại các trạm booth.</p>
+          <p className="text-xs text-gray-500 mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Log lỗi
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={isExporting}
+            className="bg-white text-[#004ac6] border border-[#004ac6]/30 hover:bg-blue-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleOpenModal()}
+            className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Log lỗi
+          </button>
+        </div>
       </div>
 
-      {/* Filters Box */}
       <div className="bg-white rounded-xl border border-outline-variant p-4 shadow-sm text-left">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Filter store */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3">
           <div>
-            <label className="block text-[11px] font-sans font-bold text-gray-500 uppercase tracking-wider mb-1">Cửa hàng</label>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Cửa hàng</label>
             <select
               value={logStoreFilter}
               onChange={e => setLogStoreFilter(e.target.value)}
               className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
             >
-              <option value="">-- Tất cả cửa hàng --</option>
-              <option value="CH Quận 1">CH Quận 1</option>
-              <option value="CH Quận 3">CH Quận 3</option>
-              <option value="CH Gò Vấp">CH Gò Vấp</option>
-              <option value="CH Quận 10">CH Quận 10</option>
+              <option value="">Tất cả</option>
+              {storeOptions.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
             </select>
           </div>
 
-          {/* Filter booth */}
           <div>
-            <label className="block text-[11px] font-sans font-bold text-gray-500 uppercase tracking-wider mb-1">Trạm Booth</label>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tháng</label>
             <select
-              value={logBoothFilter}
-              onChange={e => setLogBoothFilter(e.target.value)}
+              value={logMonthFilter}
+              onChange={e => setLogMonthFilter(e.target.value ? Number(e.target.value) : '')}
               className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
             >
-              <option value="">-- Tất cả trạm --</option>
-              <option value="Quầy Thu Ngân 1">Quầy Thu Ngân 1</option>
-              <option value="Quầy Thu Ngân 2">Quầy Thu Ngân 2</option>
-              <option value="Kiosk Tự Phục Vụ">Kiosk Tự Phục Vụ</option>
-              <option value="Kho hàng">Kho hàng</option>
-              <option value="Phòng kỹ thuật">Phòng kỹ thuật</option>
+              <option value="">Tất cả</option>
+              {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
+                <option key={month} value={month}>Tháng {month}</option>
+              ))}
             </select>
           </div>
 
-          {/* Free search info */}
-          <div className="sm:col-span-2">
-            <label className="block text-[11px] font-sans font-bold text-gray-500 uppercase tracking-wider mb-1">Tìm ID, chi tiết tên lỗi, người báo...</label>
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Nhóm lỗi</label>
+            <select
+              value={logErrorGroupFilter}
+              onChange={e => setLogErrorGroupFilter(e.target.value ? Number(e.target.value) as ErrorGroup : '')}
+              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              {errorGroupOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Trạng thái</label>
+            <select
+              value={logStatusFilter}
+              onChange={e => setLogStatusFilter(e.target.value ? Number(e.target.value) as ErrorLogStatus : '')}
+              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              {statusOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Mức độ</label>
+            <select
+              value={logSeverityFilter}
+              onChange={e => setLogSeverityFilter(e.target.value ? Number(e.target.value) as Severity : '')}
+              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              {severityOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Tìm kiếm</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Tìm kiếm nhanh..."
+                placeholder="Mã lỗi, cửa hàng..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg text-xs"
@@ -170,79 +332,60 @@ export default function ErrorLogsTab() {
         </div>
       </div>
 
-      {/* Data table container */}
       <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 select-none font-sans">
-                <th className="py-4 px-5 font-bold">Mã lỗi (ID)</th>
-                <th className="py-4 px-5 font-bold">Chi tiết lỗi phát sinh</th>
-                <th className="py-4 px-5 font-bold">Người báo cáo</th>
-                <th className="py-4 px-5 font-bold">Thời gian</th>
-                <th className="py-4 px-5 font-bold">Nơi hoạt động</th>
-                <th className="py-4 px-5 font-bold">Độ nghiêm trọng</th>
+                <th className="py-4 px-5 font-bold">Ngày tiếp nhận</th>
+                <th className="py-4 px-5 font-bold">Cửa hàng</th>
+                <th className="py-4 px-5 font-bold">Nhóm lỗi</th>
                 <th className="py-4 px-5 font-bold">Trạng thái</th>
+                <th className="py-4 px-5 font-bold">Mức độ</th>
                 <th className="py-4 px-5 font-bold text-right">Tùy biến</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f5f9]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-sans font-bold text-gray-400">
+                  <td colSpan={6} className="py-10 text-center font-bold text-gray-400">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-sans font-bold text-gray-400">
+                  <td colSpan={6} className="py-10 text-center font-bold text-gray-400">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map(log => (
                   <tr key={log.id} className="hover:bg-[#faf8ff] transition-colors">
-                    <td className="py-4 px-5 font-mono font-bold text-gray-500">{log.id}</td>
+                    <td className="py-4 px-5 text-gray-700 font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
+                    <td className="py-4 px-5 font-semibold text-gray-900">{log.store}</td>
+                    <td className="py-4 px-5 text-gray-700">{errorGroupLabels[log.errorGroup]}</td>
                     <td className="py-4 px-5">
-                      <span className="font-semibold text-gray-900 line-clamp-1">{log.title}</span>
-                      <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-400 font-sans">
-                        <span>Có file đính kèm:</span> 
-                        <span className={log.attachment ? 'text-blue-600 font-bold' : 'text-gray-400'}>
-                          {log.attachment ? 'Đã tải lên' : 'Không có'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-5 font-medium text-gray-800">{log.reporter}</td>
-                    <td className="py-4 px-5 text-gray-500 font-sans whitespace-nowrap">{log.reportTime}</td>
-                    <td className="py-4 px-5">
-                      <span className="font-semibold text-gray-700">{log.store}</span>
-                      <p className="text-[10px] text-gray-400 mt-0.5">{log.booth}</p>
-                    </td>
-                    <td className="py-4 px-5">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full font-bold uppercase text-[9px] ${
-                        log.severity === 'Lỗi nghiêm trọng'
-                          ? 'bg-red-100 text-red-600'
-                          : log.severity === 'Cảnh báo'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {log.severity}
+                      <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getStatusClass(log.status)}`}>
+                        {statusLabels[log.status]}
                       </span>
                     </td>
                     <td className="py-4 px-5">
-                      <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        log.status === 'Mới'
-                          ? 'bg-red-50 text-red-600 border border-red-100'
-                          : log.status === 'Đang xử lý'
-                          ? 'bg-blue-50 text-blue-600 border border-blue-100'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}>
-                        {log.status}
+                      <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getSeverityClass(log.severity)}`}>
+                        {severityLabels[log.severity]}
                       </span>
                     </td>
                     <td className="py-4 px-5 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-1.5">
                         <button
+                          type="button"
+                          onClick={() => setSelectedLogDetails(log)}
+                          className="p-1 px-2 border rounded hover:bg-slate-50 hover:text-gray-900 transition-colors hover:border-slate-300 cursor-pointer"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenModal(log)}
                           className="p-1 px-2 border rounded hover:bg-blue-50 hover:text-primary transition-colors hover:border-blue-200 cursor-pointer"
                           title="Chỉnh sửa"
@@ -250,7 +393,8 @@ export default function ErrorLogsTab() {
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(log.id)}
+                          type="button"
+                          onClick={() => handleDelete(log)}
                           className="p-1 px-2 border rounded hover:bg-red-50 hover:text-red-600 transition-colors hover:border-red-200 cursor-pointer"
                           title="Xóa lỗi"
                         >
@@ -265,112 +409,118 @@ export default function ErrorLogsTab() {
           </table>
         </div>
 
-        {/* Table Footer with information density */}
         <div className="bg-gray-50 border-t border-outline-variant px-5 py-3 flex items-center justify-between font-sans">
           <span className="text-xs text-gray-400">Hiển thị {filteredLogs.length} của {logs.length} bản ghi lỗi</span>
-          <div className="flex gap-1 select-none">
-            <button className="px-2.5 py-1 border border-outline-variant text-[11px] hover:bg-white rounded disabled:opacity-40 cursor-pointer" disabled>Trước</button>
-            <button className="px-3 py-1 border border-[#004ac6] bg-[#dbe1ff] text-[#00174b] text-[11px] font-bold rounded cursor-pointer">1</button>
-            <button className="px-3 py-1 border border-outline-variant text-[11px] hover:bg-white rounded cursor-pointer" onClick={() => toast.info('Dữ liệu chỉ hiển thị trang 1 trong bản demo.')}>2</button>
-            <button className="px-2.5 py-1 border border-outline-variant text-[11px] hover:bg-white rounded cursor-pointer" onClick={() => toast.info('Tính năng phân trang sẽ hoạt động khi có nhiều bản ghi lớn.')}>Sau</button>
-          </div>
+          <span className="text-[11px] text-gray-400 font-medium">Bộ lọc đang xử lý phía client</span>
         </div>
       </div>
 
-      {/* Local Log Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 border border-outline-variant">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">
-                {currentEditingLog ? `Chỉnh sửa Log lỗi [${currentEditingLog.id}]` : 'Khai báo lỗi hệ thống mới'}
+                {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Khai báo log lỗi mới'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
             </div>
             <form onSubmit={handleSave} className="space-y-4 text-sm text-left">
-              <div>
-                <label className="block font-medium mb-1">Mô tả sự cố / Tên lỗi *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ví dụ: Lỗi kết nối máy in bill"
-                  value={logTitle}
-                  onChange={e => setLogTitle(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Người báo cáo *</label>
+                  <label className="block font-medium mb-1">Ngày tiếp nhận *</label>
                   <input
-                    type="text"
+                    type="date"
                     required
-                    placeholder="Nhập tên nhân sự"
-                    value={logReporter}
-                    onChange={e => setLogReporter(e.target.value)}
+                    value={receivedDate}
+                    onChange={e => setReceivedDate(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Độ nghiêm trọng</label>
-                  <select
-                    value={logSeverity}
-                    onChange={e => setLogSeverity(e.target.value as any)}
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
-                  >
-                    <option value="Lỗi nghiêm trọng">Lỗi nghiêm trọng (Critical)</option>
-                    <option value="Cảnh báo">Cảnh báo (Warning)</option>
-                    <option value="Bình thường">Bình thường (Normal)</option>
-                  </select>
+                  <label className="block font-medium mb-1">Cửa hàng *</label>
+                  <input
+                    type="text"
+                    required
+                    value={store}
+                    onChange={e => setStore(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Cửa hàng xảy ra</label>
+                  <label className="block font-medium mb-1">Nhóm lỗi</label>
                   <select
-                    value={logStore}
-                    onChange={e => setLogStore(e.target.value)}
+                    value={errorGroup}
+                    onChange={e => setErrorGroup(Number(e.target.value) as ErrorGroup)}
                     className="w-full px-3 py-2 border rounded-lg bg-white"
                   >
-                    <option value="CH Quận 1">CH Quận 1</option>
-                    <option value="CH Quận 3">CH Quận 3</option>
-                    <option value="CH Gò Vấp">CH Gò Vấp</option>
-                    <option value="CH Quận 10">CH Quận 10</option>
-                    <option value="Kho Tổng Bình Dương">Kho Tổng Bình Dương</option>
+                    {errorGroupOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Trạm Booth hỗ trợ</label>
+                  <label className="block font-medium mb-1">Trạng thái</label>
                   <select
-                    value={logBooth}
-                    onChange={e => setLogBooth(e.target.value)}
+                    value={status}
+                    onChange={e => setStatus(Number(e.target.value) as ErrorLogStatus)}
                     className="w-full px-3 py-2 border rounded-lg bg-white"
                   >
-                    <option value="Quầy Thu Ngân 1">Quầy Thu Ngân 1</option>
-                    <option value="Quầy Thu Ngân 2">Quầy Thu Ngân 2</option>
-                    <option value="Kiosk Tự Phục Vụ">Kiosk Tự Phục Vụ</option>
-                    <option value="Kho hàng">Kho hàng</option>
-                    <option value="Phòng kỹ thuật">Phòng kỹ thuật</option>
+                    {statusOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Mức độ</label>
+                  <select
+                    value={severity}
+                    onChange={e => setSeverity(Number(e.target.value) as Severity)}
+                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                  >
+                    {severityOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
+
               <div>
-                <label className="block font-medium mb-1">Trạng thái xử lý</label>
-                <div className="flex gap-4">
-                  {(['Mới', 'Đang xử lý', 'Đã đóng'] as const).map(st => (
-                    <label key={st} className="flex items-center gap-1 cursor-pointer select-none">
-                      <input
-                        type="radio"
-                        name="logStatusGroup"
-                        checked={logStatus === st}
-                        onChange={() => setLogStatus(st)}
-                      />
-                      {st}
-                    </label>
-                  ))}
-                </div>
+                <label className="block font-medium mb-1">Nguyên nhân sơ bộ</label>
+                <textarea
+                  rows={3}
+                  value={preliminaryCause}
+                  onChange={e => setPreliminaryCause(e.target.value)}
+                  placeholder="Nhập nguyên nhân sơ bộ nếu có..."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+
+              <div>
+                <label className="block font-medium mb-1">Cách xử lý</label>
+                <textarea
+                  rows={3}
+                  value={solution}
+                  onChange={e => setSolution(e.target.value)}
+                  placeholder="Nhập cách xử lý nếu có..."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1">Ghi chú</label>
+                <textarea
+                  rows={3}
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  placeholder="Nhập ghi chú thêm..."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -381,12 +531,86 @@ export default function ErrorLogsTab() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer animate-pulse-subtle disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {selectedLogDetails && (
+        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+              <div>
+                <h3 className="text-lg font-bold text-on-surface">Chi tiết log lỗi</h3>
+                <p className="text-xs text-gray-500 mt-1">{selectedLogDetails.errorCode || selectedLogDetails.id}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedLogDetails(null)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Ngày tiếp nhận</span>
+                <p className="font-semibold text-gray-900">{formatDate(selectedLogDetails.receivedDate)}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cửa hàng</span>
+                <p className="font-semibold text-gray-900">{selectedLogDetails.store}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nhóm lỗi</span>
+                <p className="font-semibold text-gray-900">{errorGroupLabels[selectedLogDetails.errorGroup]}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">IT phụ trách</span>
+                <p className="font-semibold text-gray-900">{selectedLogDetails.assignedToName || selectedLogDetails.assignedToId || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Trạng thái</span>
+                <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getStatusClass(selectedLogDetails.status)}`}>
+                  {statusLabels[selectedLogDetails.status]}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mức độ</span>
+                <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getSeverityClass(selectedLogDetails.severity)}`}>
+                  {severityLabels[selectedLogDetails.severity]}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 mt-5 text-sm">
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mô tả lỗi</span>
+                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.description || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nguyên nhân sơ bộ</span>
+                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.preliminaryCause || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cách xử lý</span>
+                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.solution || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Ghi chú</span>
+                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-5 mt-5 border-t">
+              <button
+                type="button"
+                onClick={() => setSelectedLogDetails(null)}
+                className="px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black text-xs font-bold cursor-pointer"
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

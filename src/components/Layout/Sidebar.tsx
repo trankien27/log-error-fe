@@ -49,7 +49,7 @@ export default function Sidebar() {
   };
 
   const activeTab = getActiveTab();
-  const newLogsCount = logs.filter(l => l.status === 'Mới').length;
+  const newLogsCount = logs.filter(l => l.status === 1).length;
   const pendingTasksCount = tasks.filter(t => t.status === 'pending').length;
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 

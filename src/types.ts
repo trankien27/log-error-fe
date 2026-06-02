@@ -1,14 +1,26 @@
+export type ErrorGroup = 1 | 2 | 3;
+export type ProcessingFlow = 1 | 2 | 3;
+export type ErrorLogStatus = 1 | 2 | 3;
+export type Severity = 1 | 2 | 3;
+
 export interface ErrorLog {
   id: string;
-  title: string;
-  description?: string;
-  reporter: string;
-  reportTime: string;
+  errorCode: string;
+  receivedDate: string;
+  month: number;
   store: string;
-  booth: string;
-  attachment: boolean;
-  status: 'Mới' | 'Đang xử lý' | 'Đã đóng';
-  severity: 'Lỗi nghiêm trọng' | 'Bình thường' | 'Cảnh báo';
+  errorGroup: ErrorGroup;
+  description: string;
+  processingFlow: ProcessingFlow;
+  preliminaryCause?: string | null;
+  solution?: string | null;
+  status: ErrorLogStatus;
+  severity: Severity;
+  assignedToId: string;
+  assignedToName?: string | null;
+  note?: string | null;
+  createdTime: string;
+  lastUpdatedTime?: string | null;
 }
 
 export interface User {
