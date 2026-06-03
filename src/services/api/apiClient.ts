@@ -7,6 +7,14 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown;
 };
 
+type RefreshTokenResponse = {
+  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+};
+
+let refreshTokenPromise: Promise<string> | null = null;
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
   const payload = text ? JSON.parse(text) : null;
@@ -22,24 +30,84 @@ async function parseResponse<T>(response: Response): Promise<T> {
   return (payload?.data ?? payload) as T;
 }
 
+function clearAuthStorage() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
+}
+
+async function refreshAccessToken(): Promise<string> {
+  if (refreshTokenPromise) {
+    return refreshTokenPromise;
+  }
+
+  refreshTokenPromise = (async () => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+
+    if (!refreshToken) {
+      clearAuthStorage();
+      throw new Error('Phiên đăng nhập đã hết hạn.');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    const payload = await parseResponse<RefreshTokenResponse>(response);
+    const accessToken = payload.accessToken || payload.token;
+
+    if (!accessToken) {
+      clearAuthStorage();
+      throw new Error('Không thể làm mới phiên đăng nhập.');
+    }
+
+    localStorage.setItem(AUTH_TOKEN_KEY, accessToken);
+    if (payload.refreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, payload.refreshToken);
+    }
+
+    return accessToken;
+  })().catch(error => {
+    clearAuthStorage();
+    throw error;
+  }).finally(() => {
+    refreshTokenPromise = null;
+  });
+
+  return refreshTokenPromise;
+}
+
 export const apiClient = {
   request: async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
-    const headers = new Headers(options.headers);
+    const executeRequest = async () => {
+      const headers = new Headers(options.headers);
 
-    if (!headers.has('Content-Type') && options.body !== undefined) {
-      headers.set('Content-Type', 'application/json');
+      if (!headers.has('Content-Type') && options.body !== undefined) {
+        headers.set('Content-Type', 'application/json');
+      }
+
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (token && !headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+
+      return fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        headers,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      });
+    };
+
+    let response = await executeRequest();
+
+    if (response.status === 401 && path !== '/api/auth/refresh-token') {
+      await refreshAccessToken();
+      response = await executeRequest();
     }
-
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
-      headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    });
 
     return parseResponse<T>(response);
   },
