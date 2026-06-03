@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Download, Edit2, Eye, Plus, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Edit2, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -70,6 +70,10 @@ export default function ErrorLogsTab() {
   const currentUser = useAuthStore(s => s.currentUser);
   const {
     logs,
+    totalItems,
+    totalPages,
+    logPageIndex,
+    logPageSize,
     searchQuery,
     logStoreFilter,
     logBoothFilter,
@@ -85,13 +89,17 @@ export default function ErrorLogsTab() {
     setLogMonthFilter,
     setLogErrorGroupFilter,
     setLogSeverityFilter,
+    setLogPageIndex,
+    setLogPageSize,
     addLog,
     updateLog,
     deleteLog,
     fetchLogs,
+    syncGoogleSheet,
     exportLogs,
     getFilteredLogs,
     isExporting,
+    isSyncingGoogleSheet,
   } = useLogsStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -117,16 +125,24 @@ export default function ErrorLogsTab() {
       month: logMonthFilter || undefined,
       errorGroup: logErrorGroupFilter || undefined,
       severity: logSeverityFilter || undefined,
+      pageIndex: logPageIndex,
+      pageSize: logPageSize,
     });
-  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logSeverityFilter]);
+  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logSeverityFilter, logPageIndex, logPageSize]);
 
-  const getActiveQuery = () => ({
+  const getFilterQuery = () => ({
     store: logStoreFilter || undefined,
     booth: logBoothFilter || undefined,
     status: logStatusFilter || undefined,
     month: logMonthFilter || undefined,
     errorGroup: logErrorGroupFilter || undefined,
     severity: logSeverityFilter || undefined,
+  });
+
+  const getActiveQuery = () => ({
+    ...getFilterQuery(),
+    pageIndex: logPageIndex,
+    pageSize: logPageSize,
   });
 
   const loadStores = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
@@ -225,10 +241,20 @@ export default function ErrorLogsTab() {
 
   const handleExport = async () => {
     try {
-      await exportLogs(getActiveQuery());
+      await exportLogs(getFilterQuery());
       toast.success('Đã xuất file Excel.');
     } catch (err: any) {
       toast.error(err.message || 'Không thể xuất file Excel.');
+    }
+  };
+
+  const handleSyncGoogleSheet = async () => {
+    try {
+      await syncGoogleSheet();
+      await fetchLogs(getActiveQuery());
+      toast.success('Đã sync dữ liệu từ Google Sheet.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể sync dữ liệu từ Google Sheet.');
     }
   };
 
@@ -240,6 +266,14 @@ export default function ErrorLogsTab() {
           <p className="text-xs text-gray-500 mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={handleSyncGoogleSheet}
+            disabled={isSyncingGoogleSheet || isLoading}
+            className="bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} /> {isSyncingGoogleSheet ? 'Đang sync...' : 'Sync Google Sheet'}
+          </button>
           <button
             type="button"
             onClick={handleExport}
@@ -438,9 +472,45 @@ export default function ErrorLogsTab() {
           </table>
         </div>
 
-        <div className="bg-gray-50 border-t border-outline-variant px-5 py-3 flex items-center justify-between font-sans">
-          <span className="text-xs text-gray-400">Hiển thị {filteredLogs.length} của {logs.length} bản ghi lỗi</span>
-          <span className="text-[11px] text-gray-400 font-medium">Bộ lọc đang xử lý phía client</span>
+        <div className="bg-gray-50 border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+          <span className="text-xs text-gray-400">
+            Hiển thị {filteredLogs.length} của {totalItems} bản ghi lỗi
+          </span>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <label className="text-gray-500 font-semibold" htmlFor="log-page-size">Số dòng</label>
+            <select
+              id="log-page-size"
+              value={logPageSize}
+              onChange={e => setLogPageSize(Number(e.target.value))}
+              disabled={isLoading}
+              className="px-2 py-1.5 bg-white border border-outline-variant rounded-lg text-gray-700 font-semibold focus:outline-[#004ac6] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {[10, 20, 50, 100].map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span className="text-[11px] text-gray-400 font-medium min-w-[72px] text-center">
+              Trang {totalPages === 0 ? 0 : logPageIndex + 1}/{totalPages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setLogPageIndex(Math.max(logPageIndex - 1, 0))}
+              disabled={isLoading || logPageIndex <= 0}
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-white text-gray-600 hover:bg-blue-50 hover:text-[#004ac6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Trang trước"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLogPageIndex(logPageIndex + 1)}
+              disabled={isLoading || totalPages === 0 || logPageIndex + 1 >= totalPages}
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-white text-gray-600 hover:bg-blue-50 hover:text-[#004ac6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Trang sau"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

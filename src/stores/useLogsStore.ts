@@ -4,8 +4,13 @@ import { ErrorLogPayload, ErrorLogQuery, logsService } from '../services/api/log
 
 interface LogsState {
   logs: ErrorLog[];
+  totalItems: number;
+  totalPages: number;
+  logPageIndex: number;
+  logPageSize: number;
   isLoading: boolean;
   isExporting: boolean;
+  isSyncingGoogleSheet: boolean;
   error: string | null;
 
   searchQuery: string;
@@ -26,6 +31,8 @@ interface LogsState {
   setLogMonthFilter: (month: '' | number) => void;
   setLogErrorGroupFilter: (group: '' | ErrorGroup) => void;
   setLogSeverityFilter: (severity: '' | Severity) => void;
+  setLogPageIndex: (pageIndex: number) => void;
+  setLogPageSize: (pageSize: number) => void;
   setIsLogModalOpen: (isOpen: boolean) => void;
   setCurrentEditingLog: (log: ErrorLog | null) => void;
 
@@ -34,6 +41,7 @@ interface LogsState {
   updateLog: (id: string, log: ErrorLogPayload) => Promise<void>;
   updateLogStatus: (id: string, status: ErrorLogStatus) => Promise<void>;
   deleteLog: (id: string) => Promise<void>;
+  syncGoogleSheet: () => Promise<void>;
   exportLogs: (query?: ErrorLogQuery) => Promise<void>;
 
   getFilteredLogs: () => ErrorLog[];
@@ -41,8 +49,13 @@ interface LogsState {
 
 export const useLogsStore = create<LogsState>((set, get) => ({
   logs: [],
+  totalItems: 0,
+  totalPages: 0,
+  logPageIndex: 0,
+  logPageSize: 20,
   isLoading: false,
   isExporting: false,
+  isSyncingGoogleSheet: false,
   error: null,
 
   searchQuery: '',
@@ -57,20 +70,29 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   currentEditingLog: null,
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setLogStoreFilter: (logStoreFilter) => set({ logStoreFilter }),
-  setLogBoothFilter: (logBoothFilter) => set({ logBoothFilter }),
-  setLogStatusFilter: (logStatusFilter) => set({ logStatusFilter }),
-  setLogMonthFilter: (logMonthFilter) => set({ logMonthFilter }),
-  setLogErrorGroupFilter: (logErrorGroupFilter) => set({ logErrorGroupFilter }),
-  setLogSeverityFilter: (logSeverityFilter) => set({ logSeverityFilter }),
+  setLogStoreFilter: (logStoreFilter) => set({ logStoreFilter, logPageIndex: 0 }),
+  setLogBoothFilter: (logBoothFilter) => set({ logBoothFilter, logPageIndex: 0 }),
+  setLogStatusFilter: (logStatusFilter) => set({ logStatusFilter, logPageIndex: 0 }),
+  setLogMonthFilter: (logMonthFilter) => set({ logMonthFilter, logPageIndex: 0 }),
+  setLogErrorGroupFilter: (logErrorGroupFilter) => set({ logErrorGroupFilter, logPageIndex: 0 }),
+  setLogSeverityFilter: (logSeverityFilter) => set({ logSeverityFilter, logPageIndex: 0 }),
+  setLogPageIndex: (logPageIndex) => set({ logPageIndex }),
+  setLogPageSize: (logPageSize) => set({ logPageSize, logPageIndex: 0 }),
   setIsLogModalOpen: (isLogModalOpen) => set({ isLogModalOpen }),
   setCurrentEditingLog: (currentEditingLog) => set({ currentEditingLog }),
 
   fetchLogs: async (query) => {
     set({ isLoading: true, error: null });
     try {
-      const logs = await logsService.getAll(query);
-      set({ logs, isLoading: false });
+      const result = await logsService.getAll(query);
+      set({
+        logs: result.items,
+        totalItems: result.totalItems,
+        totalPages: result.totalPages,
+        logPageIndex: result.pageIndex,
+        logPageSize: result.pageSize,
+        isLoading: false,
+      });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
     }
@@ -125,6 +147,17 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       }));
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  syncGoogleSheet: async () => {
+    set({ isSyncingGoogleSheet: true, error: null });
+    try {
+      await logsService.syncGoogleSheet();
+      set({ isSyncingGoogleSheet: false });
+    } catch (err: any) {
+      set({ error: err.message, isSyncingGoogleSheet: false });
       throw err;
     }
   },

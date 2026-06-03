@@ -1,4 +1,4 @@
-import { ErrorGroup, ErrorLog, ErrorLogStatus, ProcessingFlow, Severity } from '../../types';
+import { ErrorGroup, ErrorLog, ErrorLogStatus, PagedResult, ProcessingFlow, Severity } from '../../types';
 import { apiClient, API_BASE_URL, AUTH_TOKEN_KEY } from './apiClient';
 
 export type ErrorLogQuery = {
@@ -8,6 +8,8 @@ export type ErrorLogQuery = {
   booth?: string;
   errorGroup?: ErrorGroup;
   severity?: Severity;
+  pageIndex?: number;
+  pageSize?: number;
 };
 
 export type ErrorLogPayload = {
@@ -45,8 +47,20 @@ function getFileName(response: Response) {
 }
 
 export const logsService = {
-  getAll: async (query?: ErrorLogQuery): Promise<ErrorLog[]> => {
-    return apiClient.get<ErrorLog[]>(`/api/error-logs${buildQuery(query)}`);
+  getAll: async (query?: ErrorLogQuery): Promise<PagedResult<ErrorLog>> => {
+    const result = await apiClient.get<PagedResult<ErrorLog> | ErrorLog[]>(`/api/error-logs${buildQuery(query)}`);
+
+    if (Array.isArray(result)) {
+      return {
+        items: result,
+        totalItems: result.length,
+        totalPages: 1,
+        pageIndex: query?.pageIndex ?? 0,
+        pageSize: query?.pageSize ?? 20,
+      };
+    }
+
+    return result;
   },
 
   create: async (log: ErrorLogPayload): Promise<ErrorLog> => {
@@ -65,6 +79,10 @@ export const logsService = {
   delete: async (id: string): Promise<boolean> => {
     await apiClient.delete<void>(`/api/error-logs/${encodeURIComponent(id)}`);
     return true;
+  },
+
+  syncGoogleSheet: async (): Promise<void> => {
+    await apiClient.post<void>('/api/error-logs/sync-google-sheet');
   },
 
   exportExcel: async (query?: ErrorLogQuery): Promise<{ blob: Blob; fileName: string }> => {
