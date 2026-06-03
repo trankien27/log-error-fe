@@ -60,14 +60,6 @@ export default function TopHeader() {
   }, [isQuickNotifModalOpen]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
-  const displayName = currentUser?.name || currentUser?.email || 'Người dùng';
-  const avatarInitials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(-2)
-    .map(part => part[0])
-    .join('')
-    .toUpperCase();
 
   const handleLogoutClick = () => {
     logout();
@@ -78,7 +70,7 @@ export default function TopHeader() {
     <header className="h-[64px] bg-white border-b border-outline-variant flex items-center justify-between px-6 sticky top-0 z-10 w-full shrink-0">
       {/* Search Input Box */}
       <div className="flex-1 max-w-sm">
-        {['/error-logs', '/users', '/booths'].includes(location.pathname) ? (
+        {/* {['/error-logs', '/users', '/booths'].includes(location.pathname) ? (
           <div className="relative animate-fadeIn">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737686] w-4 h-4" />
             <input
@@ -93,7 +85,7 @@ export default function TopHeader() {
           <div className="text-xs text-gray-400 select-none font-medium italic">
             Nhấn đúp chuột hoặc dùng Sidebar để chuyển đổi trang
           </div>
-        )}
+        )} */}
       </div>
 
       <div className="hidden lg:block text-sm font-bold text-[#004ac6] tracking-wide mx-4 select-none">
@@ -262,18 +254,12 @@ export default function TopHeader() {
         </button>
 
         <div className="flex items-center gap-2 pl-1">
-          {currentUser?.avatar ? (
-            <img
-              src={currentUser.avatar}
-              alt="Profile Avatar"
-              className="w-8 h-8 rounded-full border border-outline-variant object-cover hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full border border-outline-variant bg-primary/10 text-primary flex items-center justify-center text-[10px] font-black hover:ring-2 hover:ring-primary transition-all cursor-pointer">
-              {avatarInitials || 'U'}
-            </div>
-          )}
-          <span className="text-xs font-semibold text-[#191b23] hidden md:inline">{displayName}</span>
+          <img
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJxIxM-pTaq-TrY6WNyhAKjLFP2Es54BgSU2qI5i13RoIkH50fE93ywO2E0I_7dwtlyIQsfmiEDHmuqhOmO7kf4gXGSOa0RzX8K9DS9IvUvIiJkEdzFPiR_uD5CBuyEy5sZEL_vd-X1B8Jkbk11HNQpa8ORFqQFbZTCAoZClWjZAQcA_G2DP-I4CbQA1Q1fY4oHRK-U-eeSN4dFf35awAUhqzBxKD80S1ZLBAvULgZylMmBhqKrhW-r6NycH9rf2ASb9mVIT2zemA"
+            alt="Profile Avatar"
+            className="w-8 h-8 rounded-full border border-outline-variant object-cover hover:ring-2 hover:ring-primary transition-all cursor-pointer"
+          />
+          <span className="text-xs font-semibold text-[#191b23] hidden md:inline">{currentUser?.name}</span>
         </div>
       </div>
     </header>
