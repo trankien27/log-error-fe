@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ErrorGroup, ErrorLog, ErrorLogStatus, Severity } from '../types';
+import { ErrorGroup, ErrorLog, ErrorLogStatus, ProcessingFlow, Severity } from '../types';
 import { ErrorLogPayload, ErrorLogQuery, logsService } from '../services/api/logsService';
 
 interface LogsState {
@@ -19,6 +19,7 @@ interface LogsState {
   logStatusFilter: '' | ErrorLogStatus;
   logMonthFilter: '' | number;
   logErrorGroupFilter: '' | ErrorGroup;
+  logProcessingFlowFilter: '' | ProcessingFlow;
   logSeverityFilter: '' | Severity;
 
   isLogModalOpen: boolean;
@@ -30,6 +31,7 @@ interface LogsState {
   setLogStatusFilter: (status: '' | ErrorLogStatus) => void;
   setLogMonthFilter: (month: '' | number) => void;
   setLogErrorGroupFilter: (group: '' | ErrorGroup) => void;
+  setLogProcessingFlowFilter: (flow: '' | ProcessingFlow) => void;
   setLogSeverityFilter: (severity: '' | Severity) => void;
   setLogPageIndex: (pageIndex: number) => void;
   setLogPageSize: (pageSize: number) => void;
@@ -64,6 +66,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   logStatusFilter: '',
   logMonthFilter: '',
   logErrorGroupFilter: '',
+  logProcessingFlowFilter: '',
   logSeverityFilter: '',
 
   isLogModalOpen: false,
@@ -75,6 +78,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   setLogStatusFilter: (logStatusFilter) => set({ logStatusFilter, logPageIndex: 1 }),
   setLogMonthFilter: (logMonthFilter) => set({ logMonthFilter, logPageIndex: 1 }),
   setLogErrorGroupFilter: (logErrorGroupFilter) => set({ logErrorGroupFilter, logPageIndex: 1 }),
+  setLogProcessingFlowFilter: (logProcessingFlowFilter) => set({ logProcessingFlowFilter, logPageIndex: 1 }),
   setLogSeverityFilter: (logSeverityFilter) => set({ logSeverityFilter, logPageIndex: 1 }),
   setLogPageIndex: (logPageIndex) => set({ logPageIndex }),
   setLogPageSize: (logPageSize) => set({ logPageSize, logPageIndex: 1 }),
@@ -192,6 +196,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       logStatusFilter,
       logMonthFilter,
       logErrorGroupFilter,
+      logProcessingFlowFilter,
       logSeverityFilter,
     } = get();
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -207,9 +212,10 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       const statusMatch = logStatusFilter ? log.status === logStatusFilter : true;
       const monthMatch = logMonthFilter ? log.month === logMonthFilter : true;
       const groupMatch = logErrorGroupFilter ? log.errorGroup === logErrorGroupFilter : true;
+      const processingFlowMatch = logProcessingFlowFilter ? log.processingFlow === logProcessingFlowFilter : true;
       const severityMatch = logSeverityFilter ? log.severity === logSeverityFilter : true;
 
-      return searchMatch && storeMatch && boothMatch && statusMatch && monthMatch && groupMatch && severityMatch;
+      return searchMatch && storeMatch && boothMatch && statusMatch && monthMatch && groupMatch && processingFlowMatch && severityMatch;
     });
   },
 }));

@@ -7,6 +7,7 @@ export type ErrorLogQuery = {
   store?: string;
   booth?: string;
   errorGroup?: ErrorGroup;
+  processingFlow?: ProcessingFlow;
   severity?: Severity;
   pageIndex?: number;
   pageSize?: number;

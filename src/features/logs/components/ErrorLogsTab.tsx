@@ -5,7 +5,7 @@ import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
-import { ErrorGroup, ErrorLog, ErrorLogStatus, Severity } from '../../../types';
+import { ErrorGroup, ErrorLog, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
 
 const errorGroupLabels: Record<ErrorGroup, string> = {
   1: 'Phần cứng',
@@ -25,6 +25,12 @@ const severityLabels: Record<Severity, string> = {
   3: 'Cao',
 };
 
+const processingFlowLabels: Record<ProcessingFlow, string> = {
+  1: 'IT Support xử lý',
+  2: 'Gửi Dev xử lý',
+  3: 'Khác',
+};
+
 const errorGroupOptions = Object.entries(errorGroupLabels).map(([value, label]) => ({
   value: Number(value) as ErrorGroup,
   label,
@@ -37,6 +43,11 @@ const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({
 
 const severityOptions = Object.entries(severityLabels).map(([value, label]) => ({
   value: Number(value) as Severity,
+  label,
+}));
+
+const processingFlowOptions = Object.entries(processingFlowLabels).map(([value, label]) => ({
+  value: Number(value) as ProcessingFlow,
   label,
 }));
 
@@ -80,6 +91,7 @@ export default function ErrorLogsTab() {
     logStatusFilter,
     logMonthFilter,
     logErrorGroupFilter,
+    logProcessingFlowFilter,
     logSeverityFilter,
     isLoading,
     setSearchQuery,
@@ -88,6 +100,7 @@ export default function ErrorLogsTab() {
     setLogStatusFilter,
     setLogMonthFilter,
     setLogErrorGroupFilter,
+    setLogProcessingFlowFilter,
     setLogSeverityFilter,
     setLogPageIndex,
     setLogPageSize,
@@ -112,6 +125,7 @@ export default function ErrorLogsTab() {
   const [logStoreFilterId, setLogStoreFilterId] = useState<string | number | undefined>();
   const [description, setDescription] = useState('');
   const [errorGroup, setErrorGroup] = useState<ErrorGroup>(1);
+  const [processingFlow, setProcessingFlow] = useState<ProcessingFlow>(1);
   const [status, setStatus] = useState<ErrorLogStatus>(1);
   const [severity, setSeverity] = useState<Severity>(2);
   const [preliminaryCause, setPreliminaryCause] = useState('');
@@ -126,11 +140,12 @@ export default function ErrorLogsTab() {
       status: logStatusFilter || undefined,
       month: logMonthFilter || undefined,
       errorGroup: logErrorGroupFilter || undefined,
+      processingFlow: logProcessingFlowFilter || undefined,
       severity: logSeverityFilter || undefined,
       pageIndex: logPageIndex,
       pageSize: logPageSize,
     });
-  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logSeverityFilter, logPageIndex, logPageSize]);
+  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
 
   const getFilterQuery = () => ({
     store: logStoreFilter || undefined,
@@ -138,6 +153,7 @@ export default function ErrorLogsTab() {
     status: logStatusFilter || undefined,
     month: logMonthFilter || undefined,
     errorGroup: logErrorGroupFilter || undefined,
+    processingFlow: logProcessingFlowFilter || undefined,
     severity: logSeverityFilter || undefined,
   });
 
@@ -166,6 +182,7 @@ export default function ErrorLogsTab() {
       setBooth(log.booth || '');
       setDescription(log.description || '');
       setErrorGroup(log.errorGroup);
+      setProcessingFlow(log.processingFlow);
       setStatus(log.status);
       setSeverity(log.severity);
       setPreliminaryCause(log.preliminaryCause || '');
@@ -179,6 +196,7 @@ export default function ErrorLogsTab() {
       setBooth('');
       setDescription('');
       setErrorGroup(1);
+      setProcessingFlow(1);
       setStatus(1);
       setSeverity(2);
       setPreliminaryCause('');
@@ -207,7 +225,7 @@ export default function ErrorLogsTab() {
       booth: booth.trim(),
       errorGroup,
       description: description.trim(),
-      processingFlow: 1 as const,
+      processingFlow,
       preliminaryCause: preliminaryCause.trim(),
       solution: solution.trim(),
       severity,
@@ -302,7 +320,7 @@ export default function ErrorLogsTab() {
       </div>
 
       <div className="bg-white rounded-xl border border-outline-variant p-4 shadow-sm text-left">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Cửa hàng</label>
             <LazySearchDropdown
@@ -373,6 +391,20 @@ export default function ErrorLogsTab() {
             >
               <option value="">Tất cả</option>
               {statusOptions.map(option => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1">Luồng xử lý</label>
+            <select
+              value={logProcessingFlowFilter}
+              onChange={e => setLogProcessingFlowFilter(e.target.value ? Number(e.target.value) as ProcessingFlow : '')}
+              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-[#004ac6] cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              {processingFlowOptions.map(option => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
             </select>
@@ -585,7 +617,7 @@ export default function ErrorLogsTab() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Nhóm lỗi</label>
                   <select
@@ -594,6 +626,18 @@ export default function ErrorLogsTab() {
                     className="w-full px-3 py-2 border rounded-lg bg-white"
                   >
                     {errorGroupOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Luồng xử lý</label>
+                  <select
+                    value={processingFlow}
+                    onChange={e => setProcessingFlow(Number(e.target.value) as ProcessingFlow)}
+                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                  >
+                    {processingFlowOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
                     ))}
                   </select>
