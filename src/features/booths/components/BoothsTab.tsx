@@ -47,7 +47,7 @@ export default function BoothsTab() {
       setBoothIdField(`BTH-00${booths.length + 1}`);
       setBoothNameField('');
       setBoothUltraviewField('');
-      setBoothStoresField('CH Quận 1');
+      setBoothStoresField('');
     }
     setIsBoothModalOpen(true);
   };

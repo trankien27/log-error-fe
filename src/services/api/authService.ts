@@ -29,7 +29,6 @@ function decodeTokenPayload(token: string): BackendUser | null {
         .map(char => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
         .join('')
     );
-    console.log('Decoded token payload:', json);
     return JSON.parse(json);
   } catch {
     return null;
@@ -52,7 +51,7 @@ function normalizeUser(user: BackendUser): User {
       'current-user',
     name: fullName,
     email: user.email || '',
-    role: roleClaim === 'Admin' || roleClaim === 'Manager' || roleClaim === 'IT Support' || roleClaim === 'Staff'
+    role: roleClaim === 'Admin' || roleClaim === 'Manager' || roleClaim === 'IT Support' || roleClaim === 'Staff' || roleClaim === 'User'
       ? roleClaim
       : 'Staff',
     status: user.status || 'Hoạt động',

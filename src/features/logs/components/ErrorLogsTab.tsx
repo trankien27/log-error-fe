@@ -100,6 +100,8 @@ function getSeverityClass(severity: Severity) {
 
 export default function ErrorLogsTab() {
   const currentUser = useAuthStore(s => s.currentUser);
+  const isAdmin = currentUser?.role === 'Admin';
+  console.log('Current user in ErrorLogsTab:', currentUser);
   const {
     logs,
     totalItems,
@@ -138,10 +140,9 @@ export default function ErrorLogsTab() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [reportFromDate, setReportFromDate] = useState(toDateTimeInputValue(new Date().toISOString()));
-  const [reportToDate, setReportToDate] = useState(toDateTimeInputValue(new Date().toISOString()));
   const [reportText, setReportText] = useState('');
   const [isReportLoading, setIsReportLoading] = useState(false);
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
   const [selectedLogDetails, setSelectedLogDetails] = useState<ErrorLog | null>(null);
   const [currentEditingLog, setCurrentEditingLog] = useState<ErrorLog | null>(null);
   const [receivedDate, setReceivedDate] = useState(toDateTimeInputValue(new Date().toISOString()));
@@ -159,6 +160,9 @@ export default function ErrorLogsTab() {
   const [note, setNote] = useState('');
 
   const filteredLogs = getFilteredLogs();
+  const selectedLogIdSet = new Set(selectedLogIds);
+  const currentPageLogIds = filteredLogs.map(log => log.id);
+  const isAllCurrentPageSelected = currentPageLogIds.length > 0 && currentPageLogIds.every(id => selectedLogIdSet.has(id));
   useEffect(() => {
     fetchLogs({
       store: logStoreFilter || undefined,
@@ -217,7 +221,7 @@ export default function ErrorLogsTab() {
     } else {
       setCurrentEditingLog(null);
       setReceivedDate(toDateTimeInputValue(new Date().toISOString()));
-      setStore('CH Quận 1');
+      setStore('');
       setStoreId(undefined);
       setBooth('');
       setDescription('');
@@ -276,6 +280,35 @@ export default function ErrorLogsTab() {
     }
   };
 
+  const handleSaveShortcut = (event: React.KeyboardEvent<HTMLFormElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.requestSubmit();
+  };
+
+  const handleToggleLogSelection = (id: string) => {
+    setSelectedLogIds(prev => (
+      prev.includes(id)
+        ? prev.filter(selectedId => selectedId !== id)
+        : [...prev, id]
+    ));
+  };
+
+  const handleToggleCurrentPageSelection = () => {
+    setSelectedLogIds(prev => {
+      const currentPageIdSet = new Set(currentPageLogIds);
+
+      if (isAllCurrentPageSelected) {
+        return prev.filter(id => !currentPageIdSet.has(id));
+      }
+
+      return Array.from(new Set([...prev, ...currentPageLogIds]));
+    });
+  };
+
   const handleDelete = (log: ErrorLog) => {
     toast.warning(`Xóa log lỗi ${log.errorCode || log.id}?`, {
       action: {
@@ -283,6 +316,7 @@ export default function ErrorLogsTab() {
         onClick: async () => {
           try {
             await deleteLog(log.id);
+            setSelectedLogIds(prev => prev.filter(id => id !== log.id));
             toast.success('Đã xóa log lỗi.');
           } catch (err: any) {
             toast.error(err.message || 'Không thể xóa log lỗi.');
@@ -312,23 +346,16 @@ export default function ErrorLogsTab() {
   };
 
   const handleGenerateReportText = async () => {
-    if (!reportFromDate || !reportToDate) {
-      toast.error('Vui lòng chọn ngày bắt đầu và ngày kết thúc.');
-      return;
-    }
-
-    if (reportFromDate > reportToDate) {
-      toast.error('Ngày bắt đầu không được lớn hơn ngày kết thúc.');
+    if (selectedLogIds.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một log lỗi để xuất báo cáo.');
       return;
     }
 
     setIsReportLoading(true);
     try {
-      const text = await logsService.getReportText({
-        fromDate: toApiDateTime(reportFromDate),
-        toDate: toApiDateTime(reportToDate),
-      });
+      const text = await logsService.createReport({ ids: selectedLogIds });
       setReportText(text);
+      setIsReportModalOpen(true);
       toast.success('Đã xuất báo cáo văn bản.');
     } catch (err: any) {
       toast.error(err.message || 'Không thể xuất báo cáo văn bản.');
@@ -359,14 +386,16 @@ export default function ErrorLogsTab() {
           <p className="text-xs text-gray-500 mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleSyncGoogleSheet}
-            disabled={isSyncingGoogleSheet || isLoading}
-            className="bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} /> {isSyncingGoogleSheet ? 'Đang sync...' : 'Sync Google Sheet'}
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleSyncGoogleSheet}
+              disabled={isSyncingGoogleSheet || isLoading}
+              className="bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} /> {isSyncingGoogleSheet ? 'Đang sync...' : 'Sync Google Sheet'}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleExport}
@@ -377,10 +406,11 @@ export default function ErrorLogsTab() {
           </button>
           <button
             type="button"
-            onClick={() => setIsReportModalOpen(true)}
-            className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            onClick={handleGenerateReportText}
+            disabled={isReportLoading || selectedLogIds.length === 0}
+            className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <FileText className="w-4 h-4" /> Xuất báo cáo
+            <FileText className="w-4 h-4" /> {isReportLoading ? 'Đang xuất...' : `Xuất báo cáo (${selectedLogIds.length})`}
           </button>
           <button
             type="button"
@@ -518,6 +548,16 @@ export default function ErrorLogsTab() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 select-none font-sans">
+                <th className="py-4 px-5 font-bold w-12">
+                  <input
+                    type="checkbox"
+                    checked={isAllCurrentPageSelected}
+                    onChange={handleToggleCurrentPageSelection}
+                    disabled={filteredLogs.length === 0}
+                    className="w-4 h-4 accent-[#004ac6] cursor-pointer disabled:cursor-not-allowed"
+                    aria-label="Chọn tất cả log lỗi trên trang hiện tại"
+                  />
+                </th>
                 <th className="py-4 px-5 font-bold">Ngày tiếp nhận</th>
                 <th className="py-4 px-5 font-bold">Cửa hàng</th>
                 <th className="py-4 px-5 font-bold">Mô tả lỗi</th>
@@ -530,19 +570,28 @@ export default function ErrorLogsTab() {
             <tbody className="divide-y divide-[#f1f5f9]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center font-bold text-gray-400">
+                  <td colSpan={8} className="py-10 text-center font-bold text-gray-400">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center font-bold text-gray-400">
+                  <td colSpan={8} className="py-10 text-center font-bold text-gray-400">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map(log => (
                   <tr key={log.id} className="hover:bg-[#faf8ff] transition-colors">
+                    <td className="py-4 px-5">
+                      <input
+                        type="checkbox"
+                        checked={selectedLogIdSet.has(log.id)}
+                        onChange={() => handleToggleLogSelection(log.id)}
+                        className="w-4 h-4 accent-[#004ac6] cursor-pointer"
+                        aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
+                      />
+                    </td>
                     <td className="py-4 px-5 text-gray-700 font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
                     <td className="py-4 px-5 font-semibold text-gray-900">{log.store}</td>
                     <td className="py-4 px-5 text-gray-700 max-w-xs">
@@ -596,7 +645,7 @@ export default function ErrorLogsTab() {
 
         <div className="bg-gray-50 border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
           <span className="text-xs text-gray-400">
-            Hiển thị {filteredLogs.length} của {totalItems} bản ghi lỗi
+            Hiển thị {filteredLogs.length} của {totalItems} bản ghi lỗi · Đã chọn {selectedLogIds.length}
           </span>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <label className="text-gray-500 font-semibold" htmlFor="log-page-size">Số dòng</label>
@@ -645,27 +694,6 @@ export default function ErrorLogsTab() {
             </div>
 
             <div className="space-y-4 text-sm text-left">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-medium mb-1">Ngày giờ bắt đầu</label>
-                  <input
-                    type="datetime-local"
-                    value={reportFromDate}
-                    onChange={e => setReportFromDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
-                  />
-                </div>
-                <div>
-                  <label className="block font-medium mb-1">Ngày giờ kết thúc</label>
-                  <input
-                    type="datetime-local"
-                    value={reportToDate}
-                    onChange={e => setReportToDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
-                  />
-                </div>
-              </div>
-
               <div>
                 <label className="block font-medium mb-1">Nội dung báo cáo</label>
                 <textarea
@@ -688,11 +716,10 @@ export default function ErrorLogsTab() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleGenerateReportText}
-                  disabled={isReportLoading}
-                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-container font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-container font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <FileText className="w-4 h-4" /> {isReportLoading ? 'Đang xuất...' : 'Xuất văn bản'}
+                  Đóng
                 </button>
               </div>
             </div>
@@ -702,14 +729,14 @@ export default function ErrorLogsTab() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 border border-outline-variant">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-6 border border-outline-variant">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">
-                {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Khai báo log lỗi mới'}
+                {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Thêm lỗi mới'}
               </h3>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
             </div>
-            <form onSubmit={handleSave} className="space-y-4 text-sm text-left">
+            <form onSubmit={handleSave} onKeyDown={handleSaveShortcut} className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm text-left">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Ngày tiếp nhận *</label>
@@ -850,7 +877,7 @@ export default function ErrorLogsTab() {
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
+              <div className="lg:col-span-2 flex justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

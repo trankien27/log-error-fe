@@ -44,13 +44,13 @@ export default function UsersTab() {
   // Local Form states for edit user (or create)
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
-  const [userRole, setUserRole] = useState<'Admin' | 'Manager' | 'IT Support' | 'Staff'>('Staff');
+  const [userRole, setUserRole] = useState<User['role']>('Staff');
   const [userStatus, setUserStatus] = useState<'Hoạt động' | 'Vô hiệu hóa'>('Hoạt động');
 
   // Detailed profile form states
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
-  const [profileRole, setProfileRole] = useState<'Admin' | 'Manager' | 'IT Support' | 'Staff'>('Staff');
+  const [profileRole, setProfileRole] = useState<User['role']>('Staff');
   const [profileDept, setProfileDept] = useState('');
 
   // Sync profile details if selected profile changes

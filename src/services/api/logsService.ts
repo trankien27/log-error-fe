@@ -45,6 +45,10 @@ export type ErrorLogReportTextQuery = {
   toDate: string;
 };
 
+export type ErrorLogReportPayload = {
+  ids: string[];
+};
+
 export type ErrorLogStatsByGroupItem = {
   errorGroup: string;
   count: number;
@@ -140,6 +144,10 @@ export const logsService = {
     });
 
     return apiClient.get<string>(`/api/error-logs/report-text?${searchParams.toString()}`);
+  },
+
+  createReport: async (payload: ErrorLogReportPayload): Promise<string> => {
+    return apiClient.post<string>('/api/error-logs/report', payload);
   },
 
   getStatsByGroup: async (query: ErrorLogStatsQuery): Promise<ErrorLogStatsByGroup> => {
