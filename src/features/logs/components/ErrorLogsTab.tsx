@@ -490,12 +490,12 @@ export default function ErrorLogsTab() {
               ))}
             </select>
             <span className="text-[11px] text-gray-400 font-medium min-w-[72px] text-center">
-              Trang {totalPages === 0 ? 0 : logPageIndex + 1}/{totalPages}
+              Trang {totalPages === 0 ? 0 : logPageIndex}/{totalPages}
             </span>
             <button
               type="button"
-              onClick={() => setLogPageIndex(Math.max(logPageIndex - 1, 0))}
-              disabled={isLoading || logPageIndex <= 0}
+              onClick={() => setLogPageIndex(Math.max(logPageIndex - 1, 1))}
+              disabled={isLoading || logPageIndex <= 1}
               className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-white text-gray-600 hover:bg-blue-50 hover:text-[#004ac6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Trang trước"
             >
@@ -504,7 +504,7 @@ export default function ErrorLogsTab() {
             <button
               type="button"
               onClick={() => setLogPageIndex(logPageIndex + 1)}
-              disabled={isLoading || totalPages === 0 || logPageIndex + 1 >= totalPages}
+              disabled={isLoading || totalPages === 0 || logPageIndex >= totalPages}
               className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-white text-gray-600 hover:bg-blue-50 hover:text-[#004ac6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Trang sau"
             >

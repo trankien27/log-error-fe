@@ -55,7 +55,7 @@ export const logsService = {
         items: result,
         totalItems: result.length,
         totalPages: 1,
-        pageIndex: query?.pageIndex ?? 0,
+        pageIndex: query?.pageIndex ?? 1,
         pageSize: query?.pageSize ?? 20,
       };
     }
