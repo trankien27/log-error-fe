@@ -40,6 +40,11 @@ export type ErrorLogStatsQuery = {
   toDate: string;
 };
 
+export type ErrorLogReportTextQuery = {
+  fromDate: string;
+  toDate: string;
+};
+
 export type ErrorLogStatsByGroupItem = {
   errorGroup: string;
   count: number;
@@ -126,6 +131,15 @@ export const logsService = {
     });
 
     return apiClient.get<ErrorLogStats>(`/api/error-logs/stats?${searchParams.toString()}`);
+  },
+
+  getReportText: async (query: ErrorLogReportTextQuery): Promise<string> => {
+    const searchParams = new URLSearchParams({
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+    });
+
+    return apiClient.get<string>(`/api/error-logs/report-text?${searchParams.toString()}`);
   },
 
   getStatsByGroup: async (query: ErrorLogStatsQuery): Promise<ErrorLogStatsByGroup> => {

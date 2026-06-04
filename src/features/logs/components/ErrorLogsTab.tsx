@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Edit2, Eye, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
+import { logsService } from '../../../services/api/logsService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { ErrorGroup, ErrorLog, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
@@ -51,18 +52,38 @@ const processingFlowOptions = Object.entries(processingFlowLabels).map(([value, 
   label,
 }));
 
-function toDateInputValue(date: string) {
-  if (!date) return '';
-  return date.slice(0, 10);
+function padDatePart(value: number) {
+  return String(value).padStart(2, '0');
 }
 
-function toApiDate(date: string) {
-  return `${date}T00:00:00`;
+function toDateTimeInputValue(date: string) {
+  if (!date) return '';
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date.slice(0, 16);
+  }
+
+  const year = parsedDate.getFullYear();
+  const month = padDatePart(parsedDate.getMonth() + 1);
+  const day = padDatePart(parsedDate.getDate());
+  const hours = padDatePart(parsedDate.getHours());
+  const minutes = padDatePart(parsedDate.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function toApiDateTime(date: string) {
+  return date.length === 16 ? `${date}:00` : date;
 }
 
 function formatDate(date: string) {
   if (!date) return 'N/A';
-  return new Intl.DateTimeFormat('vi-VN').format(new Date(date));
+  return new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(date));
 }
 
 function getStatusClass(status: ErrorLogStatus) {
@@ -116,9 +137,14 @@ export default function ErrorLogsTab() {
   } = useLogsStore();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportFromDate, setReportFromDate] = useState(toDateTimeInputValue(new Date().toISOString()));
+  const [reportToDate, setReportToDate] = useState(toDateTimeInputValue(new Date().toISOString()));
+  const [reportText, setReportText] = useState('');
+  const [isReportLoading, setIsReportLoading] = useState(false);
   const [selectedLogDetails, setSelectedLogDetails] = useState<ErrorLog | null>(null);
   const [currentEditingLog, setCurrentEditingLog] = useState<ErrorLog | null>(null);
-  const [receivedDate, setReceivedDate] = useState(toDateInputValue(new Date().toISOString()));
+  const [receivedDate, setReceivedDate] = useState(toDateTimeInputValue(new Date().toISOString()));
   const [store, setStore] = useState('CH Quận 1');
   const [storeId, setStoreId] = useState<string | number | undefined>();
   const [booth, setBooth] = useState('');
@@ -176,7 +202,7 @@ export default function ErrorLogsTab() {
   const handleOpenModal = (log: ErrorLog | null = null) => {
     if (log) {
       setCurrentEditingLog(log);
-      setReceivedDate(toDateInputValue(log.receivedDate));
+      setReceivedDate(toDateTimeInputValue(log.receivedDate));
       setStore(log.store);
       setStoreId(undefined);
       setBooth(log.booth || '');
@@ -190,7 +216,7 @@ export default function ErrorLogsTab() {
       setNote(log.note || '');
     } else {
       setCurrentEditingLog(null);
-      setReceivedDate(toDateInputValue(new Date().toISOString()));
+      setReceivedDate(toDateTimeInputValue(new Date().toISOString()));
       setStore('CH Quận 1');
       setStoreId(undefined);
       setBooth('');
@@ -220,7 +246,7 @@ export default function ErrorLogsTab() {
     }
 
     const payload = {
-      receivedDate: toApiDate(receivedDate),
+      receivedDate: toApiDateTime(receivedDate),
       store: store.trim(),
       booth: booth.trim(),
       errorGroup,
@@ -285,6 +311,46 @@ export default function ErrorLogsTab() {
     }
   };
 
+  const handleGenerateReportText = async () => {
+    if (!reportFromDate || !reportToDate) {
+      toast.error('Vui lòng chọn ngày bắt đầu và ngày kết thúc.');
+      return;
+    }
+
+    if (reportFromDate > reportToDate) {
+      toast.error('Ngày bắt đầu không được lớn hơn ngày kết thúc.');
+      return;
+    }
+
+    setIsReportLoading(true);
+    try {
+      const text = await logsService.getReportText({
+        fromDate: toApiDateTime(reportFromDate),
+        toDate: toApiDateTime(reportToDate),
+      });
+      setReportText(text);
+      toast.success('Đã xuất báo cáo văn bản.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xuất báo cáo văn bản.');
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
+
+  const handleCopyReportText = async () => {
+    if (!reportText) {
+      toast.error('Chưa có nội dung báo cáo để copy.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(reportText);
+      toast.success('Đã copy báo cáo vào clipboard.');
+    } catch {
+      toast.error('Không thể copy vào clipboard.');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -308,6 +374,13 @@ export default function ErrorLogsTab() {
             className="bg-white text-[#004ac6] border border-[#004ac6]/30 hover:bg-blue-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" /> {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsReportModalOpen(true)}
+            className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <FileText className="w-4 h-4" /> Xuất báo cáo
           </button>
           <button
             type="button"
@@ -563,6 +636,70 @@ export default function ErrorLogsTab() {
         </div>
       </div>
 
+      {isReportModalOpen && (
+        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 border border-outline-variant">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+              <h3 className="text-lg font-bold text-on-surface">Xuất báo cáo văn bản</h3>
+              <button type="button" onClick={() => setIsReportModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+            </div>
+
+            <div className="space-y-4 text-sm text-left">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-medium mb-1">Ngày giờ bắt đầu</label>
+                  <input
+                    type="datetime-local"
+                    value={reportFromDate}
+                    onChange={e => setReportFromDate(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Ngày giờ kết thúc</label>
+                  <input
+                    type="datetime-local"
+                    value={reportToDate}
+                    onChange={e => setReportToDate(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1">Nội dung báo cáo</label>
+                <textarea
+                  value={reportText}
+                  onChange={e => setReportText(e.target.value)}
+                  rows={8}
+                  placeholder="Nội dung báo cáo sẽ hiển thị sau khi xuất."
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] font-mono text-xs resize-y"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCopyReportText}
+                  disabled={!reportText}
+                  className="px-4 py-2 rounded-lg border border-outline-variant text-gray-600 hover:bg-gray-50 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <ClipboardCopy className="w-4 h-4" /> Copy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGenerateReportText}
+                  disabled={isReportLoading}
+                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-container font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <FileText className="w-4 h-4" /> {isReportLoading ? 'Đang xuất...' : 'Xuất văn bản'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 border border-outline-variant">
@@ -577,7 +714,7 @@ export default function ErrorLogsTab() {
                 <div>
                   <label className="block font-medium mb-1">Ngày tiếp nhận *</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     required
                     value={receivedDate}
                     onChange={e => setReceivedDate(e.target.value)}
