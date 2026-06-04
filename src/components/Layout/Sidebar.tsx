@@ -77,10 +77,7 @@ export default function Sidebar() {
     <aside className="w-[280px] bg-white border-r border-outline-variant flex flex-col fixed left-0 top-0 h-full z-20">
       <div className="h-[64px] flex items-center px-6 border-b border-outline-variant shrink-0 justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-white">
-            <Shield className="w-5 h-5" />
-          </div>
-          <span className="text-lg font-bold text-primary tracking-tight">IT Admin System</span>
+          <span className="text-lg font-bold text-primary tracking-tight">IT Support</span>
         </div>
         <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
       </div>

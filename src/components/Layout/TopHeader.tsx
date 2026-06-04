@@ -88,10 +88,6 @@ export default function TopHeader() {
         )} */}
       </div>
 
-      <div className="hidden lg:block text-sm font-bold text-[#004ac6] tracking-wide mx-4 select-none">
-        IT SUPPORT MANAGEMENT PORTAL
-      </div>
-
       <div className="flex items-center gap-3">
         {/* Notification Bell Dropdown Container */}
         <div className="relative" ref={quickNotifRef}>
