@@ -28,6 +28,39 @@ export type ErrorLogPayload = {
   status?: ErrorLogStatus;
 };
 
+export type ErrorLogStats = {
+  total: number;
+  inProgress: number;
+  sentToDev: number;
+  monitoringAfterFix: number;
+};
+
+export type ErrorLogStatsQuery = {
+  fromDate: string;
+  toDate: string;
+};
+
+export type ErrorLogStatsByGroupItem = {
+  errorGroup: string;
+  count: number;
+};
+
+export type ErrorLogStatsByGroup = {
+  total: number;
+  byGroup: ErrorLogStatsByGroupItem[];
+};
+
+export type ErrorLogByStore = {
+  store: string;
+  errorCount: number;
+};
+
+export type ErrorLogByStoreQuery = {
+  month: number;
+  year: number;
+  ascending: boolean;
+};
+
 function buildQuery(params: ErrorLogQuery = {}) {
   const searchParams = new URLSearchParams();
 
@@ -84,6 +117,34 @@ export const logsService = {
 
   syncGoogleSheet: async (): Promise<void> => {
     await apiClient.post<void>('/api/error-logs/sync-google-sheet');
+  },
+
+  getStats: async (query: ErrorLogStatsQuery): Promise<ErrorLogStats> => {
+    const searchParams = new URLSearchParams({
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+    });
+
+    return apiClient.get<ErrorLogStats>(`/api/error-logs/stats?${searchParams.toString()}`);
+  },
+
+  getStatsByGroup: async (query: ErrorLogStatsQuery): Promise<ErrorLogStatsByGroup> => {
+    const searchParams = new URLSearchParams({
+      fromDate: query.fromDate,
+      toDate: query.toDate,
+    });
+
+    return apiClient.get<ErrorLogStatsByGroup>(`/api/error-logs/stats/by-group?${searchParams.toString()}`);
+  },
+
+  getByStore: async (query: ErrorLogByStoreQuery): Promise<ErrorLogByStore[]> => {
+    const searchParams = new URLSearchParams({
+      month: String(query.month),
+      year: String(query.year),
+      ascending: String(query.ascending),
+    });
+
+    return apiClient.get<ErrorLogByStore[]>(`/api/error-logs/by-store?${searchParams.toString()}`);
   },
 
   exportExcel: async (query?: ErrorLogQuery): Promise<{ blob: Blob; fileName: string }> => {
