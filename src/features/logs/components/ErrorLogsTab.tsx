@@ -107,7 +107,9 @@ export default function ErrorLogsTab() {
   const [currentEditingLog, setCurrentEditingLog] = useState<ErrorLog | null>(null);
   const [receivedDate, setReceivedDate] = useState(toDateInputValue(new Date().toISOString()));
   const [store, setStore] = useState('CH Quận 1');
+  const [storeId, setStoreId] = useState<string | number | undefined>();
   const [booth, setBooth] = useState('');
+  const [logStoreFilterId, setLogStoreFilterId] = useState<string | number | undefined>();
   const [description, setDescription] = useState('');
   const [errorGroup, setErrorGroup] = useState<ErrorGroup>(1);
   const [status, setStatus] = useState<ErrorLogStatus>(1);
@@ -148,15 +150,19 @@ export default function ErrorLogsTab() {
   const loadStores = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
     return lookupService.searchStores(query);
   }, []);
-  const loadBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
-    return lookupService.searchBooths(query);
-  }, []);
+  const loadFilteredBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
+    return lookupService.searchBooths({ ...query, storeId: logStoreFilterId });
+  }, [logStoreFilterId]);
+  const loadFormBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
+    return lookupService.searchBooths({ ...query, storeId });
+  }, [storeId]);
 
   const handleOpenModal = (log: ErrorLog | null = null) => {
     if (log) {
       setCurrentEditingLog(log);
       setReceivedDate(toDateInputValue(log.receivedDate));
       setStore(log.store);
+      setStoreId(undefined);
       setBooth(log.booth || '');
       setDescription(log.description || '');
       setErrorGroup(log.errorGroup);
@@ -169,6 +175,7 @@ export default function ErrorLogsTab() {
       setCurrentEditingLog(null);
       setReceivedDate(toDateInputValue(new Date().toISOString()));
       setStore('CH Quận 1');
+      setStoreId(undefined);
       setBooth('');
       setDescription('');
       setErrorGroup(1);
@@ -189,7 +196,7 @@ export default function ErrorLogsTab() {
       return;
     }
 
-    if (!currentUser?.id) {
+    if (!currentUser?.name) {
       toast.error('Không tìm thấy user đang đăng nhập để gán IT phụ trách.');
       return;
     }
@@ -204,7 +211,9 @@ export default function ErrorLogsTab() {
       preliminaryCause: preliminaryCause.trim(),
       solution: solution.trim(),
       severity,
-      assignedToId: currentEditingLog?.assignedToId || currentUser.id,
+      assignedToId: currentEditingLog
+        ? currentEditingLog.assignedToName || currentEditingLog.assignedToId
+        : currentUser.name,
       note: note.trim(),
       status,
     };
@@ -302,8 +311,16 @@ export default function ErrorLogsTab() {
               emptyText="Không tìm thấy cửa hàng."
               loadOptions={loadStores}
               pageSize={20}
-              onSelect={item => setLogStoreFilter(item.name)}
-              onClear={() => setLogStoreFilter('')}
+              onSelect={item => {
+                setLogStoreFilter(item.name);
+                setLogStoreFilterId(item.id);
+                setLogBoothFilter('');
+              }}
+              onClear={() => {
+                setLogStoreFilter('');
+                setLogStoreFilterId(undefined);
+                setLogBoothFilter('');
+              }}
             />
           </div>
 
@@ -313,7 +330,7 @@ export default function ErrorLogsTab() {
               value={logBoothFilter}
               placeholder="Tất cả Booth"
               emptyText="Không tìm thấy Booth."
-              loadOptions={loadBooths}
+              loadOptions={loadFilteredBooths}
               onSelect={item => setLogBoothFilter(item.name)}
               onClear={() => setLogBoothFilter('')}
             />
@@ -543,7 +560,16 @@ export default function ErrorLogsTab() {
                     emptyText="Không tìm thấy cửa hàng."
                     loadOptions={loadStores}
                     pageSize={20}
-                    onSelect={item => setStore(item.name)}
+                    onSelect={item => {
+                      setStore(item.name);
+                      setStoreId(item.id);
+                      setBooth('');
+                    }}
+                    onClear={() => {
+                      setStore('');
+                      setStoreId(undefined);
+                      setBooth('');
+                    }}
                   />
                 </div>
                 <div>
@@ -552,7 +578,7 @@ export default function ErrorLogsTab() {
                     value={booth}
                     placeholder="Chọn Booth..."
                     emptyText="Không tìm thấy Booth."
-                    loadOptions={loadBooths}
+                    loadOptions={loadFormBooths}
                     onSelect={item => setBooth(item.name)}
                     onClear={() => setBooth('')}
                   />
