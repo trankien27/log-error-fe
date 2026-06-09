@@ -1,31 +1,58 @@
 import { User, Role } from '../../types';
 import { apiClient } from './apiClient';
 
+type UsersResponse = User[] | {
+  items?: User[];
+};
+
+function normalizeUser(user: any): User {
+  const firstName = user.firstName || '';
+  const lastName = user.lastName || '';
+  const name = user.name || `${firstName} ${lastName}`.trim() || user.email || '';
+
+  return {
+    ...user,
+    id: String(user.id ?? user.userId ?? ''),
+    name,
+    email: user.email || '',
+    role: user.role ?? user.roleId,
+    status: user.status || 'Hoạt động',
+  };
+}
+
 export const usersService = {
   getUsers: async (): Promise<User[]> => {
-    return apiClient.get<User[]>('/users');
+    const result = await apiClient.get<UsersResponse>('/api/users');
+
+    if (Array.isArray(result)) {
+      return result.map(normalizeUser);
+    }
+
+    return Array.isArray(result.items) ? result.items.map(normalizeUser) : [];
   },
 
   saveUser: async (user: Omit<User, 'id'> & { id?: string }): Promise<User> => {
     if (user.id) {
-      return apiClient.put<User>(`/users/${encodeURIComponent(user.id)}`, user);
+      const saved = await apiClient.put<User>(`/api/users/${encodeURIComponent(user.id)}`, user);
+      return normalizeUser(saved);
     }
-    return apiClient.post<User>('/users', user);
+    const saved = await apiClient.post<User>('/api/users', user);
+    return normalizeUser(saved);
   },
 
   deleteUser: async (id: string): Promise<boolean> => {
-    await apiClient.delete<void>(`/users/${encodeURIComponent(id)}`);
+    await apiClient.delete<void>(`/api/users/${encodeURIComponent(id)}`);
     return true;
   },
 
   getRoles: async (): Promise<Role[]> => {
-    return apiClient.get<Role[]>('/roles');
+    return apiClient.get<Role[]>('/api/roles');
   },
 
   saveRole: async (role: Role, isEdit: boolean): Promise<Role> => {
     if (isEdit) {
-      return apiClient.put<Role>(`/roles/${encodeURIComponent(role.name)}`, role);
+      return apiClient.put<Role>(`/api/roles/${encodeURIComponent(role.name)}`, role);
     }
-    return apiClient.post<Role>('/roles', role);
+    return apiClient.post<Role>('/api/roles', role);
   }
 };
