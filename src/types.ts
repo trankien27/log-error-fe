@@ -28,7 +28,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Manager' | 'IT Support' | 'Staff' | 'User';
+  role: 'Admin' | 'Manager' | 'IT Support' | 'Staff' | 'User' | 1 | 2 | 3 | 4 | 5;
   status: 'Hoạt động' | 'Vô hiệu hóa';
   avatar?: string;
   phone?: string;
@@ -73,9 +73,14 @@ export interface TaskAttachment {
 
 export interface Task {
   id: string;
+  code?: string;
   title: string;
+  description?: string;
+  priority?: number;
   status: 'pending' | 'progress' | 'done';
   dueText: string;
+  dueDate?: string;
+  assigneeId?: string;
   assigneeName: string;
   assigneeAvatar?: string;
   commentsCount: number;

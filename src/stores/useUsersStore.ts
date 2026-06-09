@@ -66,9 +66,22 @@ export const useUsersStore = create<UsersState>((set, get) => ({
   fetchUsersAndRoles: async () => {
     set({ isLoading: true });
     try {
-      const users = await usersService.getUsers();
-      const roles = await usersService.getRoles();
-      set({ users, roles, isLoading: false });
+      const [usersResult, rolesResult] = await Promise.allSettled([
+        usersService.getUsers(),
+        usersService.getRoles(),
+      ]);
+
+      set({
+        users: usersResult.status === 'fulfilled' ? usersResult.value : [],
+        roles: rolesResult.status === 'fulfilled' ? rolesResult.value : [],
+        error:
+          usersResult.status === 'rejected'
+            ? usersResult.reason?.message || 'Không thể tải danh sách người dùng.'
+            : rolesResult.status === 'rejected'
+            ? rolesResult.reason?.message || 'Không thể tải danh sách vai trò.'
+            : null,
+        isLoading: false,
+      });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
     }

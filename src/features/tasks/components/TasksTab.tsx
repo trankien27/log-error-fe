@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Clock, Paperclip, CheckCircle, Edit2, Trash2, X, Paperclip as PaperclipIcon, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTasksStore } from '../../../stores/useTasksStore';
+import { useUsersStore } from '../../../stores/useUsersStore';
 import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
 import { Task, TaskAttachment } from '../../../types';
 
@@ -21,6 +22,7 @@ export default function TasksTab() {
     selectedTaskDetails,
     setSelectedTaskDetails
   } = useTasksStore();
+  const { users } = useUsersStore();
 
   const {
     draggedTaskId,
@@ -33,26 +35,59 @@ export default function TasksTab() {
 
   // Local Form states for creating/editing task
   const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
   const [taskStatusField, setTaskStatusField] = useState<'pending' | 'progress' | 'done'>('pending');
   const [taskDue, setTaskDue] = useState('Hôm nay');
+  const [taskAssigneeId, setTaskAssigneeId] = useState('');
   const [taskAssignee, setTaskAssignee] = useState('');
   const [taskAttachments, setTaskAttachments] = useState<TaskAttachment[]>([]);
   const [taskNotesInput, setTaskNotesInput] = useState('');
 
+  const getTodayInputValue = () => new Date().toISOString().slice(0, 10);
+  const toDateInputValue = (dateValue?: string) => {
+    if (!dateValue) return getTodayInputValue();
+    const date = new Date(dateValue);
+    return Number.isNaN(date.getTime()) ? dateValue.slice(0, 10) : date.toISOString().slice(0, 10);
+  };
+  const isTaskAssigneeRole = (role: unknown) => role === 2 || String(role).toLowerCase() === 'it support';
+  const assigneeUsers = users.filter(user => isTaskAssigneeRole(user.role));
+
+  const getDefaultAssignee = () => assigneeUsers[0] || null;
+  const findAssigneeUser = (assigneeId?: string, assigneeName?: string) => {
+    return users.find(user => user.id === assigneeId)
+      || users.find(user => user.name === assigneeName)
+      || null;
+  };
+  const getTaskAssigneeName = (task: Task) => findAssigneeUser(task.assigneeId, task.assigneeName)?.name || task.assigneeName || 'Chưa gán';
+  const getTaskAssigneeInitial = (task: Task) => getTaskAssigneeName(task).charAt(0).toUpperCase();
+
+  const formatDueText = (dateValue: string) => {
+    const date = new Date(dateValue);
+    return Number.isNaN(date.getTime()) ? dateValue : date.toLocaleDateString('vi-VN');
+  };
+
+  const isOverdueDate = (dateValue: string) => Boolean(dateValue) && dateValue < getTodayInputValue();
+
   const handleOpenTaskModal = (t: Task | null = null) => {
     if (t) {
+      const assigneeUser = findAssigneeUser(t.assigneeId, t.assigneeName);
       setCurrentEditingTask(t);
       setTaskTitle(t.title);
+      setTaskDescription(t.description || '');
       setTaskStatusField(t.status);
-      setTaskDue(t.dueText);
-      setTaskAssignee(t.assigneeName);
+      setTaskDue(toDateInputValue(t.dueDate || t.dueText));
+      setTaskAssigneeId(assigneeUser?.id || t.assigneeId || '');
+      setTaskAssignee(assigneeUser?.name || t.assigneeName);
       setTaskAttachments(t.attachments || []);
     } else {
+      const defaultAssignee = getDefaultAssignee();
       setCurrentEditingTask(null);
       setTaskTitle('');
+      setTaskDescription('');
       setTaskStatusField('pending');
-      setTaskDue('Hôm nay');
-      setTaskAssignee('Đặng Tuấn Anh');
+      setTaskDue(getTodayInputValue());
+      setTaskAssigneeId(defaultAssignee?.id || '');
+      setTaskAssignee(defaultAssignee?.name || '');
       setTaskAttachments([]);
     }
     setIsTaskModalOpen(true);
@@ -64,13 +99,23 @@ export default function TasksTab() {
       toast.error('Vui lòng điền tiêu đề công việc.');
       return;
     }
+    if (!taskAssigneeId) {
+      toast.error('Vui lòng chọn người đảm nhận.');
+      return;
+    }
+
+    const selectedAssignee = findAssigneeUser(taskAssigneeId, taskAssignee);
 
     const payload = {
       title: taskTitle.trim(),
+      description: taskDescription.trim(),
+      priority: currentEditingTask?.priority ?? 1,
       status: taskStatusField,
-      dueText: taskDue,
-      assigneeName: taskAssignee,
-      isOverdue: taskDue.includes('Hôm qua'),
+      dueDate: taskDue,
+      dueText: taskDue ? formatDueText(taskDue) : 'Hôm nay',
+      assigneeId: selectedAssignee?.id || taskAssigneeId || undefined,
+      assigneeName: selectedAssignee?.name || taskAssignee.trim(),
+      isOverdue: isOverdueDate(taskDue),
       attachments: taskAttachments,
       notes: currentEditingTask?.notes || ''
     };
@@ -84,6 +129,15 @@ export default function TasksTab() {
         toast.success('Tạo tác vụ thành công.');
       }
       setIsTaskModalOpen(false);
+      setCurrentEditingTask(null);
+      setTaskTitle('');
+      setTaskDescription('');
+      setTaskStatusField('pending');
+      setTaskDue(getTodayInputValue());
+      const defaultAssignee = getDefaultAssignee();
+      setTaskAssigneeId(defaultAssignee?.id || '');
+      setTaskAssignee(defaultAssignee?.name || '');
+      setTaskAttachments([]);
     } catch (err: any) {
       toast.error(err.message || 'Không thể lưu tác vụ.');
     }
@@ -183,7 +237,7 @@ export default function TasksTab() {
             onDragOver={(e) => handleDragOver(e, 'pending')}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'pending')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] transition-all duration-200 ${
+            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
               dragOverColumn === 'pending' ? 'bg-[#e0e7ff] border-2 border-dashed border-primary shadow-inner' : 'bg-[#f8fafc]'
             }`}
           >
@@ -197,16 +251,14 @@ export default function TasksTab() {
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onClick={() => {
                     setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.notes || '');
+                    setTaskNotesInput(task.description || '');
                   }}
                   className={`bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md hover:border-primary/40 shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     draggedTaskId === task.id ? 'opacity-30 border-primary' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="bg-[#f0f0fb] text-[#191b23] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
-                      {task.id}
-                    </span>
+                     <h5 className="text-xs font-bold text-gray-900 leading-snug">{task.title}</h5>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -218,7 +270,7 @@ export default function TasksTab() {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <h5 className="text-xs font-bold text-gray-900 leading-snug">{task.title}</h5>
+                 
 
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1 text-red-650 font-medium">
@@ -236,9 +288,9 @@ export default function TasksTab() {
                   <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center font-bold text-[9px] text-[#004ac6]">
-                        {task.assigneeName.charAt(0)}
+                        {getTaskAssigneeInitial(task)}
                       </div>
-                      <span className="text-[10px] text-gray-500 font-medium truncate">{task.assigneeName}</span>
+                      <span className="text-[10px] text-gray-500 font-medium truncate">{getTaskAssigneeName(task)}</span>
                     </div>
                     
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
@@ -273,7 +325,7 @@ export default function TasksTab() {
             onDragOver={(e) => handleDragOver(e, 'progress')}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'progress')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] transition-all duration-200 ${
+            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
               dragOverColumn === 'progress' ? 'bg-[#e0e7ff] border-2 border-dashed border-primary shadow-inner' : 'bg-[#f8fafc]'
             }`}
           >
@@ -287,7 +339,7 @@ export default function TasksTab() {
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onClick={() => {
                     setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.notes || '');
+                    setTaskNotesInput(task.description || '');
                   }}
                   className={`bg-white p-4 rounded-lg border shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     task.isOverdue ? 'border-red-400 bg-red-50/50' : 'border-outline-variant'
@@ -328,9 +380,9 @@ export default function TasksTab() {
                   <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center font-bold text-[9px] text-red-650">
-                        {task.assigneeName.charAt(0)}
+                        {getTaskAssigneeInitial(task)}
                       </div>
-                      <span className="text-[10px] text-gray-500 font-medium truncate">{task.assigneeName}</span>
+                      <span className="text-[10px] text-gray-500 font-medium truncate">{getTaskAssigneeName(task)}</span>
                     </div>
                     
                     <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -372,7 +424,7 @@ export default function TasksTab() {
             onDragOver={(e) => handleDragOver(e, 'done')}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'done')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] transition-all duration-200 ${
+            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
               dragOverColumn === 'done' ? 'bg-[#e2f1e9] border-2 border-dashed border-emerald-500 shadow-inner' : 'bg-[#f8fafc]'
             }`}
           >
@@ -386,7 +438,7 @@ export default function TasksTab() {
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onClick={() => {
                     setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.notes || '');
+                    setTaskNotesInput(task.description || '');
                   }}
                   className={`bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md shadow-sm space-y-3 min-h-[90px] transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     draggedTaskId === task.id ? 'opacity-30 border-emerald-500' : ''
@@ -457,25 +509,47 @@ export default function TasksTab() {
                   className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
                 />
               </div>
+              <div>
+                <label className="block font-medium mb-1">Mô tả</label>
+                <textarea
+                  rows={3}
+                  placeholder="Nhập mô tả chi tiết cho nhiệm vụ"
+                  value={taskDescription}
+                  onChange={e => setTaskDescription(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Người đảm nhận *</label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    value={taskAssignee}
-                    onChange={e => setTaskAssignee(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
-                  />
+                    value={taskAssigneeId}
+                    disabled={assigneeUsers.length === 0}
+                    onChange={e => {
+                      const selectedUser = assigneeUsers.find(user => user.id === e.target.value);
+                      setTaskAssigneeId(selectedUser?.id || '');
+                      setTaskAssignee(selectedUser?.name || '');
+                    }}
+                    className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-[#004ac6] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <option value="" disabled>
+                      {assigneeUsers.length === 0 ? 'Không có user role 2' : 'Chọn người đảm nhận'}
+                    </option>
+                    {assigneeUsers.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Hạn xử lý (Due text)</label>
+                  <label className="block font-medium mb-1">Hạn xử lý</label>
                   <input
-                    type="text"
+                    type="date"
                     value={taskDue}
                     onChange={e => setTaskDue(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
-                    placeholder="Hôm nay, Ngày mai, 2026-05-28..."
                   />
                 </div>
               </div>
@@ -616,11 +690,11 @@ export default function TasksTab() {
               {/* Assignee details */}
               <div className="flex items-center gap-3 bg-[#f8fafc] border border-outline-variant p-3.5 rounded-xl">
                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm">
-                  {selectedTaskDetails.assigneeName.charAt(0)}
+                  {getTaskAssigneeInitial(selectedTaskDetails)}
                 </div>
                 <div className="text-xs">
                   <p className="font-extrabold text-gray-900 leading-snug">Phụ trách kỹ thuật</p>
-                  <p className="text-gray-500 font-medium mt-0.5">{selectedTaskDetails.assigneeName}</p>
+                  <p className="text-gray-500 font-medium mt-0.5">{getTaskAssigneeName(selectedTaskDetails)}</p>
                 </div>
               </div>
 

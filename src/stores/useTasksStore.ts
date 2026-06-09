@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { Task, TaskAttachment } from '../types';
-import { tasksService } from '../services/api/tasksService';
+import { create } from "zustand";
+import { Task, TaskAttachment } from "../types";
+import { tasksService } from "../services/api/tasksService";
 
 interface TasksState {
   tasks: Task[];
@@ -18,8 +18,13 @@ interface TasksState {
   setSelectedTaskDetails: (task: Task | null) => void;
 
   fetchTasks: () => Promise<void>;
-  saveTask: (task: Omit<Task, 'id' | 'commentsCount'> & { id?: string }) => Promise<void>;
-  updateTaskStatus: (id: string, newStatus: 'pending' | 'progress' | 'done') => Promise<void>;
+  saveTask: (
+    task: Omit<Task, "id" | "commentsCount"> & { id?: string },
+  ) => Promise<void>;
+  updateTaskStatus: (
+    id: string,
+    newStatus: "pending" | "progress" | "done",
+  ) => Promise<void>;
   updateTaskNotes: (id: string, notes: string) => Promise<void>;
   addAttachment: (id: string, file: TaskAttachment) => Promise<void>;
   deleteAttachment: (id: string, fileName: string) => Promise<void>;
@@ -53,12 +58,12 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     try {
       const saved = await tasksService.save(taskData);
       set((state) => {
-        const exists = state.tasks.some(t => t.id === saved.id);
+        const exists = state.tasks.some((t) => t.id === saved.id);
         return {
-          tasks: exists 
-            ? state.tasks.map(t => t.id === saved.id ? saved : t) 
-            : [...state.tasks, saved],
-          isLoading: false
+          tasks: exists
+            ? state.tasks.map((t) => (t.id === saved.id ? saved : t))
+            : [saved, ...state.tasks],
+          isLoading: false,
         };
       });
     } catch (err: any) {
@@ -72,9 +77,12 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     try {
       const updated = await tasksService.updateStatus(id, newStatus);
       set((state) => ({
-        tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
-        isLoading: false
+        tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
+        selectedTaskDetails:
+          state.selectedTaskDetails?.id === id
+            ? updated
+            : state.selectedTaskDetails,
+        isLoading: false,
       }));
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
@@ -87,9 +95,12 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     try {
       const updated = await tasksService.updateNotes(id, notes);
       set((state) => ({
-        tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
-        isLoading: false
+        tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
+        selectedTaskDetails:
+          state.selectedTaskDetails?.id === id
+            ? updated
+            : state.selectedTaskDetails,
+        isLoading: false,
       }));
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
@@ -102,9 +113,12 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     try {
       const updated = await tasksService.addAttachment(id, file);
       set((state) => ({
-        tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
-        isLoading: false
+        tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
+        selectedTaskDetails:
+          state.selectedTaskDetails?.id === id
+            ? updated
+            : state.selectedTaskDetails,
+        isLoading: false,
       }));
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
@@ -117,13 +131,16 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     try {
       const updated = await tasksService.deleteAttachment(id, fileName);
       set((state) => ({
-        tasks: state.tasks.map(t => t.id === id ? updated : t),
-        selectedTaskDetails: state.selectedTaskDetails?.id === id ? updated : state.selectedTaskDetails,
-        isLoading: false
+        tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
+        selectedTaskDetails:
+          state.selectedTaskDetails?.id === id
+            ? updated
+            : state.selectedTaskDetails,
+        isLoading: false,
       }));
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;
     }
-  }
+  },
 }));
