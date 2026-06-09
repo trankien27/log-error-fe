@@ -237,7 +237,7 @@ export default function TasksTab() {
             onDragOver={(e) => handleDragOver(e, 'pending')}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'pending')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] transition-all duration-200 ${
+            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
               dragOverColumn === 'pending' ? 'bg-[#e0e7ff] border-2 border-dashed border-primary shadow-inner' : 'bg-[#f8fafc]'
             }`}
           >
@@ -325,7 +325,7 @@ export default function TasksTab() {
             onDragOver={(e) => handleDragOver(e, 'progress')}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'progress')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] transition-all duration-200 ${
+            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
               dragOverColumn === 'progress' ? 'bg-[#e0e7ff] border-2 border-dashed border-primary shadow-inner' : 'bg-[#f8fafc]'
             }`}
           >
@@ -424,7 +424,7 @@ export default function TasksTab() {
             onDragOver={(e) => handleDragOver(e, 'done')}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'done')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] transition-all duration-200 ${
+            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
               dragOverColumn === 'done' ? 'bg-[#e2f1e9] border-2 border-dashed border-emerald-500 shadow-inner' : 'bg-[#f8fafc]'
             }`}
           >
