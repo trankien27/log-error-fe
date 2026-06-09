@@ -251,16 +251,14 @@ export default function TasksTab() {
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onClick={() => {
                     setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.notes || '');
+                    setTaskNotesInput(task.description || '');
                   }}
                   className={`bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md hover:border-primary/40 shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     draggedTaskId === task.id ? 'opacity-30 border-primary' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="bg-[#f0f0fb] text-[#191b23] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
-                      {task.id}
-                    </span>
+                     <h5 className="text-xs font-bold text-gray-900 leading-snug">{task.title}</h5>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -272,7 +270,7 @@ export default function TasksTab() {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <h5 className="text-xs font-bold text-gray-900 leading-snug">{task.title}</h5>
+                 
 
                   <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-1 text-red-650 font-medium">
@@ -341,7 +339,7 @@ export default function TasksTab() {
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onClick={() => {
                     setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.notes || '');
+                    setTaskNotesInput(task.description || '');
                   }}
                   className={`bg-white p-4 rounded-lg border shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     task.isOverdue ? 'border-red-400 bg-red-50/50' : 'border-outline-variant'
@@ -440,7 +438,7 @@ export default function TasksTab() {
                   onDragStart={(e) => handleDragStart(e, task.id)}
                   onClick={() => {
                     setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.notes || '');
+                    setTaskNotesInput(task.description || '');
                   }}
                   className={`bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md shadow-sm space-y-3 min-h-[90px] transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     draggedTaskId === task.id ? 'opacity-30 border-emerald-500' : ''
