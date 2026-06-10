@@ -110,6 +110,86 @@ export interface Activity {
   statusType: 'error' | 'pending' | 'success';
 }
 
+export interface ShiftDto {
+  id: number;
+  code: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  workingHours: number;
+  isExtraShift: boolean;
+  isActive: boolean;
+}
+
+export interface WorkScheduleDto {
+  id: number;
+  workDate: string;
+  userId: string;
+  userName: string;
+  shiftId: number;
+  shiftCode: string;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  workingHours: number;
+  status: number;
+  statusName: string;
+  note?: string | null;
+}
+
+export interface CalendarDayDto {
+  date: string;
+  dayOfWeek: number;
+  dayName: string;
+  isWeekendRule: boolean;
+  isValid: boolean;
+  requiredShifts: string[];
+  requiredExtraShiftGroups: string[][];
+  assignedShifts: string[];
+  missingShifts: string[];
+  missingExtraShiftGroups: string[][];
+  schedules: WorkScheduleDto[];
+}
+
+export interface CalendarResponseDto {
+  fromDate: string;
+  toDate: string;
+  days: CalendarDayDto[];
+}
+
+export interface CreateWorkScheduleRequest {
+  workDate: string;
+  userId: string;
+  shiftId: number;
+  note?: string | null;
+}
+
+export interface BulkCreateWorkScheduleRequest {
+  items: CreateWorkScheduleRequest[];
+}
+
+export interface UpdateWorkScheduleRequest {
+  workDate: string;
+  userId: string;
+  shiftId: number;
+  note?: string | null;
+}
+
+export interface ChangeShiftRequest {
+  shiftId: number;
+  note?: string | null;
+}
+
+export interface ChangeUserRequest {
+  userId: string;
+  note?: string | null;
+}
+
+export interface UpdateWorkScheduleStatusRequest {
+  status: number;
+  note?: string | null;
+}
+
 export type TabType =
   | 'overview'
   | 'error_logs'

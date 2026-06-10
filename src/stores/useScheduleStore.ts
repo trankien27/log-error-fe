@@ -1,84 +1,103 @@
 import { create } from 'zustand';
 import { scheduleService } from '../services/api/scheduleService';
+import { CalendarDayDto, ShiftDto } from '../types';
 
 interface ScheduleState {
   shifts: any[];
+  shiftDefinitions: ShiftDto[];
+  calendarDays: CalendarDayDto[];
+  weekStart: string;
+  weekEnd: string;
   isLoading: boolean;
   error: string | null;
 
-  // Filter settings
   scheduleTeamMode: 'team' | 'my';
   scheduleSearchQuery: string;
   scheduleRoleFilter: string;
+  scheduleShiftFilter: string;
+  scheduleStatusFilter: string;
 
-  // Modals & fields
   isCreateShiftModalOpen: boolean;
 
-  // Setters/Actions
   setScheduleTeamMode: (mode: 'team' | 'my') => void;
   setScheduleSearchQuery: (query: string) => void;
   setScheduleRoleFilter: (role: string) => void;
+  setScheduleShiftFilter: (shiftId: string) => void;
+  setScheduleStatusFilter: (status: string) => void;
   setIsCreateShiftModalOpen: (isOpen: boolean) => void;
 
   fetchShifts: () => Promise<void>;
-  saveShift: (shift: any) => Promise<void>;
-  deleteShift: (id: string) => Promise<void>;
+  fetchCalendar: (fromDate: string, toDate: string) => Promise<void>;
+}
+
+function formatDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getCurrentWeekRange() {
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  return {
+    weekStart: formatDate(monday),
+    weekEnd: formatDate(sunday),
+  };
 }
 
 export const useScheduleStore = create<ScheduleState>((set, get) => ({
   shifts: [],
+  shiftDefinitions: [],
+  calendarDays: [],
+  ...getCurrentWeekRange(),
   isLoading: false,
   error: null,
 
   scheduleTeamMode: 'team',
   scheduleSearchQuery: '',
   scheduleRoleFilter: 'Tất cả vai trò',
+  scheduleShiftFilter: '',
+  scheduleStatusFilter: '',
 
   isCreateShiftModalOpen: false,
 
   setScheduleTeamMode: (scheduleTeamMode) => set({ scheduleTeamMode }),
   setScheduleSearchQuery: (scheduleSearchQuery) => set({ scheduleSearchQuery }),
   setScheduleRoleFilter: (scheduleRoleFilter) => set({ scheduleRoleFilter }),
+  setScheduleShiftFilter: (scheduleShiftFilter) => set({ scheduleShiftFilter }),
+  setScheduleStatusFilter: (scheduleStatusFilter) => set({ scheduleStatusFilter }),
   setIsCreateShiftModalOpen: (isCreateShiftModalOpen) => set({ isCreateShiftModalOpen }),
 
   fetchShifts: async () => {
-    set({ isLoading: true });
-    try {
-      const shifts = await scheduleService.getAll();
-      set({ shifts, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.message, isLoading: false });
-    }
+    const { weekStart, weekEnd } = getCurrentWeekRange();
+    await get().fetchCalendar(weekStart, weekEnd);
   },
 
-  saveShift: async (shift) => {
+  fetchCalendar: async (fromDate, toDate) => {
     set({ isLoading: true, error: null });
     try {
-      const saved = await scheduleService.save(shift);
-      set((state) => {
-        const exists = state.shifts.some(s => s.id === saved.id);
-        const updated = exists
-          ? state.shifts.map(s => s.id === saved.id ? saved : s)
-          : [...state.shifts, saved];
-        return { shifts: updated, isLoading: false };
+      const [shiftDefinitions, calendar] = await Promise.all([
+        scheduleService.getShifts(true),
+        scheduleService.getCalendar(fromDate, toDate),
+      ]);
+
+      set({
+        shiftDefinitions,
+        calendarDays: calendar.days,
+        shifts: calendar.days.flatMap((day) => day.schedules),
+        weekStart: calendar.fromDate,
+        weekEnd: calendar.toDate,
+        isLoading: false,
       });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
-      throw err;
     }
   },
-
-  deleteShift: async (id) => {
-    set({ isLoading: true, error: null });
-    try {
-      await scheduleService.delete(id);
-      set((state) => ({
-        shifts: state.shifts.filter(s => s.id !== id),
-        isLoading: false
-      }));
-    } catch (err: any) {
-      set({ error: err.message, isLoading: false });
-      throw err;
-    }
-  }
 }));
