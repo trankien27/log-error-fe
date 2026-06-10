@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useTasksStore } from '@/stores/useTasksStore';
 
 export function useKanbanDragDrop() {
@@ -13,7 +14,7 @@ export function useKanbanDragDrop() {
 
   const handleDragOver = (e: React.DragEvent, column: 'pending' | 'progress' | 'done') => {
     e.preventDefault();
-    setDragOverColumn(column);
+    setDragOverColumn((current) => (current === column ? current : column));
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -21,14 +22,17 @@ export function useKanbanDragDrop() {
     setDragOverColumn(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, column: 'pending' | 'progress' | 'done') => {
+  const handleDrop = (e: React.DragEvent, column: 'pending' | 'progress' | 'done') => {
     e.preventDefault();
     const id = e.dataTransfer.getData('text/plain') || draggedTaskId;
-    if (id) {
-      await updateTaskStatus(id, column);
-    }
     setDraggedTaskId(null);
     setDragOverColumn(null);
+
+    if (id) {
+      updateTaskStatus(id, column).catch((err: any) => {
+        toast.error(err.message || 'Không thể cập nhật trạng thái.');
+      });
+    }
   };
 
   return {

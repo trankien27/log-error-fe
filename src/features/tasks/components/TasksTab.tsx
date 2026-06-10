@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Clock, Paperclip, CheckCircle, Edit2, Trash2, X, Paperclip as PaperclipIcon, Check } from 'lucide-react';
+import { Plus, Clock, Paperclip, Edit2, Paperclip as PaperclipIcon, Columns3, List, ArrowRight, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTasksStore } from '../../../stores/useTasksStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
@@ -42,6 +42,7 @@ export default function TasksTab() {
   const [taskAssignee, setTaskAssignee] = useState('');
   const [taskAttachments, setTaskAttachments] = useState<TaskAttachment[]>([]);
   const [taskNotesInput, setTaskNotesInput] = useState('');
+  const [activeTaskView, setActiveTaskView] = useState<'kanban' | 'list'>('kanban');
 
   const getTodayInputValue = () => new Date().toISOString().slice(0, 10);
   const toDateInputValue = (dateValue?: string) => {
@@ -60,6 +61,15 @@ export default function TasksTab() {
   };
   const getTaskAssigneeName = (task: Task) => findAssigneeUser(task.assigneeId, task.assigneeName)?.name || task.assigneeName || 'Chưa gán';
   const getTaskAssigneeInitial = (task: Task) => getTaskAssigneeName(task).charAt(0).toUpperCase();
+  const getTaskStatusLabel = (status: Task['status']) => {
+    if (status === 'pending') return 'Chờ xử lý';
+    if (status === 'progress') return 'Đang làm';
+    return 'Hoàn thành';
+  };
+  const openTaskDetails = (task: Task) => {
+    setSelectedTaskDetails(task);
+    setTaskNotesInput(task.description || '');
+  };
 
   const formatDueText = (dateValue: string) => {
     const date = new Date(dateValue);
@@ -297,9 +307,9 @@ export default function TasksTab() {
                       <button
                         onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
                         disabled={isLoading}
-                        className="text-[10px] border border-blue-200 text-[#004ac6] hover:bg-blue-50 px-2 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
+                        className="text-[10px] border border-blue-200 text-[#004ac6] hover:bg-blue-50 px-2 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
                       >
-                        Bắt đầu &rarr;
+                        Bắt đầu <ArrowRight className="w-3 h-3" />
                       </button>
                     </div>
                   </div>
@@ -396,9 +406,9 @@ export default function TasksTab() {
                       <button
                         onClick={() => handleUpdateTaskStatus(task.id, 'done')}
                         disabled={isLoading}
-                        className="text-[10px] bg-emerald-600 text-white font-bold hover:bg-emerald-700 px-2 py-1 rounded whitespace-nowrap shadow-sm active:scale-95 transition-transform cursor-pointer"
+                        className="text-[10px] bg-emerald-600 text-white font-bold hover:bg-emerald-700 px-2 py-1 rounded whitespace-nowrap shadow-sm active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
                       >
-                        Đã xong &check;
+                        Đã xong <Check className="w-3 h-3" />
                       </button>
                     </div>
                   </div>

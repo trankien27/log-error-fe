@@ -73,7 +73,24 @@ export const useTasksStore = create<TasksState>((set, get) => ({
   },
 
   updateTaskStatus: async (id, newStatus) => {
-    set({ isLoading: true, error: null });
+    const previousTask = get().tasks.find((task) => task.id === id);
+
+    if (!previousTask || previousTask.status === newStatus) {
+      return;
+    }
+
+    const optimisticTask = { ...previousTask, status: newStatus };
+
+    set((state) => ({
+      tasks: state.tasks.map((task) => (task.id === id ? optimisticTask : task)),
+      selectedTaskDetails:
+        state.selectedTaskDetails?.id === id
+          ? optimisticTask
+          : state.selectedTaskDetails,
+      isLoading: true,
+      error: null,
+    }));
+
     try {
       const updated = await tasksService.updateStatus(id, newStatus);
       set((state) => ({
@@ -85,7 +102,15 @@ export const useTasksStore = create<TasksState>((set, get) => ({
         isLoading: false,
       }));
     } catch (err: any) {
-      set({ error: err.message, isLoading: false });
+      set((state) => ({
+        tasks: state.tasks.map((task) => (task.id === id ? previousTask : task)),
+        selectedTaskDetails:
+          state.selectedTaskDetails?.id === id
+            ? previousTask
+            : state.selectedTaskDetails,
+        error: err.message,
+        isLoading: false,
+      }));
       throw err;
     }
   },
