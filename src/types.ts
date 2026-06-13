@@ -35,6 +35,34 @@ export interface User {
   department?: string;
 }
 
+export interface ChatUser {
+  id: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversationId: number;
+  senderId: string;
+  content: string;
+  createdAt: string;
+  editedAt?: string | null;
+  deletedAt?: string | null;
+  sender?: ChatUser | null;
+}
+
+export interface ChatConversation {
+  id: number;
+  type: 'Direct' | string;
+  createdAt: string;
+  updatedAt: string;
+  otherUser?: ChatUser | null;
+  lastMessage?: ChatMessage | null;
+  unreadCount: number;
+}
+
 export interface Role {
   name: string;
   userCount: number;
@@ -194,6 +222,7 @@ export type TabType =
   | 'overview'
   | 'error_logs'
   | 'tasks'
+  | 'chat'
   | 'users'
   | 'roles'
   | 'booths'

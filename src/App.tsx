@@ -5,6 +5,7 @@ import AuthPage from './features/auth/components/AuthPage';
 import OverviewTab from './features/dashboard/components/OverviewTab';
 import ErrorLogsTab from './features/logs/components/ErrorLogsTab';
 import TasksTab from './features/tasks/components/TasksTab';
+import ChatTab from './features/chat/components/ChatTab';
 import UsersTab from './features/users/components/UsersTab';
 import RolesTab from './features/users/components/RolesTab';
 import BoothsTab from './features/booths/components/BoothsTab';
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="overview" element={<OverviewTab />} />
         <Route path="error-logs" element={<ErrorLogsTab />} />
         <Route path="tasks" element={<TasksTab />} />
+        <Route path="chat" element={<ChatTab />} />
         <Route path="users" element={<UsersTab />} />
         <Route path="roles" element={<RolesTab />} />
         <Route path="booths" element={<BoothsTab />} />

@@ -6,6 +6,7 @@ import {
   Calendar,
   ClipboardList,
   LayoutDashboard,
+  MessageSquare,
   Settings,
   Shield,
   Store,
@@ -39,6 +40,7 @@ export default function Sidebar() {
     if (path === '/overview') return 'overview';
     if (path === '/error-logs') return 'error_logs';
     if (path === '/tasks') return 'tasks';
+    if (path === '/chat') return 'chat';
     if (path === '/users') return 'users';
     if (path === '/roles') return 'roles';
     if (path === '/booths') return 'booths';
@@ -63,6 +65,7 @@ export default function Sidebar() {
       case 'overview': navigate('/overview'); break;
       case 'error_logs': navigate('/error-logs'); break;
       case 'tasks': navigate('/tasks'); break;
+      case 'chat': navigate('/chat'); break;
       case 'users': navigate('/users'); break;
       case 'roles': navigate('/roles'); break;
       case 'booths': navigate('/booths'); break;
@@ -110,6 +113,12 @@ export default function Sidebar() {
                   {pendingTasksCount}
                 </span>
               )}
+            </button>
+          </li>
+          <li>
+            <button onClick={() => navigateTo('chat')} className={navButtonClass(activeTab === 'chat')}>
+              <MessageSquare className="w-4 h-4" />
+              <span>Chat</span>
             </button>
           </li>
           <li>

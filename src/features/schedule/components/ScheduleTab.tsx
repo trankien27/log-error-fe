@@ -1,80 +1,118 @@
-import React, { useMemo, useState } from 'react';
-import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Edit2,
-  Plus,
-  RefreshCcw,
-  Save,
-  Trash2,
-  X,
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, ChevronLeft, ChevronRight, RefreshCcw, Save, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { scheduleService } from '../../../services/api/scheduleService';
 import { useScheduleStore } from '../../../stores/useScheduleStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
-import { CreateWorkScheduleRequest, ShiftDto, WorkScheduleDto } from '../../../types';
+import { CreateWorkScheduleRequest, ShiftDto, User, WorkScheduleDto } from '../../../types';
 
-type ScheduleModalMode = 'create' | 'edit' | 'changeShift' | 'changeUser' | 'status';
+type ShiftCode = 'S' | 'C' | 'S+' | 'C+' | 'OFF' | '';
 
-type ScheduleForm = {
-  id?: number;
-  workDate: string;
+type ScheduleCellState = {
+  date: string;
   userId: string;
-  shiftId: string;
-  status: string;
-  note: string;
+  userName: string;
+  scheduleId?: number;
+  shiftCode: ShiftCode;
+  shiftId?: number;
+  note?: string | null;
 };
 
-type BulkError = {
-  index: number;
-  field: string;
+type ScheduleRow = {
+  userId: string;
+  userName: string;
+  phone?: string;
+  cells: ScheduleCellState[];
+};
+
+type CellError = {
+  key: string;
   message: string;
 };
 
-const requiredShiftCodes = ['S', 'C', 'T'];
-const extraShiftCodes = ['S+', 'C+'];
+const editableShiftCodes: ShiftCode[] = ['S', 'C', 'S+', 'C+', 'OFF'];
+const weekDayLabels = ['THỨ HAI', 'THỨ BA', 'THỨ TƯ', 'THỨ NĂM', 'THỨ SÁU', 'THỨ BẢY', 'CN'];
 
-const statusOptions = [
-  { value: 1, label: 'Scheduled' },
-  { value: 2, label: 'Completed' },
-  { value: 3, label: 'Absent' },
-  { value: 4, label: 'Cancelled' },
-];
-
-const shiftBadgeClass: Record<string, string> = {
-  S: 'bg-blue-50 text-blue-700 border-blue-200',
-  C: 'bg-orange-50 text-orange-700 border-orange-200',
-  T: 'bg-violet-50 text-violet-700 border-violet-200',
-  'S+': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  'C+': 'bg-red-50 text-red-700 border-red-200',
+const shiftCellClass: Record<string, string> = {
+  S: 'bg-primary/10 text-primary',
+  C: 'bg-amber-100 text-amber-800',
+  'S+': 'bg-emerald-100 text-emerald-800',
+  'C+': 'bg-orange-100 text-orange-800',
+  OFF: 'bg-red-600 text-white',
 };
 
-const statusClass: Record<number, string> = {
-  1: 'bg-slate-100 text-slate-700 border-slate-200',
-  2: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  3: 'bg-red-50 text-red-700 border-red-200',
-  4: 'bg-gray-100 text-gray-500 border-gray-200',
-};
-
-function formatDisplayDate(dateValue: string) {
-  return new Date(`${dateValue}T00:00:00`).toLocaleDateString('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-  });
+function toDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function addDays(dateValue: string, days: number) {
   const date = new Date(`${dateValue}T00:00:00`);
   date.setDate(date.getDate() + days);
-  return date.toLocaleDateString('sv-SE');
+  return toDateInput(date);
 }
 
-function getShiftByCode(shifts: ShiftDto[], code: string) {
+function formatDateHeader(dateValue: string) {
+  return new Date(`${dateValue}T00:00:00`).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
+function formatWeekLabel(dateValue: string) {
+  return new Date(`${dateValue}T00:00:00`).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: 'short',
+  });
+}
+
+function getCellKey(userId: string, date: string) {
+  return `${userId}__${date}`;
+}
+
+function getShiftByCode(shifts: ShiftDto[], code: ShiftCode) {
+  if (!code || code === 'OFF') return undefined;
   return shifts.find((shift) => shift.code === code);
+}
+
+function buildWeekDates(weekStart: string) {
+  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+}
+
+function buildScheduleRows(users: User[], schedules: WorkScheduleDto[], weekDates: string[]): ScheduleRow[] {
+  const usersById = new Map<string, User>();
+  users.forEach((user) => usersById.set(user.id, user));
+  schedules.forEach((schedule) => {
+    if (!usersById.has(schedule.userId)) {
+      usersById.set(schedule.userId, {
+        id: schedule.userId,
+        name: schedule.userName,
+        email: '',
+        role: 'User',
+        status: 'Hoạt động',
+      });
+    }
+  });
+
+  return Array.from(usersById.values()).map((user) => ({
+    userId: user.id,
+    userName: user.name,
+    phone: user.phone,
+    cells: weekDates.map((date) => {
+      const schedule = schedules.find((item) => item.userId === user.id && item.workDate === date);
+      return {
+        date,
+        userId: user.id,
+        userName: user.name,
+        scheduleId: schedule?.id,
+        shiftCode: (schedule?.shiftCode as ShiftCode) || '',
+        shiftId: schedule?.shiftId,
+        note: schedule?.note,
+      };
+    }),
+  }));
 }
 
 export default function ScheduleTab() {
@@ -84,200 +122,125 @@ export default function ScheduleTab() {
     weekStart,
     weekEnd,
     isLoading,
-    scheduleSearchQuery,
-    scheduleRoleFilter,
-    scheduleShiftFilter,
-    scheduleStatusFilter,
-    setScheduleSearchQuery,
-    setScheduleRoleFilter,
-    setScheduleShiftFilter,
-    setScheduleStatusFilter,
     fetchCalendar,
   } = useScheduleStore();
   const { users } = useUsersStore();
 
   const [fromDate, setFromDate] = useState(weekStart);
   const [toDate, setToDate] = useState(weekEnd);
-  const [modalMode, setModalMode] = useState<ScheduleModalMode>('create');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form, setForm] = useState<ScheduleForm>({
-    workDate: weekStart,
-    userId: '',
-    shiftId: '',
-    status: '1',
-    note: '',
-  });
-  const [bulkItems, setBulkItems] = useState<CreateWorkScheduleRequest[]>([]);
-  const [bulkErrors, setBulkErrors] = useState<BulkError[]>([]);
-  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [changes, setChanges] = useState<Record<string, ScheduleCellState>>({});
+  const [cellErrors, setCellErrors] = useState<CellError[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const activeShifts = useMemo(
-    () => shiftDefinitions.filter((shift) => shift.isActive),
+    () => shiftDefinitions.filter((shift) => shift.isActive && editableShiftCodes.includes(shift.code as ShiftCode)),
     [shiftDefinitions],
   );
 
-  const visibleDays = useMemo(() => {
-    return calendarDays.map((day) => ({
-      ...day,
-      schedules: day.schedules.filter((schedule) => {
-        if (scheduleSearchQuery && !schedule.userName.toLowerCase().includes(scheduleSearchQuery.toLowerCase())) return false;
-        if (scheduleShiftFilter && String(schedule.shiftId) !== scheduleShiftFilter) return false;
-        if (scheduleStatusFilter && String(schedule.status) !== scheduleStatusFilter) return false;
-        if (scheduleRoleFilter !== 'Tất cả vai trò') {
-          const user = users.find((item) => item.id === schedule.userId);
-          if (user && String(user.role) !== scheduleRoleFilter) return false;
-        }
-        return true;
-      }),
-    }));
-  }, [calendarDays, scheduleRoleFilter, scheduleSearchQuery, scheduleShiftFilter, scheduleStatusFilter, users]);
+  const weekDates = useMemo(() => buildWeekDates(weekStart), [weekStart]);
+  const schedules = useMemo(() => calendarDays.flatMap((day) => day.schedules), [calendarDays]);
+  const rows = useMemo(() => buildScheduleRows(users, schedules, weekDates), [schedules, users, weekDates]);
 
-  const totalSchedules = calendarDays.reduce((total, day) => total + day.schedules.length, 0);
-  const invalidDays = calendarDays.filter((day) => !day.isValid).length;
+  const hasUnsavedChanges = Object.keys(changes).length > 0;
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const reloadCalendar = async (start = fromDate, end = toDate) => {
+    if (hasUnsavedChanges && !window.confirm('Bạn có thay đổi chưa lưu. Reload sẽ mất các thay đổi này. Tiếp tục?')) {
+      return;
+    }
+
+    setChanges({});
+    setCellErrors([]);
     await fetchCalendar(start, end);
   };
 
-  const handleRangeLoad = async () => {
-    if (!fromDate || !toDate) {
-      toast.error('Vui lòng chọn từ ngày và đến ngày.');
+  const moveWeek = async (offset: number) => {
+    if (hasUnsavedChanges && !window.confirm('Bạn có thay đổi chưa lưu. Chuyển tuần sẽ mất các thay đổi này. Tiếp tục?')) {
       return;
     }
-    await reloadCalendar(fromDate, toDate);
-  };
 
-  const handleMoveWeek = async (offsetDays: number) => {
-    const nextStart = addDays(weekStart, offsetDays);
-    const nextEnd = addDays(weekEnd, offsetDays);
+    const nextStart = addDays(weekStart, offset);
+    const nextEnd = addDays(weekEnd, offset);
     setFromDate(nextStart);
     setToDate(nextEnd);
-    await reloadCalendar(nextStart, nextEnd);
+    setChanges({});
+    setCellErrors([]);
+    await fetchCalendar(nextStart, nextEnd);
   };
 
-  const openScheduleModal = (
-    mode: ScheduleModalMode,
-    schedule?: WorkScheduleDto,
-    defaults?: Partial<ScheduleForm>,
-  ) => {
-    setModalMode(mode);
-    setForm({
-      id: schedule?.id,
-      workDate: schedule?.workDate || defaults?.workDate || weekStart,
-      userId: schedule?.userId || defaults?.userId || users[0]?.id || '',
-      shiftId: String(schedule?.shiftId || defaults?.shiftId || activeShifts[0]?.id || ''),
-      status: String(schedule?.status || defaults?.status || 1),
-      note: schedule?.note || defaults?.note || '',
+  const getEffectiveCell = (cell: ScheduleCellState) => {
+    return changes[getCellKey(cell.userId, cell.date)] || cell;
+  };
+
+  const getCellError = (cell: ScheduleCellState) => {
+    return cellErrors.find((error) => error.key === getCellKey(cell.userId, cell.date));
+  };
+
+  const changeCellShift = (cell: ScheduleCellState, nextShiftCode: ShiftCode) => {
+    const shift = getShiftByCode(activeShifts, nextShiftCode);
+    const nextCell: ScheduleCellState = {
+      ...cell,
+      shiftCode: nextShiftCode,
+      shiftId: shift?.id,
+      note: nextShiftCode === 'OFF' ? 'OFF' : shift?.name || cell.note || null,
+    };
+
+    setChanges((current) => ({
+      ...current,
+      [getCellKey(cell.userId, cell.date)]: nextCell,
+    }));
+    setCellErrors((errors) => errors.filter((error) => error.key !== getCellKey(cell.userId, cell.date)));
+  };
+
+  const buildBulkItems = () => {
+    const items: CreateWorkScheduleRequest[] = [];
+    const itemKeys: string[] = [];
+
+    Object.values(changes).forEach((cell) => {
+      if (!cell.shiftCode || cell.shiftCode === 'OFF' || !cell.shiftId) return;
+
+      items.push({
+        workDate: cell.date,
+        userId: cell.userId,
+        shiftId: cell.shiftId,
+        note: cell.note || null,
+      });
+      itemKeys.push(getCellKey(cell.userId, cell.date));
     });
-    setIsModalOpen(true);
+
+    return { items, itemKeys };
   };
 
-  const handleSubmitSchedule = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const validateChanges = async () => {
+    const { items, itemKeys } = buildBulkItems();
+    setCellErrors([]);
 
-    if (!form.workDate || !form.userId || !form.shiftId) {
-      toast.error('Vui lòng nhập đủ ngày làm việc, nhân viên và ca làm việc.');
-      return;
-    }
-
-    const shift = activeShifts.find((item) => item.id === Number(form.shiftId));
-    if (!shift) {
-      toast.error('Ca làm việc không hợp lệ hoặc đã inactive.');
-      return;
+    if (items.length === 0) {
+      toast.info('Không có ca làm mới để validate. Các ô OFF sẽ được xử lý khi lưu.');
+      return true;
     }
 
     try {
-      if (modalMode === 'edit' && form.id) {
-        await scheduleService.updateWorkSchedule(form.id, {
-          workDate: form.workDate,
-          userId: form.userId,
-          shiftId: Number(form.shiftId),
-          note: form.note || null,
-        });
-        toast.success('Đã cập nhật phân ca.');
-      } else if (modalMode === 'changeShift' && form.id) {
-        await scheduleService.changeShift(form.id, {
-          shiftId: Number(form.shiftId),
-          note: form.note || null,
-        });
-        toast.success('Đã đổi ca.');
-      } else if (modalMode === 'changeUser' && form.id) {
-        await scheduleService.changeUser(form.id, {
-          userId: form.userId,
-          note: form.note || null,
-        });
-        toast.success('Đã đổi người làm ca.');
-      } else if (modalMode === 'status' && form.id) {
-        await scheduleService.updateWorkScheduleStatus(form.id, {
-          status: Number(form.status),
-          note: form.note || null,
-        });
-        toast.success('Đã cập nhật trạng thái.');
-      } else {
-        await scheduleService.createWorkSchedule({
-          workDate: form.workDate,
-          userId: form.userId,
-          shiftId: Number(form.shiftId),
-          note: form.note || null,
-        });
-        toast.success('Đã tạo phân ca.');
-      }
-
-      setIsModalOpen(false);
-      await reloadCalendar();
-    } catch (err: any) {
-      toast.error(err.message || 'Không thể lưu phân ca.');
-    }
-  };
-
-  const handleDeleteSchedule = (schedule: WorkScheduleDto) => {
-    toast.warning(`Xóa phân ca ${schedule.shiftCode} của ${schedule.userName}?`, {
-      action: {
-        label: 'Xóa',
-        onClick: async () => {
-          try {
-            await scheduleService.deleteWorkSchedule(schedule.id);
-            toast.success('Đã xóa phân ca.');
-            await reloadCalendar();
-          } catch (err: any) {
-            toast.error(err.message || 'Không thể xóa phân ca.');
-          }
-        },
-      },
-    });
-  };
-
-  const addBulkRow = () => {
-    setBulkItems((items) => [
-      ...items,
-      {
-        workDate: weekStart,
-        userId: users[0]?.id || '',
-        shiftId: activeShifts[0]?.id || 0,
-        note: '',
-      },
-    ]);
-    setIsBulkOpen(true);
-  };
-
-  const updateBulkRow = (index: number, patch: Partial<CreateWorkScheduleRequest>) => {
-    setBulkItems((items) => items.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
-    setBulkErrors((errors) => errors.filter((error) => error.index !== index));
-  };
-
-  const validateBulk = async () => {
-    if (bulkItems.length === 0) {
-      toast.error('Chưa có dòng phân ca hàng loạt.');
-      return false;
-    }
-
-    try {
-      const result = await scheduleService.validateBulk({ items: bulkItems });
-      setBulkErrors(result.errors || []);
+      const result = await scheduleService.validateBulk({ items });
       if (!result.isValid) {
+        setCellErrors(result.errors.map((error) => ({
+          key: itemKeys[error.index],
+          message: error.message,
+        })));
         toast.error('Dữ liệu phân ca chưa hợp lệ.');
         return false;
       }
+
       toast.success('Dữ liệu phân ca hợp lệ.');
       return true;
     } catch (err: any) {
@@ -286,372 +249,230 @@ export default function ScheduleTab() {
     }
   };
 
-  const saveBulk = async () => {
-    const isValid = await validateBulk();
-    if (!isValid) return;
+  const saveChanges = async () => {
+    if (!hasUnsavedChanges) return;
 
+    setIsSaving(true);
     try {
-      const result = await scheduleService.bulkCreateWorkSchedules({ items: bulkItems });
-      toast.success(`Đã lưu ${result.createdCount} phân ca.`);
-      setBulkItems([]);
-      setBulkErrors([]);
-      setIsBulkOpen(false);
-      await reloadCalendar();
+      const valid = await validateChanges();
+      if (!valid) return;
+
+      const changedCells = Object.values(changes);
+      const existingToOff = changedCells.filter((cell) => cell.scheduleId && cell.shiftCode === 'OFF');
+      const existingToUpdate = changedCells.filter((cell) => cell.scheduleId && cell.shiftCode !== 'OFF' && cell.shiftId);
+      const createItems = changedCells
+        .filter((cell) => !cell.scheduleId && cell.shiftCode !== 'OFF' && cell.shiftId)
+        .map((cell) => ({
+          workDate: cell.date,
+          userId: cell.userId,
+          shiftId: cell.shiftId!,
+          note: cell.note || null,
+        }));
+
+      await Promise.all([
+        ...existingToOff.map((cell) => scheduleService.deleteWorkSchedule(cell.scheduleId!)),
+        ...existingToUpdate.map((cell) => scheduleService.updateWorkSchedule(cell.scheduleId!, {
+          workDate: cell.date,
+          userId: cell.userId,
+          shiftId: cell.shiftId!,
+          note: cell.note || null,
+        })),
+      ]);
+
+      if (createItems.length > 0) {
+        await scheduleService.bulkCreateWorkSchedules({ items: createItems });
+      }
+
+      toast.success('Đã lưu lịch làm việc.');
+      setChanges({});
+      setCellErrors([]);
+      await fetchCalendar(weekStart, weekEnd);
     } catch (err: any) {
-      toast.error(err.message || 'Không thể lưu lịch hàng loạt.');
+      toast.error(err.message || 'Không thể lưu lịch.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const renderScheduleCard = (schedule: WorkScheduleDto) => {
-    const shiftClass = shiftBadgeClass[schedule.shiftCode] || 'bg-slate-50 text-slate-700 border-slate-200';
-    const statusBadgeClass = statusClass[schedule.status] || statusClass[1];
+  const renderShiftSelect = (cell: ScheduleCellState) => {
+    const effectiveCell = getEffectiveCell(cell);
+    const error = getCellError(cell);
+    const isChanged = Boolean(changes[getCellKey(cell.userId, cell.date)]);
+    const cellClass = effectiveCell.shiftCode
+      ? shiftCellClass[effectiveCell.shiftCode] || 'bg-primary/10 text-primary'
+      : 'bg-white text-gray-400';
 
     return (
-      <div key={schedule.id} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className={`inline-flex px-2 py-0.5 rounded-md border text-[10px] font-black ${shiftClass}`}>
-                {schedule.shiftCode}
-              </span>
-              <span className={`inline-flex px-2 py-0.5 rounded-md border text-[10px] font-bold ${statusBadgeClass}`}>
-                {schedule.statusName}
-              </span>
-            </div>
-            <p className="mt-1 text-xs font-extrabold text-gray-900 truncate">{schedule.userName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => openScheduleModal('edit', schedule)}
-            className="p-1 text-gray-400 hover:text-primary hover:bg-blue-50 rounded cursor-pointer"
-            title="Sửa phân ca"
-          >
-            <Edit2 className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="text-[10px] text-gray-500 font-medium">
-          {schedule.shiftName} · {schedule.startTime} - {schedule.endTime}
-        </div>
-        {schedule.note && <p className="text-[10px] text-gray-600 bg-slate-50 rounded p-1.5">{schedule.note}</p>}
-
-        <div className="flex flex-wrap gap-1 pt-1">
-          <button type="button" onClick={() => openScheduleModal('changeShift', schedule)} className="px-2 py-1 rounded border text-[10px] font-bold text-primary hover:bg-blue-50 cursor-pointer">
-            Đổi ca
-          </button>
-          <button type="button" onClick={() => openScheduleModal('changeUser', schedule)} className="px-2 py-1 rounded border text-[10px] font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">
-            Đổi người
-          </button>
-          <button type="button" onClick={() => openScheduleModal('status', schedule)} className="px-2 py-1 rounded border text-[10px] font-bold text-emerald-700 hover:bg-emerald-50 cursor-pointer">
-            Trạng thái
-          </button>
-          <button type="button" onClick={() => handleDeleteSchedule(schedule)} className="px-2 py-1 rounded border border-red-200 text-[10px] font-bold text-red-600 hover:bg-red-50 cursor-pointer">
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderShiftCell = (dayDate: string, schedules: WorkScheduleDto[], code: string) => {
-    const shift = getShiftByCode(activeShifts, code);
-    const items = schedules.filter((schedule) => schedule.shiftCode === code);
-
-    if (items.length > 0) {
-      return <div className="space-y-2">{items.map(renderScheduleCard)}</div>;
-    }
-
-    return (
-      <button
-        type="button"
-        onClick={() => openScheduleModal('create', undefined, { workDate: dayDate, shiftId: String(shift?.id || '') })}
-        className="w-full min-h-28 rounded-lg border border-dashed border-orange-200 bg-orange-50/40 text-orange-700 hover:bg-orange-50 flex flex-col items-center justify-center gap-1 text-[11px] font-bold cursor-pointer"
+      <td
+        key={cell.date}
+        title={error?.message || undefined}
+        className={`h-11 border border-outline-variant p-0 text-center align-middle ${error ? 'ring-2 ring-red-500 ring-inset' : ''}`}
       >
-        <AlertCircle className="w-4 h-4" />
-        <span>Thiếu ca {code}</span>
-        <span className="inline-flex items-center gap-1 text-[10px]"><Plus className="w-3 h-3" /> Thêm ca</span>
-      </button>
+        <select
+          value={effectiveCell.shiftCode}
+          onChange={(event) => changeCellShift(cell, event.target.value as ShiftCode)}
+          className={`h-full w-full cursor-pointer border-0 text-center text-xs font-extrabold outline-none ${cellClass} ${isChanged ? 'ring-2 ring-primary ring-inset' : ''}`}
+        >
+          <option value="">-</option>
+          {activeShifts.map((shift) => (
+            <option key={shift.id} value={shift.code}>{shift.code}</option>
+          ))}
+          <option value="OFF">OFF</option>
+        </select>
+      </td>
     );
-  };
-
-  const renderExtraCell = (dayDate: string, schedules: WorkScheduleDto[]) => {
-    const extraItems = schedules.filter((schedule) => extraShiftCodes.includes(schedule.shiftCode));
-
-    if (extraItems.length > 0) {
-      return <div className="space-y-2">{extraItems.map(renderScheduleCard)}</div>;
-    }
-
-    const fallbackShift = activeShifts.find((shift) => extraShiftCodes.includes(shift.code));
-
-    return (
-      <button
-        type="button"
-        onClick={() => openScheduleModal('create', undefined, { workDate: dayDate, shiftId: String(fallbackShift?.id || '') })}
-        className="w-full min-h-28 rounded-lg border border-dashed border-red-200 bg-red-50/40 text-red-700 hover:bg-red-50 flex flex-col items-center justify-center gap-1 text-[11px] font-bold cursor-pointer"
-      >
-        <AlertCircle className="w-4 h-4" />
-        <span>Thiếu S+ hoặc C+</span>
-        <span className="text-[10px]">+ Thêm ca tăng cường</span>
-      </button>
-    );
-  };
-
-  const getModalTitle = () => {
-    if (modalMode === 'edit') return 'Sửa phân ca';
-    if (modalMode === 'changeShift') return 'Đổi ca nhanh';
-    if (modalMode === 'changeUser') return 'Đổi người làm thay';
-    if (modalMode === 'status') return 'Cập nhật trạng thái';
-    return 'Tạo phân ca';
   };
 
   return (
-    <div className="space-y-5 text-[#191b23] text-left animate-fadeIn">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 font-sans">Quản lý phân ca</h2>
-          <p className="text-xs text-gray-500 mt-1">Theo dõi S/C/T hằng ngày và ca tăng cường S+/C+ cho T6, T7, CN.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => handleMoveWeek(-7)} className="p-2 border border-outline-variant rounded-lg hover:bg-slate-50 cursor-pointer">
-            <ChevronLeft className="w-4 h-4" />
+    <div className="space-y-4 text-[#191b23] text-left animate-fadeIn">
+      <div className="h-14 border border-outline-variant bg-primary text-white flex items-center justify-center">
+        <h2 className="text-lg font-extrabold tracking-wide">LỊCH LÀM VIỆC</h2>
+      </div>
+
+      <div className="border border-outline-variant bg-primary/10">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-2">
+          <button
+            type="button"
+            onClick={() => moveWeek(-7)}
+            disabled={isLoading || isSaving}
+            className="justify-self-start px-3 py-1.5 border border-outline-variant bg-white rounded text-xs font-bold flex items-center gap-1 hover:bg-primary/5 cursor-pointer disabled:opacity-50"
+          >
+            <ChevronLeft className="w-4 h-4" /> Tuần trước
           </button>
-          <div className="px-3 py-2 border border-outline-variant rounded-lg bg-white text-xs font-bold font-mono">
-            {formatDisplayDate(weekStart)} - {formatDisplayDate(weekEnd)}
+
+          <div className="flex items-center justify-center gap-2 text-sm font-bold">
+            <span>Tuần:</span>
+            <span className="font-mono">{formatWeekLabel(weekStart)}</span>
           </div>
-          <button type="button" onClick={() => handleMoveWeek(7)} className="p-2 border border-outline-variant rounded-lg hover:bg-slate-50 cursor-pointer">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <button type="button" onClick={addBulkRow} className="px-3 py-2 border border-outline-variant rounded-lg text-xs font-bold hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer">
-            <Plus className="w-3.5 h-3.5" /> Tạo lịch hàng loạt
-          </button>
-          <button type="button" onClick={saveBulk} disabled={bulkItems.length === 0} className="px-3 py-2 bg-primary text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            <Save className="w-3.5 h-3.5" /> Lưu lịch
-          </button>
-          <button type="button" onClick={validateBulk} disabled={bulkItems.length === 0} className="px-3 py-2 border border-emerald-200 text-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Validate lịch
+
+          <button
+            type="button"
+            onClick={() => moveWeek(7)}
+            disabled={isLoading || isSaving}
+            className="justify-self-end px-3 py-1.5 border border-outline-variant bg-white rounded text-xs font-bold flex items-center gap-1 hover:bg-primary/5 cursor-pointer disabled:opacity-50"
+          >
+            Tuần sau <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white border border-outline-variant rounded-lg p-3">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-bold">Tổng phân ca</p>
-          <p className="text-lg font-extrabold">{totalSchedules}</p>
-        </div>
-        <div className="bg-white border border-outline-variant rounded-lg p-3">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-bold">Ngày đủ ca</p>
-          <p className="text-lg font-extrabold text-emerald-700">{calendarDays.length - invalidDays}</p>
-        </div>
-        <div className="bg-white border border-outline-variant rounded-lg p-3">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-bold">Ngày thiếu ca</p>
-          <p className="text-lg font-extrabold text-red-700">{invalidDays}</p>
-        </div>
-        <div className="bg-white border border-outline-variant rounded-lg p-3">
-          <p className="text-[10px] uppercase tracking-wide text-gray-400 font-bold">Ca active</p>
-          <p className="text-lg font-extrabold">{activeShifts.length}</p>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-outline-variant p-4 grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+      <div className="border border-outline-variant bg-white p-3 grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3 items-end">
         <label className="text-xs font-bold text-gray-600">
           Từ ngày
-          <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs" />
+          <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="mt-1 w-full px-3 py-2 border border-outline-variant rounded text-xs" />
         </label>
         <label className="text-xs font-bold text-gray-600">
           Đến ngày
-          <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs" />
+          <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="mt-1 w-full px-3 py-2 border border-outline-variant rounded text-xs" />
         </label>
-        <label className="text-xs font-bold text-gray-600">
-          User
-          <input type="text" value={scheduleSearchQuery} onChange={(event) => setScheduleSearchQuery(event.target.value)} placeholder="Tìm nhân viên" className="mt-1 w-full px-3 py-2 border rounded-lg text-xs" />
-        </label>
-        <label className="text-xs font-bold text-gray-600">
-          Ca làm việc
-          <select value={scheduleShiftFilter} onChange={(event) => setScheduleShiftFilter(event.target.value)} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs bg-white">
-            <option value="">Tất cả ca</option>
-            {activeShifts.map((shift) => <option key={shift.id} value={shift.id}>{shift.code} - {shift.name}</option>)}
-          </select>
-        </label>
-        <div className="flex gap-2">
-          <label className="text-xs font-bold text-gray-600 flex-1">
-            Trạng thái
-            <select value={scheduleStatusFilter} onChange={(event) => setScheduleStatusFilter(event.target.value)} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs bg-white">
-              <option value="">Tất cả</option>
-              {statusOptions.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={handleRangeLoad} className="self-end px-3 py-2 bg-gray-900 text-white rounded-lg text-xs font-bold cursor-pointer">
-            <RefreshCcw className="w-4 h-4" />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={validateChanges}
+            disabled={!hasUnsavedChanges || isLoading || isSaving}
+            className="px-3 py-2 border border-outline-variant rounded text-xs font-bold flex items-center gap-1.5 hover:bg-primary/5 cursor-pointer disabled:opacity-50"
+          >
+            <ShieldCheck className="w-4 h-4" /> Validate lịch
+          </button>
+          <button
+            type="button"
+            onClick={saveChanges}
+            disabled={!hasUnsavedChanges || isLoading || isSaving}
+            className="px-3 py-2 bg-primary text-white rounded text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" /> {isSaving ? 'Đang lưu...' : 'Lưu lịch'}
+          </button>
+          <button
+            type="button"
+            onClick={() => reloadCalendar(fromDate, toDate)}
+            disabled={isLoading || isSaving}
+            className="px-3 py-2 border border-outline-variant rounded text-xs font-bold flex items-center gap-1.5 hover:bg-primary/5 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCcw className="w-4 h-4" /> Reload
           </button>
         </div>
       </div>
 
-      {isBulkOpen && (
-        <div className="bg-white border border-outline-variant rounded-xl p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-extrabold">Tạo lịch hàng loạt</h3>
-            <button type="button" onClick={addBulkRow} className="text-xs font-bold text-primary flex items-center gap-1 cursor-pointer">
-              <Plus className="w-3.5 h-3.5" /> Thêm dòng
-            </button>
-          </div>
-          <div className="space-y-2">
-            {bulkItems.map((item, index) => {
-              const rowErrors = bulkErrors.filter((error) => error.index === index);
-              return (
-                <div key={index} className={`grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1.5fr_auto] gap-2 p-2 rounded-lg border ${rowErrors.length ? 'border-red-300 bg-red-50/50' : 'border-slate-200'}`}>
-                  <input type="date" value={item.workDate} onChange={(event) => updateBulkRow(index, { workDate: event.target.value })} className="px-2 py-2 border rounded text-xs" />
-                  <select value={item.userId} onChange={(event) => updateBulkRow(index, { userId: event.target.value })} className="px-2 py-2 border rounded text-xs bg-white">
-                    {users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
-                  </select>
-                  <select value={item.shiftId} onChange={(event) => updateBulkRow(index, { shiftId: Number(event.target.value) })} className="px-2 py-2 border rounded text-xs bg-white">
-                    {activeShifts.map((shift) => <option key={shift.id} value={shift.id}>{shift.code} - {shift.name}</option>)}
-                  </select>
-                  <input value={item.note || ''} onChange={(event) => updateBulkRow(index, { note: event.target.value })} placeholder="Ghi chú" className="px-2 py-2 border rounded text-xs" />
-                  <button type="button" onClick={() => setBulkItems((items) => items.filter((_, itemIndex) => itemIndex !== index))} className="px-2 text-red-600 hover:bg-red-50 rounded cursor-pointer">
-                    <X className="w-4 h-4" />
-                  </button>
-                  {rowErrors.length > 0 && (
-                    <div className="md:col-span-5 text-[11px] text-red-700 font-semibold">
-                      {rowErrors.map((error) => `${error.field}: ${error.message}`).join(' | ')}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      <div className="border border-outline-variant bg-white overflow-hidden">
+        <div className="max-h-[560px] overflow-auto">
+          <table className="w-full min-w-[980px] border-collapse text-sm">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-primary/10">
+                <th rowSpan={2} className="w-48 border border-outline-variant px-3 py-2 text-left font-extrabold align-middle">
+                  Nhân sự
+                </th>
+                {weekDates.map((date) => (
+                  <th key={date} className="border border-outline-variant px-3 py-2 text-center font-extrabold">
+                    {formatDateHeader(date)}
+                  </th>
+                ))}
+              </tr>
+              <tr className="bg-primary/5">
+                {weekDates.map((date, index) => (
+                  <th key={date} className="border border-outline-variant px-3 py-2 text-center text-xs font-extrabold">
+                    {weekDayLabels[index]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="border border-outline-variant px-3 py-10 text-center text-xs text-gray-400">
+                    Đang tải lịch làm việc...
+                  </td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="border border-outline-variant px-3 py-10 text-center text-xs text-gray-400">
+                    Chưa có nhân sự để phân ca.
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.userId} className="hover:bg-primary/5">
+                    <td className="h-11 border border-outline-variant px-3 py-2 text-left font-extrabold bg-white sticky left-0 z-[1]">
+                      {row.userName}
+                    </td>
+                    {row.cells.map(renderShiftSelect)}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      <div className="bg-white border border-outline-variant rounded-xl shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="px-4 py-12 text-center text-xs text-gray-400">Đang tải lịch phân ca...</div>
-        ) : visibleDays.length === 0 ? (
-          <div className="px-4 py-12 text-center text-xs text-gray-400">Chưa có dữ liệu lịch trong khoảng ngày này.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <div className="min-w-[1280px] grid grid-cols-7 divide-x divide-slate-100">
-              {visibleDays.map((day) => (
-                <div key={day.date} className={`min-h-[680px] flex flex-col ${day.isWeekendRule ? 'bg-orange-50/25' : 'bg-white'}`}>
-                  <div className="sticky top-0 z-10 bg-inherit border-b border-slate-100 px-3 py-3 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-extrabold text-gray-900">{formatDisplayDate(day.date)}</p>
-                        <p className="text-[10px] text-gray-400 font-mono">{day.date}</p>
-                      </div>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                        day.isValid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'
-                      }`}>
-                        {day.isValid ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                        {day.isValid ? 'Đủ ca' : 'Thiếu'}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-1">
-                      {day.isWeekendRule && <span className="inline-flex text-[10px] font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-700">Cuối tuần</span>}
-                      <span className="text-[10px] text-gray-400">Đã gán: {day.assignedShifts.length ? day.assignedShifts.join(', ') : 'Chưa có'}</span>
-                    </div>
-
-                    {!day.isValid && (
-                      <div className="space-y-1 rounded-lg border border-red-100 bg-red-50/60 p-2">
-                        {day.missingShifts.length > 0 && <p className="text-[10px] text-red-700 font-semibold">Thiếu ca: {day.missingShifts.join(', ')}</p>}
-                        {day.missingExtraShiftGroups.length > 0 && <p className="text-[10px] text-orange-700 font-semibold">Cần thêm S+ hoặc C+</p>}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex-1 p-3 space-y-3">
-                    {requiredShiftCodes.map((code) => {
-                      const shift = getShiftByCode(activeShifts, code);
-                      return (
-                        <section key={code} className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`inline-flex px-2 py-0.5 rounded-md border text-[10px] font-black ${shiftBadgeClass[code]}`}>
-                              {code}
-                            </span>
-                            <span className="text-[10px] text-gray-400 truncate">
-                              {shift ? `${shift.startTime} - ${shift.endTime}` : 'Chưa có ca'}
-                            </span>
-                          </div>
-                          {renderShiftCell(day.date, day.schedules, code)}
-                        </section>
-                      );
-                    })}
-
-                    <section className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex px-2 py-0.5 rounded-md border text-[10px] font-black bg-slate-50 text-slate-700 border-slate-200">
-                          S+ / C+
-                        </span>
-                        <span className="text-[10px] text-gray-400 truncate">Ca tăng cường</span>
-                      </div>
-                      {day.isWeekendRule ? (
-                        renderExtraCell(day.date, day.schedules)
-                      ) : (
-                        <div className="min-h-20 rounded-lg border border-dashed border-slate-150 bg-slate-50/50 text-slate-300 flex items-center justify-center text-[11px] font-bold">
-                          Không bắt buộc
-                        </div>
-                      )}
-                    </section>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 border border-outline-variant">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-base font-extrabold text-gray-900">{getModalTitle()}</h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="p-1 rounded hover:bg-slate-100 cursor-pointer"><X className="w-5 h-5" /></button>
-            </div>
-            <form onSubmit={handleSubmitSchedule} className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 text-left">
-              {(modalMode === 'create' || modalMode === 'edit') && (
-                <label className="text-xs font-bold text-gray-600">
-                  Ngày làm việc *
-                  <input type="date" value={form.workDate} onChange={(event) => setForm((current) => ({ ...current, workDate: event.target.value }))} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs" />
-                </label>
-              )}
-              {(modalMode === 'create' || modalMode === 'edit' || modalMode === 'changeUser') && (
-                <label className="text-xs font-bold text-gray-600">
-                  Nhân viên *
-                  <select value={form.userId} onChange={(event) => setForm((current) => ({ ...current, userId: event.target.value }))} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs bg-white">
-                    {users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
-                  </select>
-                </label>
-              )}
-              {(modalMode === 'create' || modalMode === 'edit' || modalMode === 'changeShift') && (
-                <label className="text-xs font-bold text-gray-600">
-                  Ca làm việc *
-                  <select value={form.shiftId} onChange={(event) => setForm((current) => ({ ...current, shiftId: event.target.value }))} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs bg-white">
-                    {activeShifts.map((shift) => <option key={shift.id} value={shift.id}>{shift.code} - {shift.name} ({shift.startTime}-{shift.endTime})</option>)}
-                  </select>
-                </label>
-              )}
-              {modalMode === 'status' && (
-                <label className="text-xs font-bold text-gray-600">
-                  Trạng thái *
-                  <select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs bg-white">
-                    {statusOptions.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-                  </select>
-                </label>
-              )}
-              <label className="text-xs font-bold text-gray-600 sm:col-span-2">
-                Ghi chú
-                <textarea value={form.note} onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))} rows={3} className="mt-1 w-full px-3 py-2 border rounded-lg text-xs resize-none" />
-              </label>
-              <div className="sm:col-span-2 flex justify-end gap-2 pt-3 border-t border-slate-100">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg border text-xs font-bold hover:bg-slate-50 cursor-pointer">Hủy</button>
-                <button type="submit" disabled={isLoading} className="px-5 py-2 rounded-lg bg-primary text-white text-xs font-bold hover:bg-primary-container cursor-pointer disabled:opacity-60">
-                  {isLoading ? 'Đang lưu...' : 'Lưu'}
-                </button>
-              </div>
-            </form>
-          </div>
+      {cellErrors.length > 0 && (
+        <div className="border border-red-200 bg-red-50 text-red-700 rounded p-3 text-xs font-semibold flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <div>{cellErrors.length} ô đang có lỗi validate. Di chuột lên ô viền đỏ để xem chi tiết.</div>
         </div>
       )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="border border-outline-variant bg-white p-4 min-h-36">
+          <h3 className="text-sm font-extrabold text-primary mb-3">GHI CHÚ</h3>
+          <div className="space-y-1 text-xs text-gray-700">
+            <p className="font-bold">Số điện thoại/zalo liên hệ:</p>
+            {rows.slice(0, 6).map((row) => (
+              <p key={row.userId}>{row.userName}: {row.phone || 'Chưa cập nhật'}</p>
+            ))}
+          </div>
+        </div>
+
+        <div className="border border-outline-variant bg-white p-4 min-h-36">
+          <h3 className="text-sm font-extrabold text-primary mb-3">Option 1</h3>
+          <div className="space-y-1 text-xs text-gray-700">
+            {activeShifts.map((shift) => (
+              <p key={shift.id}>
+                <span className="font-extrabold">{shift.code}</span> = {shift.name} {shift.startTime} - {shift.endTime}
+              </p>
+            ))}
+            <p><span className="font-extrabold">OFF</span> = Ngày nghỉ</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
