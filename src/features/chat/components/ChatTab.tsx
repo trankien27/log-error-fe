@@ -277,6 +277,7 @@ export default function ChatTab() {
               filteredConversations.map(conversation => {
                 const name = getChatUserName(conversation.otherUser);
                 const isActive = conversation.id === activeConversationId;
+                const hasUnread = conversation.unreadCount > 0;
 
                 return (
                   <button
@@ -291,16 +292,16 @@ export default function ChatTab() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-bold text-gray-950 truncate">{name}</p>
-                        <span className="text-[10px] text-gray-400 shrink-0">
+                        <p className={`text-sm text-gray-950 truncate ${hasUnread ? 'font-black' : 'font-bold'}`}>{name}</p>
+                        <span className={`text-[10px] shrink-0 ${hasUnread ? 'font-black text-primary' : 'text-gray-400'}`}>
                           {formatTime(conversation.lastMessage?.createdAt || conversation.updatedAt)}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 truncate mt-0.5">
+                      <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'font-black text-gray-950' : 'text-gray-500'}`}>
                         {conversation.lastMessage?.content || conversation.otherUser?.email || 'Chưa có tin nhắn'}
                       </p>
                     </div>
-                    {conversation.unreadCount > 0 && (
+                    {hasUnread && (
                       <span className="self-center bg-primary text-white text-[10px] font-bold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center">
                         {conversation.unreadCount}
                       </span>
