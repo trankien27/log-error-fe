@@ -144,7 +144,9 @@ export interface ShiftDto {
   name: string;
   startTime: string;
   endTime: string;
-  workingHours: number;
+  endDayOffset?: number;
+  paidWorkingHours?: number;
+  workingHours?: number;
   isExtraShift: boolean;
   isActive: boolean;
 }
@@ -153,16 +155,41 @@ export interface WorkScheduleDto {
   id: number;
   workDate: string;
   userId: string;
-  userName: string;
+  userName?: string;
   shiftId: number;
   shiftCode: string;
   shiftName: string;
   startTime: string;
   endTime: string;
-  workingHours: number;
+  endDayOffset?: number;
+  paidWorkingHours?: number;
+  workingHours?: number;
   status: number;
   statusName: string;
   note?: string | null;
+}
+
+export interface WorkScheduleWeekDayDto {
+  date: string;
+  dayOfWeek: number;
+  dayName: string;
+}
+
+export interface WorkScheduleWeekUserDto {
+  userId: string;
+  userName: string;
+  departmentName?: string | null;
+  avatarUrl?: string | null;
+  totalWorkingHours: number;
+  schedules: WorkScheduleDto[];
+}
+
+export interface WorkScheduleWeekResponse {
+  startDate: string;
+  endDate: string;
+  totalWorkingHours: number;
+  days: WorkScheduleWeekDayDto[];
+  users: WorkScheduleWeekUserDto[];
 }
 
 export interface CalendarDayDto {
@@ -196,10 +223,28 @@ export interface BulkCreateWorkScheduleRequest {
   items: CreateWorkScheduleRequest[];
 }
 
+export interface BulkAssignWorkScheduleRequest {
+  workDate: string;
+  shiftId: number;
+  userIds: string[];
+  note?: string | null;
+  skipInvalidUsers?: boolean;
+}
+
+export interface CopyWeekWorkScheduleRequest {
+  sourceDate: string;
+  targetDate: string;
+  overwriteExisting: boolean;
+  userIds: string[];
+  storeId?: string | number | null;
+  departmentId?: string | number | null;
+}
+
 export interface UpdateWorkScheduleRequest {
   workDate: string;
   userId: string;
   shiftId: number;
+  status?: number;
   note?: string | null;
 }
 

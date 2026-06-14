@@ -13,6 +13,20 @@ type RefreshTokenResponse = {
   refreshToken?: string;
 };
 
+export class ApiError extends Error {
+  code?: string;
+  data?: unknown;
+  status: number;
+
+  constructor(message: string, status: number, code?: string, data?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+    this.data = data;
+  }
+}
+
 let refreshTokenPromise: Promise<string> | null = null;
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -24,7 +38,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
       payload?.message ||
       payload?.error ||
       `API request failed with status ${response.status}`;
-    throw new Error(message);
+    throw new ApiError(message, response.status, payload?.code, payload?.data);
   }
 
   return (payload?.data ?? payload) as T;

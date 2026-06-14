@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { scheduleService } from '../services/api/scheduleService';
-import { CalendarDayDto, ShiftDto } from '../types';
+import { CalendarDayDto, ShiftDto, WorkScheduleWeekResponse } from '../types';
 
 interface ScheduleState {
   shifts: any[];
   shiftDefinitions: ShiftDto[];
   calendarDays: CalendarDayDto[];
+  weekSchedule: WorkScheduleWeekResponse | null;
   weekStart: string;
   weekEnd: string;
   isLoading: boolean;
@@ -28,6 +29,13 @@ interface ScheduleState {
 
   fetchShifts: () => Promise<void>;
   fetchCalendar: (fromDate: string, toDate: string) => Promise<void>;
+  fetchWeekSchedule: (date: string, filters?: {
+    userId?: string;
+    shiftId?: number | string;
+    storeId?: string | number;
+    departmentId?: string | number;
+    keyword?: string;
+  }) => Promise<void>;
 }
 
 function formatDate(date: Date) {
@@ -56,6 +64,7 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   shifts: [],
   shiftDefinitions: [],
   calendarDays: [],
+  weekSchedule: null,
   ...getCurrentWeekRange(),
   isLoading: false,
   error: null,
@@ -81,19 +90,24 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   },
 
   fetchCalendar: async (fromDate, toDate) => {
+    await get().fetchWeekSchedule(fromDate || toDate);
+  },
+
+  fetchWeekSchedule: async (date, filters = {}) => {
     set({ isLoading: true, error: null });
     try {
-      const [shiftDefinitions, calendar] = await Promise.all([
+      const [shiftDefinitions, weekSchedule] = await Promise.all([
         scheduleService.getShifts(true),
-        scheduleService.getCalendar(fromDate, toDate),
+        scheduleService.getWeekSchedule({ date, ...filters }),
       ]);
 
       set({
         shiftDefinitions,
-        calendarDays: calendar.days,
-        shifts: calendar.days.flatMap((day) => day.schedules),
-        weekStart: calendar.fromDate,
-        weekEnd: calendar.toDate,
+        weekSchedule,
+        calendarDays: [],
+        shifts: weekSchedule.users.flatMap((user) => user.schedules),
+        weekStart: weekSchedule.startDate,
+        weekEnd: weekSchedule.endDate,
         isLoading: false,
       });
     } catch (err: any) {
