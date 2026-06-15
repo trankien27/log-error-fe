@@ -500,7 +500,7 @@ export default function TasksTab() {
       {/* Task Edit/Create Form Modal */}
       {isTaskModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 border border-outline-variant text-left">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingTask ? `Chỉnh sửa Tác vụ IT [${currentEditingTask.id}]` : 'Tạo Tác vụ công việc IT mới'}
@@ -529,7 +529,7 @@ export default function TasksTab() {
                   className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Người đảm nhận *</label>
                   <select
@@ -614,7 +614,7 @@ export default function TasksTab() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setIsTaskModalOpen(false)}
@@ -638,7 +638,7 @@ export default function TasksTab() {
       {/* Task Details Panel Modal */}
       {selectedTaskDetails && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 border border-outline-variant text-left">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <div className="flex items-center gap-2">
                 <span className="p-1.5 rounded-lg bg-orange-50 text-orange-600">
@@ -665,7 +665,7 @@ export default function TasksTab() {
                 </h3>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Trạng thái</span>
                   <div className="flex items-center gap-2">
@@ -768,10 +768,10 @@ export default function TasksTab() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-4 border-t border-gray-150">
+              <div className="flex sm:justify-end gap-2.5 pt-4 border-t border-gray-150">
                 <button
                   onClick={() => setSelectedTaskDetails(null)}
-                  className="px-5 py-2 bg-gray-900 text-white font-bold rounded-lg hover:bg-black transition-transform active:scale-95 text-xs cursor-pointer"
+                  className="w-full sm:w-auto px-5 py-2 bg-gray-900 text-white font-bold rounded-lg hover:bg-black transition-transform active:scale-95 text-xs cursor-pointer"
                 >
                   Hoàn tất xem
                 </button>

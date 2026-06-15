@@ -51,7 +51,7 @@ export default function SettingsTab() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left panel instructions bento */}
-        <div className="lg:col-span-4 bg-white border border-outline-variant rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="lg:col-span-4 bg-white border border-outline-variant rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
           <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-[#ff6f00]">
             <Lock className="w-5 h-5 animate-pulse" />
           </div>
@@ -79,7 +79,7 @@ export default function SettingsTab() {
         </div>
 
         {/* Right panel interactive secure form stages */}
-        <div className="lg:col-span-8 bg-white border border-outline-variant rounded-2xl p-6 shadow-sm min-h-[400px] flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white border border-outline-variant rounded-2xl p-4 sm:p-6 shadow-sm min-h-[400px] flex flex-col justify-between">
           
           {/* STAGE 1: PASSWORD FORM */}
           {settingsStage === 'password' && (
@@ -180,10 +180,10 @@ export default function SettingsTab() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-slate-100">
+              <div className="flex sm:justify-end pt-4 border-t border-slate-100">
                 <button 
                   onClick={handlePasswordSubmit}
-                  className="px-5 py-2.5 bg-[#004ac6] text-white hover:bg-primary-container rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1.5 cursor-pointer"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-[#004ac6] text-white hover:bg-primary-container rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   <span>Lưu mật khẩu</span>

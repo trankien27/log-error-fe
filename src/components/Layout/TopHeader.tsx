@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Bell, Check, Search, Send } from 'lucide-react';
+import { AlertTriangle, Bell, Check, Menu, Search, Send } from 'lucide-react';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLogsStore } from '../../stores/useLogsStore';
 import { useUsersStore } from '../../stores/useUsersStore';
 import { useBoothsStore } from '../../stores/useBoothsStore';
 
-export default function TopHeader() {
+type TopHeaderProps = {
+  onOpenSidebar: () => void;
+};
+
+export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -67,9 +71,18 @@ export default function TopHeader() {
   };
 
   return (
-    <header className="h-[64px] bg-white border-b border-outline-variant flex items-center justify-between px-6 sticky top-0 z-10 w-full shrink-0">
+    <header className="h-[64px] bg-white border-b border-outline-variant flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 sticky top-0 z-10 w-full shrink-0">
+      <button
+        type="button"
+        onClick={onOpenSidebar}
+        className="lg:hidden h-10 w-10 inline-flex items-center justify-center rounded-lg border border-outline-variant text-[#434655] hover:bg-[#f3f3fe] cursor-pointer shrink-0"
+        aria-label="Mở menu điều hướng"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       {/* Search Input Box */}
-      <div className="flex-1 max-w-sm">
+      <div className="flex-1 max-w-sm min-w-0">
         {/* {['/error-logs', '/users', '/booths'].includes(location.pathname) ? (
           <div className="relative animate-fadeIn">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737686] w-4 h-4" />
@@ -88,7 +101,7 @@ export default function TopHeader() {
         )} */}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Notification Bell Dropdown Container */}
         <div className="relative" ref={quickNotifRef}>
           <button
@@ -105,7 +118,7 @@ export default function TopHeader() {
           </button>
 
           {isQuickNotifModalOpen && (
-            <div className="absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-outline-variant w-80 sm:w-96 md:w-[420px] z-50 flex flex-col max-h-[460px] transition-all overflow-hidden animate-fadeIn">
+            <div className="fixed left-3 right-3 top-[60px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 bg-white rounded-2xl shadow-xl border border-outline-variant sm:w-96 md:w-[420px] z-50 flex flex-col max-h-[calc(100dvh-5rem)] sm:max-h-[460px] transition-all overflow-hidden animate-fadeIn">
               <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
@@ -202,7 +215,7 @@ export default function TopHeader() {
                 )}
               </div>
 
-              <div className="p-3 border-t bg-slate-50 flex items-center justify-between gap-1.5 select-none">
+              <div className="p-3 border-t bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 select-none">
                 <button
                   type="button"
                   onClick={() => {
@@ -244,7 +257,7 @@ export default function TopHeader() {
         <button
           type="button"
           onClick={handleLogoutClick}
-          className="px-3 py-1.5 text-xs font-bold rounded-lg border border-outline-variant hover:bg-slate-50 text-[#191b23] cursor-pointer"
+          className="px-2 sm:px-3 py-1.5 text-xs font-bold rounded-lg border border-outline-variant hover:bg-slate-50 text-[#191b23] cursor-pointer"
         >
           Đăng xuất
         </button>

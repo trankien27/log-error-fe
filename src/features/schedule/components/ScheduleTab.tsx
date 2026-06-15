@@ -547,12 +547,12 @@ export default function ScheduleTab() {
   };
 
   return (
-    <div className="h-[calc(100vh-112px)] min-h-[720px] -m-6 bg-white text-[#111827] animate-fadeIn">
+    <div className="h-auto lg:h-[calc(100vh-112px)] min-h-[calc(100dvh-88px)] lg:min-h-[720px] -m-3 sm:-m-4 lg:-m-6 bg-white text-[#111827] animate-fadeIn">
       <div className="h-full flex flex-col">
-        <div className="border-b border-outline-variant px-6 py-5">
+        <div className="border-b border-outline-variant px-4 lg:px-6 py-4 lg:py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex h-11 rounded-md border border-outline-variant overflow-hidden">
+              <div className="inline-flex h-11 max-w-full rounded-md border border-outline-variant overflow-hidden">
                 <button
                   type="button"
                   onClick={() => moveWeek(-7)}
@@ -567,7 +567,7 @@ export default function ScheduleTab() {
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
-                <div className="px-4 flex items-center gap-3 text-sm font-bold min-w-[240px]">
+                <div className="px-3 sm:px-4 flex items-center gap-3 text-sm font-bold min-w-[220px] sm:min-w-[240px]">
                   {formatDate(weekStart)} - {formatDate(weekEnd)}
                   <CalendarDays className="w-4 h-4 ml-auto" />
                 </div>
@@ -584,7 +584,7 @@ export default function ScheduleTab() {
               <select
                 value={departmentFilter}
                 onChange={event => setDepartmentFilter(event.target.value)}
-                className="h-11 min-w-[190px] rounded-md border border-outline-variant bg-white px-3 text-sm cursor-pointer"
+                className="h-11 w-full sm:w-auto sm:min-w-[190px] rounded-md border border-outline-variant bg-white px-3 text-sm cursor-pointer"
               >
                 <option value="">Tất cả phòng ban</option>
                 {departments.map(department => (
@@ -595,7 +595,7 @@ export default function ScheduleTab() {
               <select
                 value={shiftFilter}
                 onChange={event => setShiftFilter(event.target.value)}
-                className="h-11 min-w-[190px] rounded-md border border-outline-variant bg-white px-3 text-sm cursor-pointer"
+                className="h-11 w-full sm:w-auto sm:min-w-[190px] rounded-md border border-outline-variant bg-white px-3 text-sm cursor-pointer"
               >
                 <option value="">Tất cả ca trực</option>
                 {activeShifts.map(shift => (
@@ -612,7 +612,7 @@ export default function ScheduleTab() {
                     if (event.key === 'Enter') reload();
                   }}
                   placeholder="Tìm nhân viên..."
-                  className="h-11 w-[220px] rounded-md border border-outline-variant px-3 pr-9 text-sm focus:outline-primary"
+                  className="h-11 w-full sm:w-[220px] rounded-md border border-outline-variant px-3 pr-9 text-sm focus:outline-primary"
                 />
               </div>
             </div>
@@ -679,7 +679,7 @@ export default function ScheduleTab() {
           </div>
         </div>
 
-        <div className="px-6 py-4 border-b border-outline-variant">
+        <div className="px-4 lg:px-6 py-4 border-b border-outline-variant">
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm font-medium text-gray-700">Ca trực:</span>
             {activeShifts.map(renderShiftBadge)}
@@ -768,7 +768,7 @@ export default function ScheduleTab() {
               </tbody>
             </table>
 
-            <div className="px-4 py-4 flex items-center justify-between">
+            <div className="px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <button
                 type="button"
                 onClick={() => openCreatePanel(weekStart)}
@@ -801,7 +801,7 @@ export default function ScheduleTab() {
                   </button>
                 </div>
               )}
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <p className="text-base font-bold">
                   Tổng giờ của tuần:
                   <span className="ml-8">{visibleTotalWorkingHours.toFixed(1)}h</span>
@@ -817,7 +817,7 @@ export default function ScheduleTab() {
             </p>
           </div>
 
-          <aside className="border-l border-outline-variant bg-white p-5 overflow-y-auto">
+          <aside className="border-t xl:border-t-0 xl:border-l border-outline-variant bg-white p-4 lg:p-5 overflow-y-auto">
             {panel ? (
               <div className="space-y-5">
                 <div className="flex items-center justify-between">

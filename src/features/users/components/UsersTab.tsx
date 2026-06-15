@@ -167,7 +167,7 @@ export default function UsersTab() {
         </div>
 
         {/* Profile Header Block */}
-        <div className="bg-white rounded-2xl border border-outline-variant p-6 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
+        <div className="bg-white rounded-2xl border border-outline-variant p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
           <div className="absolute right-0 top-0 w-32 h-32 bg-[#e8f0fe] rounded-full filter blur-3xl opacity-60 pointer-events-none"></div>
           
           {/* Photo with overlay effect */}
@@ -195,7 +195,7 @@ export default function UsersTab() {
           {/* Name and badges info */}
           <div className="flex-1 space-y-3 text-center md:text-left">
             <div className="flex flex-col md:flex-row items-center gap-2">
-              <h2 className="text-2xl font-extrabold tracking-tight text-gray-950 font-sans">{selectedUserProfileUser.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-gray-950 font-sans break-words">{selectedUserProfileUser.name}</h2>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 Hoạt động
@@ -211,7 +211,7 @@ export default function UsersTab() {
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-slate-500 pt-1">
               <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
                 <Mail className="w-3.5 h-3.5 text-blue-500" />
-                <span>{selectedUserProfileUser.email}</span>
+                <span className="break-all">{selectedUserProfileUser.email}</span>
               </div>
               <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
                 <Phone className="w-3.5 h-3.5 text-emerald-500" />
@@ -228,7 +228,7 @@ export default function UsersTab() {
         {/* Grid Content splits */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column Editor */}
-          <div className="lg:col-span-8 bg-white border border-outline-variant rounded-2xl p-6 shadow-sm space-y-6">
+          <div className="lg:col-span-8 bg-white border border-outline-variant rounded-2xl p-4 sm:p-6 shadow-sm space-y-6">
             <div>
               <h3 className="text-base font-bold text-gray-900 font-sans">Chi tiết Hồ sơ & Liên hệ</h3>
               <p className="text-xs text-gray-500 mt-1">Cập nhật thông tin chi tiết và quyền truy cập nghiệp vụ dành cho thành viên.</p>
@@ -296,7 +296,7 @@ export default function UsersTab() {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-3 border-t border-slate-100">
                 <button 
                   type="button" 
                   onClick={() => setSelectedUserProfileUser(null)}
@@ -434,7 +434,7 @@ export default function UsersTab() {
         {/* User table lists */}
         <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full min-w-[760px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 font-bold select-none font-sans">
                   <th className="py-4 px-5">Nhân sự</th>
@@ -539,7 +539,7 @@ export default function UsersTab() {
             </table>
           </div>
 
-          <div className="bg-gray-50 border-t border-[#ededf9] px-5 py-3 flex items-center justify-between font-sans">
+          <div className="bg-gray-50 border-t border-[#ededf9] px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 font-sans">
             <span className="text-xs text-gray-400">Hiển thị {filteredUsers.length} tài khoản cấp cao</span>
             <div className="flex gap-1 select-none">
               <button className="px-3 py-1 border border-outline-variant hover:bg-white text-[11px] rounded transition-all cursor-pointer">Trước</button>
@@ -552,7 +552,7 @@ export default function UsersTab() {
         {/* User CRUD Modal */}
         {isUserModalOpen && (
           <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-outline-variant">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
                 <h3 className="text-lg font-bold text-on-surface">
                   {currentEditingUser ? 'Cập nhật thành viên' : 'Đăng ký thành viên mới'}
@@ -582,7 +582,7 @@ export default function UsersTab() {
                     className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-medium mb-1">Vai trò quyền hạn</label>
                     <select
@@ -608,7 +608,7 @@ export default function UsersTab() {
                     </select>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 pt-4">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
                   <button
                     type="button"
                     onClick={() => setIsUserModalOpen(false)}

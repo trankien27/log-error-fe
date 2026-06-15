@@ -226,8 +226,14 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
       title="Sắp xếp lịch nhanh"
       open={open}
       onCancel={requestClose}
-      width={860}
+      width="min(860px, calc(100vw - 24px))"
       destroyOnClose
+      styles={{
+        body: {
+          maxHeight: 'calc(100dvh - 12rem)',
+          overflowY: 'auto',
+        },
+      }}
       footer={[
         <Button key="clear" onClick={clearAllocations}>Xóa phân bổ</Button>,
         <Button key="suggest" onClick={suggestAllocation} disabled={!formState.targetHours || !options}>

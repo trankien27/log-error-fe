@@ -161,7 +161,7 @@ export default function OverviewTab() {
           </p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isLoading ? (
             <div className="py-10 text-center text-xs font-bold text-gray-400">
               Đang tải thống kê log lỗi...
@@ -174,11 +174,11 @@ export default function OverviewTab() {
             <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-center">
               <div className="flex justify-center">
                 <div
-                  className="relative w-56 h-56 rounded-full flex items-center justify-center shadow-inner"
+                  className="relative w-44 h-44 sm:w-56 sm:h-56 rounded-full flex items-center justify-center shadow-inner"
                   style={{ background: chartGradient }}
                 >
-                  <div className="absolute w-36 h-36 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
-                    <span className="text-3xl font-bold text-[#191b23]">{stats?.total ?? 0}</span>
+                  <div className="absolute w-28 h-28 sm:w-36 sm:h-36 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                    <span className="text-2xl sm:text-3xl font-bold text-[#191b23]">{stats?.total ?? 0}</span>
                     <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Tổng số lỗi</span>
                   </div>
                 </div>
@@ -214,7 +214,7 @@ export default function OverviewTab() {
           </p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isGroupStatsLoading ? (
             <div className="py-10 text-center text-xs font-bold text-gray-400">
               Đang tải thống kê lỗi theo nhóm...
@@ -227,11 +227,11 @@ export default function OverviewTab() {
             <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6 items-center">
               <div className="flex justify-center">
                 <div
-                  className="relative w-56 h-56 rounded-full flex items-center justify-center shadow-inner"
+                  className="relative w-44 h-44 sm:w-56 sm:h-56 rounded-full flex items-center justify-center shadow-inner"
                   style={{ background: groupChartGradient }}
                 >
-                  <div className="absolute w-36 h-36 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
-                    <span className="text-3xl font-bold text-[#191b23]">{groupStats?.total ?? 0}</span>
+                  <div className="absolute w-28 h-28 sm:w-36 sm:h-36 bg-white rounded-full flex flex-col items-center justify-center shadow-sm">
+                    <span className="text-2xl sm:text-3xl font-bold text-[#191b23]">{groupStats?.total ?? 0}</span>
                     <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Tổng số lỗi</span>
                   </div>
                 </div>
@@ -273,7 +273,7 @@ export default function OverviewTab() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[520px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500">
                 <th className="py-4 px-5 font-bold w-20">Hạng</th>

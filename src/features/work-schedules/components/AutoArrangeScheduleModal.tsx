@@ -199,9 +199,9 @@ export default function AutoArrangeScheduleModal({ open, users, onClose, onSucce
       destroyOnClose
       extra={<Button icon={<ThunderboltOutlined />} type="primary" onClick={runPreview} loading={previewMutation.isPending}>Preview</Button>}
       footer={
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Button onClick={requestClose}>Hủy</Button>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button disabled={currentStep === 0} onClick={() => setCurrentStep(step => Math.max(0, step - 1))}>Quay lại</Button>
             {currentStep < 3 ? (
               <Button type="primary" disabled={!canGoNext} onClick={() => setCurrentStep(step => Math.min(3, step + 1))}>Tiếp tục</Button>
@@ -215,15 +215,18 @@ export default function AutoArrangeScheduleModal({ open, users, onClose, onSucce
       }
     >
       <div className="space-y-5">
-        <Steps
-          current={currentStep}
-          items={[
-            { title: 'Phạm vi' },
-            { title: 'Giới hạn nhân viên' },
-            { title: 'Nhu cầu ca' },
-            { title: 'Preview & lưu' },
-          ]}
-        />
+        <div className="overflow-x-auto pb-1">
+          <Steps
+            current={currentStep}
+            className="min-w-[620px] sm:min-w-0"
+            items={[
+              { title: 'Phạm vi' },
+              { title: 'Giới hạn nhân viên' },
+              { title: 'Nhu cầu ca' },
+              { title: 'Preview & lưu' },
+            ]}
+          />
+        </div>
 
         {apiError && <Alert type="error" showIcon message="Không thể xử lý tự động chia ca" description={<pre className="whitespace-pre-wrap font-sans">{apiError}</pre>} />}
         {optionsQuery.isFetching && <Alert type="info" showIcon message="Đang tải dữ liệu ca và tùy chọn..." />}

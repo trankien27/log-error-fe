@@ -13,6 +13,7 @@ import { useBoothsStore } from '../../stores/useBoothsStore';
 import { useScheduleStore } from '../../stores/useScheduleStore';
 
 export default function MainLayout() {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { 
     isNotificationModalOpen, 
     setIsNotificationModalOpen, 
@@ -101,15 +102,20 @@ export default function MainLayout() {
   return (
     <div className="bg-[#faf8ff] text-[#191b23] min-h-screen flex font-sans antialiased">
       {/* Sidebar Component */}
-      <Sidebar />
+      <Sidebar variant="desktop" />
+      <Sidebar
+        variant="mobile"
+        open={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col pl-[280px] min-h-screen">
+      <div className="flex-1 flex flex-col pl-0 lg:pl-[280px] min-h-screen min-w-0">
         {/* Top Header Component */}
-        <TopHeader />
+        <TopHeader onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
 
         {/* View Contents */}
-        <main className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 overflow-y-auto min-w-0">
           <Outlet />
         </main>
       </div>
@@ -119,7 +125,7 @@ export default function MainLayout() {
       {/* Modal: Xem chi tiết thông báo phát thanh */}
       {selectedNotification && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 border border-outline-variant">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <div className="flex items-center gap-2">
                 <span className={`p-1.5 rounded-lg ${
@@ -229,7 +235,7 @@ export default function MainLayout() {
       {/* Modal: Gửi thông báo phát thanh mới */}
       {isNotificationModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 border border-outline-variant">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">Kênh phát thanh & Cảnh báo khẩn</h3>
               <button onClick={() => setIsNotificationModalOpen(false)} className="text-gray-400 hover:text-gray-650 font-bold cursor-pointer">&#x2715;</button>
@@ -338,7 +344,7 @@ export default function MainLayout() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Phân loại & Cấp độ</label>
                   <select
@@ -361,7 +367,7 @@ export default function MainLayout() {
                   />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsNotificationModalOpen(false)}
