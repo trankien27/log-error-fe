@@ -214,9 +214,9 @@ export default function ChatTab() {
   const connectionReady = connection?.state === 'Connected';
 
   return (
-    <div className="h-[calc(100vh-112px)] min-h-[620px] text-left animate-fadeIn">
+    <div className="h-auto xl:h-[calc(100vh-112px)] min-h-[calc(100dvh-96px)] xl:min-h-[620px] text-left animate-fadeIn">
       <div className="h-full grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4">
-        <section className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-0">
+        <section className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[340px] xl:min-h-0">
           <div className="p-4 border-b border-outline-variant space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -313,7 +313,7 @@ export default function ChatTab() {
           </div>
         </section>
 
-        <section className="bg-[#f8fafc] border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-0">
+        <section className="bg-[#f8fafc] border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[460px] xl:min-h-0">
           <header className="h-[68px] bg-white border-b border-outline-variant px-5 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-full bg-[#dbe1ff] text-[#00174b] flex items-center justify-center text-xs font-black shrink-0">
@@ -360,7 +360,7 @@ export default function ChatTab() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white border-t border-outline-variant p-4 flex items-end gap-3">
+          <form onSubmit={handleSubmit} className="bg-white border-t border-outline-variant p-3 sm:p-4 flex flex-col sm:flex-row sm:items-end gap-3">
             <textarea
               value={content}
               onChange={event => setContent(event.target.value)}
@@ -378,7 +378,7 @@ export default function ChatTab() {
             <button
               type="submit"
               disabled={!receiverId || !content.trim() || isSending}
-              className="h-10 px-4 rounded-lg bg-primary text-white text-xs font-bold inline-flex items-center gap-1.5 hover:bg-primary-container active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-10 w-full sm:w-auto px-4 rounded-lg bg-primary text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-primary-container active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Gửi

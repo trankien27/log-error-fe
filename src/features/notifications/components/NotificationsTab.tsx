@@ -39,9 +39,9 @@ export default function NotificationsTab() {
       </div>
 
       {/* Simple helper tabs filter */}
-      <div className="flex gap-2 p-1 bg-white border border-outline-variant rounded-xl shadow-sm w-fit font-sans">
-        <button className="px-4 py-1.5 bg-[#d0e1fb] text-[#00174b] text-xs font-bold rounded-lg pointer-events-none">Tất cả thông báo</button>
-        <button className="px-4 py-1.5 text-gray-500 hover:bg-slate-50 text-xs font-medium rounded-lg cursor-pointer" onClick={() => toast.info(`Có ${notifications.filter(n => !n.isRead).length} thông báo chưa đọc.`)}>Chưa đọc ({notifications.filter(n => !n.isRead).length})</button>
+      <div className="flex gap-2 p-1 bg-white border border-outline-variant rounded-xl shadow-sm w-full sm:w-fit overflow-x-auto font-sans">
+        <button className="px-4 py-1.5 bg-[#d0e1fb] text-[#00174b] text-xs font-bold rounded-lg pointer-events-none whitespace-nowrap">Tất cả thông báo</button>
+        <button className="px-4 py-1.5 text-gray-500 hover:bg-slate-50 text-xs font-medium rounded-lg cursor-pointer whitespace-nowrap" onClick={() => toast.info(`Có ${notifications.filter(n => !n.isRead).length} thông báo chưa đọc.`)}>Chưa đọc ({notifications.filter(n => !n.isRead).length})</button>
       </div>
 
       {/* Notification list block */}
@@ -64,7 +64,7 @@ export default function NotificationsTab() {
                 }
                 setSelectedNotification(notif);
               }}
-              className={`bg-white border rounded-xl p-5 flex gap-4 items-start shadow-sm hover:shadow-md hover:border-primary/40 transition-all relative overflow-hidden cursor-pointer ${
+              className={`bg-white border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start shadow-sm hover:shadow-md hover:border-primary/40 transition-all relative overflow-hidden cursor-pointer ${
                 notif.isRead ? 'border-outline-variant opacity-80' : 'border-primary/20 bg-blue-50/5'
               }`}
             >
@@ -84,7 +84,7 @@ export default function NotificationsTab() {
               </div>
 
               <div className="flex-1 min-w-0 text-left">
-                <div className="flex items-center justify-between gap-4 mb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 mb-1">
                   <h3 className={`text-sm tracking-tight ${notif.isRead ? 'text-gray-600 line-through' : 'text-gray-900 font-bold'}`}>
                     {notif.title}
                   </h3>
@@ -92,7 +92,7 @@ export default function NotificationsTab() {
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed truncate-2-lines">{notif.content}</p>
 
-                <div className="flex items-center gap-3 mt-3">
+                <div className="flex flex-wrap items-center gap-3 mt-3">
                   <span className="inline-flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded text-[10px] text-gray-500 font-medium font-sans">
                     Gửi đến: {notif.tagName}
                   </span>
@@ -101,7 +101,7 @@ export default function NotificationsTab() {
                     <span className="bg-red-100 text-red-700 text-[9px] font-bold px-1.5 py-0.5 rounded font-sans">Khẩn cấp</span>
                   )}
 
-                  <span className="text-[10px] text-gray-400 hover:underline cursor-pointer ml-auto font-sans" onClick={(e) => {
+                  <span className="text-[10px] text-gray-400 hover:underline cursor-pointer sm:ml-auto font-sans" onClick={(e) => {
                     e.stopPropagation();
                     handleToggleReadState(notif.id);
                   }}>

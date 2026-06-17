@@ -75,7 +75,7 @@ export default function RolesTab() {
       </div>
 
       {/* Bento informational summaries Cards layout */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 shadow-sm">
         <div className="bg-white p-6 rounded-xl border border-outline-variant flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden">
           <div className="absolute -right-4 -top-4 w-20 h-20 bg-primary/5 rounded-full"></div>
           <div>
@@ -110,7 +110,7 @@ export default function RolesTab() {
           <h3 className="text-sm font-bold text-gray-800">Danh sách các vai trò vận hành</h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[760px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-[#e2e8f0] text-[11px] uppercase tracking-medium text-gray-500 font-bold select-none font-sans">
                 <th className="py-4 px-5">Tên Vai Trò</th>
@@ -164,7 +164,7 @@ export default function RolesTab() {
       {/* Role CRUD Modal */}
       {isRoleModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-outline-variant text-left">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingRole ? 'Thay đổi thông tin Vai trò' : 'Phát triển nhóm Vai trò hệ thống'}
@@ -207,7 +207,7 @@ export default function RolesTab() {
                   <option value="Cao">Cao (Highly Confidential)</option>
                 </select>
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsRoleModalOpen(false)}
