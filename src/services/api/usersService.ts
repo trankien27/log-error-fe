@@ -5,6 +5,19 @@ type UsersResponse = User[] | {
   items?: User[];
 };
 
+function buildQuery(params: Record<string, string | number | boolean | null | undefined>) {
+  const searchParams = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      searchParams.set(key, String(value));
+    }
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
+}
+
 function normalizeUser(user: any): User {
   const firstName = user.firstName || '';
   const lastName = user.lastName || '';
@@ -21,8 +34,8 @@ function normalizeUser(user: any): User {
 }
 
 export const usersService = {
-  getUsers: async (): Promise<User[]> => {
-    const result = await apiClient.get<UsersResponse>('/api/users');
+  getUsers: async (params: { role?: string | number } = {}): Promise<User[]> => {
+    const result = await apiClient.get<UsersResponse>(`/api/users${buildQuery(params)}`);
 
     if (Array.isArray(result)) {
       return result.map(normalizeUser);

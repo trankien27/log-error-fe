@@ -3,6 +3,7 @@ import { apiClient, AUTH_TOKEN_KEY, REFRESH_TOKEN_KEY, AUTH_USER_KEY } from './a
 
 type BackendUser = Partial<User> & {
   userId?: string;
+  roleId?: string | number;
   firstName?: string;
   lastName?: string;
   sub?: string;
@@ -39,7 +40,14 @@ function normalizeUser(user: BackendUser): User {
   const firstName = user.firstName || '';
   const lastName = user.lastName || '';
   const fullName = user.name || `${firstName} ${lastName}`.trim() || user.email || 'Người dùng';
-  const roleClaim = user.role || user['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+  const roleClaim = user.role ?? user.roleId ?? user['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+  const numericRole = Number(roleClaim);
+  const normalizedRole =
+    Number.isFinite(numericRole) && numericRole > 0
+      ? (numericRole as User['role'])
+      : roleClaim === 'Admin' || roleClaim === 'Manager' || roleClaim === 'IT Support' || roleClaim === 'Staff' || roleClaim === 'User'
+      ? roleClaim
+      : 'Staff';
 
   return {
     id:
@@ -51,9 +59,7 @@ function normalizeUser(user: BackendUser): User {
       'current-user',
     name: fullName,
     email: user.email || '',
-    role: roleClaim === 'Admin' || roleClaim === 'Manager' || roleClaim === 'IT Support' || roleClaim === 'Staff' || roleClaim === 'User'
-      ? roleClaim
-      : 'Staff',
+    role: normalizedRole,
     status: user.status || 'Hoạt động',
     avatar: user.avatar,
     phone: user.phone,

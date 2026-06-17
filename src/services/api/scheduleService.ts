@@ -1,13 +1,16 @@
 import {
   BulkCreateWorkScheduleRequest,
+  BulkAssignWorkScheduleRequest,
   CalendarDayDto,
   CalendarResponseDto,
   ChangeShiftRequest,
   ChangeUserRequest,
+  CopyWeekWorkScheduleRequest,
   CreateWorkScheduleRequest,
   ShiftDto,
   UpdateWorkScheduleRequest,
   UpdateWorkScheduleStatusRequest,
+  WorkScheduleWeekResponse,
   WorkScheduleDto,
 } from '../../types';
 import { apiClient } from './apiClient';
@@ -23,7 +26,13 @@ type ValidateBulkResponse = {
 
 type BulkCreateResponse = {
   createdCount: number;
+  skippedCount?: number;
+  conflicts?: unknown[];
   items: WorkScheduleDto[];
+};
+
+type ShiftsResponse = ShiftDto[] | {
+  items?: ShiftDto[];
 };
 
 function buildQuery(params: Record<string, string | number | boolean | null | undefined>) {
@@ -41,7 +50,20 @@ function buildQuery(params: Record<string, string | number | boolean | null | un
 
 export const scheduleService = {
   getShifts: (isActive: boolean | null = true): Promise<ShiftDto[]> => {
-    return apiClient.get<ShiftDto[]>(`/api/shifts${buildQuery({ isActive })}`);
+    return apiClient.get<ShiftsResponse>(`/api/shifts${buildQuery({ isActive })}`).then((result) => {
+      return Array.isArray(result) ? result : result.items || [];
+    });
+  },
+
+  getWeekSchedule: (params: {
+    date: string;
+    userId?: string;
+    shiftId?: number | string;
+    storeId?: string | number;
+    departmentId?: string | number;
+    keyword?: string;
+  }): Promise<WorkScheduleWeekResponse> => {
+    return apiClient.get<WorkScheduleWeekResponse>(`/api/work-schedules/week${buildQuery(params)}`);
   },
 
   getCalendar: (fromDate: string, toDate: string): Promise<CalendarResponseDto> => {
@@ -70,6 +92,14 @@ export const scheduleService = {
     return apiClient.post<BulkCreateResponse>('/api/work-schedules/bulk', request);
   },
 
+  bulkAssignWorkSchedules: (request: BulkAssignWorkScheduleRequest): Promise<BulkCreateResponse> => {
+    return apiClient.post<BulkCreateResponse>('/api/work-schedules/bulk', request);
+  },
+
+  batchCreateWorkSchedules: (request: BulkCreateWorkScheduleRequest): Promise<BulkCreateResponse> => {
+    return apiClient.post<BulkCreateResponse>('/api/work-schedules/batch', request);
+  },
+
   updateWorkSchedule: (id: number, schedule: UpdateWorkScheduleRequest): Promise<WorkScheduleDto> => {
     return apiClient.put<WorkScheduleDto>(`/api/work-schedules/${id}`, schedule);
   },
@@ -86,6 +116,14 @@ export const scheduleService = {
     return apiClient.patch<WorkScheduleDto>(`/api/work-schedules/${id}/status`, request);
   },
 
+  moveWorkSchedule: (id: number, request: {
+    targetDate: string;
+    targetUserId: string;
+    targetShiftId: number;
+  }): Promise<WorkScheduleDto> => {
+    return apiClient.patch<WorkScheduleDto>(`/api/work-schedules/${id}/move`, request);
+  },
+
   deleteWorkSchedule: async (id: number): Promise<boolean> => {
     await apiClient.delete<{ id: number }>(`/api/work-schedules/${id}`);
     return true;
@@ -97,5 +135,9 @@ export const scheduleService = {
 
   validateBulk: (request: BulkCreateWorkScheduleRequest): Promise<ValidateBulkResponse> => {
     return apiClient.post<ValidateBulkResponse>('/api/work-schedules/validate-bulk', request);
+  },
+
+  copyWeek: (request: CopyWeekWorkScheduleRequest): Promise<BulkCreateResponse> => {
+    return apiClient.post<BulkCreateResponse>('/api/work-schedules/copy-week', request);
   },
 };

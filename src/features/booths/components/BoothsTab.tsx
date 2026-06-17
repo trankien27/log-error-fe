@@ -124,13 +124,13 @@ export default function BoothsTab() {
             className="w-full pl-9 pr-4 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg text-xs"
           />
         </div>
-        <span className="text-xs text-gray-400 font-medium">Toàn bộ booth đang vận hành bình thường</span>
+        <span className="text-xs text-gray-400 font-medium text-center md:text-left">Toàn bộ booth đang vận hành bình thường</span>
       </div>
 
       {/* Data table booths */}
       <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[780px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 font-bold select-none font-sans">
                 <th className="py-4 px-5">Mã Trạm Booth</th>
@@ -205,7 +205,7 @@ export default function BoothsTab() {
       {/* Booth CRUD Modal */}
       {isBoothModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-outline-variant text-left">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingBooth ? `Chỉnh sửa Booth: ${currentEditingBooth.id}` : 'Đăng ký trạm hỗ trợ (Booth) mới'}
@@ -228,7 +228,7 @@ export default function BoothsTab() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-medium mb-1">Mã trạm (ID) *</label>
                   <input
@@ -275,7 +275,7 @@ export default function BoothsTab() {
                   onSelect={item => setBoothStoresField(item.name)}
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
                 <button
                   type="button"
                   onClick={() => setIsBoothModalOpen(false)}

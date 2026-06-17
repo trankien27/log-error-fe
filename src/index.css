@@ -43,3 +43,11 @@
   background-image: linear-gradient(to right, #e1e2ed 1px, transparent 1px), linear-gradient(to bottom, #e1e2ed 1px, transparent 1px);
   background-size: 24px 24px;
 }
+
+button[class*="bg-primary"],
+button[class*="bg-[#004ac6]"],
+button[class*="bg-gray-900"],
+button[class*="bg-slate-900"],
+button[class*="bg-emerald-600"] {
+  color: #ffffff !important;
+}

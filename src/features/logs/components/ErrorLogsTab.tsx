@@ -545,7 +545,7 @@ export default function ErrorLogsTab() {
 
       <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full min-w-[1100px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 select-none font-sans">
                 <th className="py-4 px-5 font-bold w-12">
@@ -687,7 +687,7 @@ export default function ErrorLogsTab() {
 
       {isReportModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 border border-outline-variant">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">Xuất báo cáo văn bản</h3>
               <button type="button" onClick={() => setIsReportModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
@@ -729,7 +729,7 @@ export default function ErrorLogsTab() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto p-6 border border-outline-variant">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Thêm lỗi mới'}
@@ -877,7 +877,7 @@ export default function ErrorLogsTab() {
                 />
               </div>
 
-              <div className="lg:col-span-2 flex justify-end gap-2 pt-4 border-t">
+              <div className="lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -900,7 +900,7 @@ export default function ErrorLogsTab() {
 
       {selectedLogDetails && (
         <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl p-6 border border-outline-variant text-left">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
               <div>
                 <h3 className="text-lg font-bold text-on-surface">Chi tiết log lỗi</h3>
