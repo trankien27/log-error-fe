@@ -138,6 +138,16 @@ export interface Activity {
   statusType: 'error' | 'pending' | 'success';
 }
 
+export interface RecentActivity {
+  id: string;
+  activityType: number;
+  activityTypeLabel: string;
+  entityId: string;
+  entityCode: string;
+  description: string;
+  occurredAt: string;
+}
+
 export interface ShiftDto {
   id: number;
   code: string;

@@ -5,6 +5,7 @@ import { useTasksStore } from '../../../stores/useTasksStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
 import { Task, TaskAttachment } from '../../../types';
+import RecentActivities from './RecentActivities';
 
 export default function TasksTab() {
   const {
@@ -496,6 +497,8 @@ export default function TasksTab() {
           </div>
         </div>
       </div>
+
+      <RecentActivities />
 
       {/* Task Edit/Create Form Modal */}
       {isTaskModalOpen && (
