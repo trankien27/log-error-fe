@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Bell,
   Calendar,
+  Clock3,
   ClipboardList,
   LayoutDashboard,
   MessageSquare,
@@ -52,6 +53,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/users') return 'users';
     if (path === '/roles') return 'roles';
     if (path === '/booths') return 'booths';
+    if (path === '/shifts') return 'shifts';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
     if (path === '/settings') return 'settings';
@@ -77,6 +79,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'users': navigate('/users'); break;
       case 'roles': navigate('/roles'); break;
       case 'booths': navigate('/booths'); break;
+      case 'shifts': navigate('/shifts'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
       case 'settings': navigate('/settings'); break;
@@ -177,6 +180,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               <button onClick={() => navigateTo('booths')} className={navButtonClass(activeTab === 'booths')}>
                 <Store className="w-4 h-4" />
                 <span>Booth</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigateTo('shifts')} className={navButtonClass(activeTab === 'shifts')}>
+                <Clock3 className="w-4 h-4" />
+                <span>Ca làm việc</span>
               </button>
             </li>
             <li>

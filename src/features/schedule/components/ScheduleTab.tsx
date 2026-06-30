@@ -10,6 +10,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Send,
   Settings,
   Trash2,
   UserRound,
@@ -121,6 +122,7 @@ export default function ScheduleTab() {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [scheduleUsers, setScheduleUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSendingTelegram, setIsSendingTelegram] = useState(false);
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
 
   const activeShifts = useMemo(
@@ -196,6 +198,12 @@ export default function ScheduleTab() {
       .filter(user => !departmentFilter || user.department === departmentFilter)
       .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   }, [departmentFilter, employeeSearch, scheduleUsers]);
+
+  const currentWeekScheduleIds = useMemo(() => {
+    return Array.from(new Set(
+      (weekSchedule?.users || []).flatMap(user => user.schedules.map(schedule => schedule.id)),
+    ));
+  }, [weekSchedule?.users]);
 
   useEffect(() => {
     fetchWeekSchedule(selectedDate, {
@@ -404,6 +412,36 @@ export default function ScheduleTab() {
     }
   };
 
+  const deleteAllCurrentWeekSchedules = () => {
+    if (!canManageSchedule) return;
+
+    const scheduleIds = currentWeekScheduleIds;
+    if (scheduleIds.length === 0) {
+      toast.info('Tuần hiện tại chưa có lịch để xóa.');
+      return;
+    }
+
+    toast.warning(`Xóa toàn bộ ${scheduleIds.length} lịch trong tuần ${formatDate(weekStart)} - ${formatDate(weekEnd)}?`, {
+      action: {
+        label: 'Xóa tất cả',
+        onClick: async () => {
+          setIsSaving(true);
+          try {
+            await Promise.all(scheduleIds.map(id => scheduleService.deleteWorkSchedule(id)));
+            toast.success(`Đã xóa ${scheduleIds.length} lịch trong tuần.`);
+            setPanel(null);
+            setCellDrafts({});
+            await reload();
+          } catch (err: any) {
+            toast.error(err.message || 'Không thể xóa toàn bộ lịch.');
+          } finally {
+            setIsSaving(false);
+          }
+        },
+      },
+    });
+  };
+
   const copyCurrentWeek = async () => {
     if (!canManageSchedule) return;
 
@@ -425,6 +463,20 @@ export default function ScheduleTab() {
 
   const exportExcel = () => {
     toast.info('Chức năng xuất Excel sẽ gọi API export khi backend bàn giao endpoint.');
+  };
+
+  const sendSelectedDateToTelegram = async () => {
+    if (!canManageSchedule) return;
+
+    setIsSendingTelegram(true);
+    try {
+      await scheduleService.sendToTelegram(selectedDate);
+      toast.success(`Đã gửi lịch ngày ${formatDate(selectedDate)} lên Telegram.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể gửi lịch lên Telegram.');
+    } finally {
+      setIsSendingTelegram(false);
+    }
   };
 
   const renderShiftBadge = (shift: ShiftDto) => {
@@ -653,6 +705,24 @@ export default function ScheduleTab() {
               >
                 <Download className="w-4 h-4" />
                 Xuất Excel
+              </button>
+              <button
+                type="button"
+                onClick={sendSelectedDateToTelegram}
+                disabled={!canManageSchedule || isSendingTelegram}
+                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSendingTelegram ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Gửi Telegram
+              </button>
+              <button
+                type="button"
+                onClick={deleteAllCurrentWeekSchedules}
+                disabled={!canManageSchedule || isSaving || currentWeekScheduleIds.length === 0}
+                className="h-11 px-4 rounded-md border border-red-200 bg-red-50 text-red-600 text-sm font-semibold inline-flex items-center gap-2 hover:bg-red-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" />
+                Xóa tất cả lịch
               </button>
               <button
                 type="button"

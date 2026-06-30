@@ -159,6 +159,18 @@ export interface ShiftDto {
   workingHours?: number;
   isExtraShift: boolean;
   isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string | null;
+}
+
+export interface CreateShiftRequest {
+  code: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  endDayOffset: 0 | 1;
+  paidWorkingHours: number;
+  isExtraShift?: boolean;
 }
 
 export interface WorkScheduleDto {
@@ -281,6 +293,7 @@ export type TabType =
   | 'users'
   | 'roles'
   | 'booths'
+  | 'shifts'
   | 'notifications'
   | 'schedule'
   | 'settings';

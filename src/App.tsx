@@ -9,6 +9,7 @@ import ChatTab from './features/chat/components/ChatTab';
 import UsersTab from './features/users/components/UsersTab';
 import RolesTab from './features/users/components/RolesTab';
 import BoothsTab from './features/booths/components/BoothsTab';
+import ShiftsTab from './features/shifts/components/ShiftsTab';
 import NotificationsTab from './features/notifications/components/NotificationsTab';
 import ScheduleTab from './features/schedule/components/ScheduleTab';
 import SettingsTab from './features/settings/components/SettingsTab';
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="users" element={<UsersTab />} />
         <Route path="roles" element={<RolesTab />} />
         <Route path="booths" element={<BoothsTab />} />
+        <Route path="shifts" element={<ShiftsTab />} />
         <Route path="notifications" element={<NotificationsTab />} />
         <Route path="schedule" element={<ScheduleTab />} />
         <Route path="settings" element={<SettingsTab />} />

@@ -14,6 +14,7 @@ import {
   WorkScheduleDto,
 } from '../../types';
 import { apiClient } from './apiClient';
+import { shiftsService } from './shiftsService';
 
 type ValidateBulkResponse = {
   isValid: boolean;
@@ -31,10 +32,6 @@ type BulkCreateResponse = {
   items: WorkScheduleDto[];
 };
 
-type ShiftsResponse = ShiftDto[] | {
-  items?: ShiftDto[];
-};
-
 function buildQuery(params: Record<string, string | number | boolean | null | undefined>) {
   const searchParams = new URLSearchParams();
 
@@ -50,9 +47,7 @@ function buildQuery(params: Record<string, string | number | boolean | null | un
 
 export const scheduleService = {
   getShifts: (isActive: boolean | null = true): Promise<ShiftDto[]> => {
-    return apiClient.get<ShiftsResponse>(`/api/shifts${buildQuery({ isActive })}`).then((result) => {
-      return Array.isArray(result) ? result : result.items || [];
-    });
+    return shiftsService.getAll({ isActive });
   },
 
   getWeekSchedule: (params: {
@@ -127,6 +122,10 @@ export const scheduleService = {
   deleteWorkSchedule: async (id: number): Promise<boolean> => {
     await apiClient.delete<{ id: number }>(`/api/work-schedules/${id}`);
     return true;
+  },
+
+  sendToTelegram: (date: string): Promise<unknown> => {
+    return apiClient.post<unknown>(`/api/work-schedules/send-to-telegram${buildQuery({ date })}`);
   },
 
   validateDate: (date: string): Promise<CalendarDayDto & { message?: string }> => {
