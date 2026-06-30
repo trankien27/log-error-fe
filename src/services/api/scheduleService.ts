@@ -10,6 +10,7 @@ import {
   ShiftDto,
   UpdateWorkScheduleRequest,
   UpdateWorkScheduleStatusRequest,
+  MonthlyWorkScheduleStats,
   WorkScheduleWeekResponse,
   WorkScheduleDto,
 } from '../../types';
@@ -81,6 +82,14 @@ export const scheduleService = {
 
   createWorkSchedule: (schedule: CreateWorkScheduleRequest): Promise<WorkScheduleDto> => {
     return apiClient.post<WorkScheduleDto>('/api/work-schedules', schedule);
+  },
+
+  getMonthlyStats: (params: {
+    year: number;
+    month: number;
+    userId?: string;
+  }): Promise<MonthlyWorkScheduleStats[]> => {
+    return apiClient.get<MonthlyWorkScheduleStats[]>(`/api/work-schedules/monthly-stats${buildQuery(params)}`);
   },
 
   bulkCreateWorkSchedules: (request: BulkCreateWorkScheduleRequest): Promise<BulkCreateResponse> => {

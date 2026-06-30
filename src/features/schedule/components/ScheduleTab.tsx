@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  BarChart3,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -21,7 +22,7 @@ import { scheduleService } from '../../../services/api/scheduleService';
 import { usersService } from '../../../services/api/usersService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useScheduleStore } from '../../../stores/useScheduleStore';
-import { ShiftDto, User, WorkScheduleDto, WorkScheduleWeekUserDto } from '../../../types';
+import { MonthlyWorkScheduleStats, ShiftDto, User, WorkScheduleDto, WorkScheduleWeekUserDto } from '../../../types';
 import QuickArrangeScheduleButton from '../../work-schedules/components/QuickArrangeScheduleButton';
 
 type DraftPanel = {
@@ -103,6 +104,18 @@ function getCellKey(userId: string, workDate: string) {
   return `${userId}_${workDate}`;
 }
 
+function getYearMonth(dateValue: string) {
+  const date = new Date(`${dateValue}T00:00:00`);
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+  };
+}
+
+function formatNumber(value: unknown) {
+  return typeof value === 'number' ? value.toLocaleString('vi-VN') : '0';
+}
+
 export default function ScheduleTab() {
   const {
     shiftDefinitions,
@@ -123,6 +136,12 @@ export default function ScheduleTab() {
   const [scheduleUsers, setScheduleUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isSendingTelegram, setIsSendingTelegram] = useState(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
+  const [isStatsLoading, setIsStatsLoading] = useState(false);
+  const [statsYear, setStatsYear] = useState(() => getYearMonth(weekStart).year);
+  const [statsMonth, setStatsMonth] = useState(() => getYearMonth(weekStart).month);
+  const [statsUserId, setStatsUserId] = useState('');
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyWorkScheduleStats[]>([]);
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
 
   const activeShifts = useMemo(
@@ -205,6 +224,59 @@ export default function ScheduleTab() {
     ));
   }, [weekSchedule?.users]);
 
+  const monthlyStatsSummary = useMemo(() => {
+    return monthlyStats.reduce(
+      (summary, item) => ({
+        totalSchedules: summary.totalSchedules + item.totalSchedules,
+        completedSchedules: summary.completedSchedules + item.completedSchedules,
+        absentSchedules: summary.absentSchedules + item.absentSchedules,
+        cancelledSchedules: summary.cancelledSchedules + item.cancelledSchedules,
+        totalPlannedHours: summary.totalPlannedHours + item.totalPlannedHours,
+        totalWorkedHours: summary.totalWorkedHours + item.totalWorkedHours,
+        totalAbsentHours: summary.totalAbsentHours + item.totalAbsentHours,
+      }),
+      {
+        totalSchedules: 0,
+        completedSchedules: 0,
+        absentSchedules: 0,
+        cancelledSchedules: 0,
+        totalPlannedHours: 0,
+        totalWorkedHours: 0,
+        totalAbsentHours: 0,
+      },
+    );
+  }, [monthlyStats]);
+
+  const monthlyStatsRows = useMemo(() => {
+    const statsByUser = new Map<string, MonthlyWorkScheduleStats>();
+
+    monthlyStats.forEach(item => {
+      const current = statsByUser.get(item.userId);
+
+      if (!current) {
+        statsByUser.set(item.userId, {
+          ...item,
+          shiftBreakdowns: [...item.shiftBreakdowns],
+        });
+        return;
+      }
+
+      statsByUser.set(item.userId, {
+        ...current,
+        totalSchedules: current.totalSchedules + item.totalSchedules,
+        completedSchedules: current.completedSchedules + item.completedSchedules,
+        absentSchedules: current.absentSchedules + item.absentSchedules,
+        cancelledSchedules: current.cancelledSchedules + item.cancelledSchedules,
+        totalPlannedHours: current.totalPlannedHours + item.totalPlannedHours,
+        totalWorkedHours: current.totalWorkedHours + item.totalWorkedHours,
+        totalAbsentHours: current.totalAbsentHours + item.totalAbsentHours,
+        shiftBreakdowns: [...current.shiftBreakdowns, ...item.shiftBreakdowns],
+      });
+    });
+
+    return Array.from(statsByUser.values()).sort((a, b) => a.userFullName.localeCompare(b.userFullName, 'vi'));
+  }, [monthlyStats]);
+
   useEffect(() => {
     fetchWeekSchedule(selectedDate, {
       departmentId: undefined,
@@ -263,6 +335,15 @@ export default function ScheduleTab() {
 
   const goToday = () => {
     setSelectedDate(toDateInput(new Date()));
+  };
+
+  const openStatsModal = () => {
+    const { year, month } = getYearMonth(selectedDate);
+    setStatsYear(year);
+    setStatsMonth(month);
+    setStatsUserId('');
+    setMonthlyStats([]);
+    setIsStatsModalOpen(true);
   };
 
   const togglePanelUser = (userId: string) => {
@@ -463,6 +544,28 @@ export default function ScheduleTab() {
 
   const exportExcel = () => {
     toast.info('Chức năng xuất Excel sẽ gọi API export khi backend bàn giao endpoint.');
+  };
+
+  const loadMonthlyStats = async () => {
+    if (!statsYear || statsMonth < 1 || statsMonth > 12) {
+      toast.error('Vui lòng chọn năm và tháng hợp lệ.');
+      return;
+    }
+
+    setIsStatsLoading(true);
+    try {
+      const result = await scheduleService.getMonthlyStats({
+        year: statsYear,
+        month: statsMonth,
+        userId: statsUserId || undefined,
+      });
+      setMonthlyStats(result);
+      toast.success('Đã tải thống kê lịch.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể tải thống kê lịch.');
+    } finally {
+      setIsStatsLoading(false);
+    }
   };
 
   const sendSelectedDateToTelegram = async () => {
@@ -671,13 +774,13 @@ export default function ScheduleTab() {
 
             <button
               type="button"
-              onClick={() => openCreatePanel(weekStart)}
+              onClick={openStatsModal}
               disabled={!canManageSchedule}
               className="h-11 px-5 rounded-md bg-primary !text-white text-sm font-bold inline-flex items-center gap-2 shadow-sm hover:bg-primary-container cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: '#fff' }}
             >
-              <Plus className="w-4 h-4" />
-              Thêm lịch
+              <BarChart3 className="w-4 h-4" />
+              Thống kê
               <ChevronDown className="w-4 h-4" />
             </button>
             <QuickArrangeScheduleButton
@@ -1014,6 +1117,118 @@ export default function ScheduleTab() {
           </aside>
         </div>
       </div>
+
+      {isStatsModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-5xl rounded-lg border border-outline-variant bg-white shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-950">Thống kê lịch làm việc</h3>
+                <p className="text-xs text-gray-500 mt-1">Xem thống kê theo năm, tháng và nhân viên.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStatsModalOpen(false)}
+                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <label className="block text-sm font-semibold">
+                  Năm
+                  <input
+                    type="number"
+                    value={statsYear}
+                    min={2020}
+                    max={2100}
+                    onChange={event => setStatsYear(Number(event.target.value))}
+                    className="mt-1 h-10 w-full rounded-md border border-outline-variant px-3 text-sm focus:outline-primary"
+                  />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Tháng
+                  <input
+                    type="number"
+                    value={statsMonth}
+                    min={1}
+                    max={12}
+                    onChange={event => setStatsMonth(Number(event.target.value))}
+                    className="mt-1 h-10 w-full rounded-md border border-outline-variant px-3 text-sm focus:outline-primary"
+                  />
+                </label>
+                <label className="block text-sm font-semibold sm:col-span-2">
+                  Nhân viên
+                  <select
+                    value={statsUserId}
+                    onChange={event => setStatsUserId(event.target.value)}
+                    className="mt-1 h-10 w-full rounded-md border border-outline-variant bg-white px-3 text-sm focus:outline-primary"
+                  >
+                    <option value="">Tất cả nhân viên</option>
+                    {scheduleUsers.map(user => (
+                      <option key={user.id} value={user.id}>{user.name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={loadMonthlyStats}
+                  disabled={isStatsLoading}
+                  className="h-10 px-5 rounded-md bg-primary text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-primary-container cursor-pointer disabled:opacity-60"
+                >
+                  {isStatsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
+                  Xem thống kê
+                </button>
+              </div>
+
+              {monthlyStats.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="rounded-md border border-outline-variant bg-slate-50 p-4">
+                      <p className="text-xs font-semibold text-gray-500">Tổng lịch</p>
+                      <p className="mt-2 text-2xl font-black text-gray-950">{formatNumber(monthlyStatsSummary.totalSchedules)}</p>
+                    </div>
+                    <div className="rounded-md border border-outline-variant bg-slate-50 p-4">
+                      <p className="text-xs font-semibold text-gray-500">Tổng giờ</p>
+                      <p className="mt-2 text-2xl font-black text-emerald-600">{formatNumber(monthlyStatsSummary.totalPlannedHours)}h</p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-outline-variant overflow-x-auto">
+                    <table className="w-full min-w-[420px] text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 text-xs uppercase tracking-wider text-gray-500">
+                          <th className="px-4 py-3 text-left">Nhân viên</th>
+                          <th className="px-4 py-3 text-right">Tổng giờ</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {monthlyStatsRows.map(item => (
+                          <tr key={item.userId} className="hover:bg-slate-50">
+                            <td className="px-4 py-3">
+                              <span className="block font-bold text-gray-950">{item.userFullName}</span>
+                            </td>
+                            <td className="px-4 py-3 text-right text-base font-black text-emerald-600">{formatNumber(item.totalPlannedHours)}h</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-outline-variant py-10 text-center text-sm font-semibold text-gray-400">
+                  Chọn điều kiện và bấm Xem thống kê.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

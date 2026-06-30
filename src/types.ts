@@ -214,6 +214,29 @@ export interface WorkScheduleWeekResponse {
   users: WorkScheduleWeekUserDto[];
 }
 
+export interface MonthlyWorkScheduleShiftBreakdown {
+  shiftId: number;
+  shiftCode: string;
+  shiftName: string;
+  scheduleCount: number;
+  totalHours: number;
+}
+
+export interface MonthlyWorkScheduleStats {
+  userId: string;
+  userFullName: string;
+  year: number;
+  month: number;
+  totalSchedules: number;
+  completedSchedules: number;
+  absentSchedules: number;
+  cancelledSchedules: number;
+  totalPlannedHours: number;
+  totalWorkedHours: number;
+  totalAbsentHours: number;
+  shiftBreakdowns: MonthlyWorkScheduleShiftBreakdown[];
+}
+
 export interface CalendarDayDto {
   date: string;
   dayOfWeek: number;
