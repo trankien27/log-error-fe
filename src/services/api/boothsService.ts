@@ -1,6 +1,13 @@
 import { Booth, LookupItem, PagedResult } from '../../types';
 import { apiClient } from './apiClient';
 
+export interface GenerateAgentKeyResponse {
+  agentKey?: string;
+  AgentKey?: string;
+  key?: string;
+  [key: string]: unknown;
+}
+
 export const boothsService = {
   getAll: async (): Promise<Booth[]> => {
     const result = await apiClient.get<PagedResult<LookupItem>>('/api/booths?pageIndex=0&pageSize=50');
@@ -23,5 +30,9 @@ export const boothsService = {
   delete: async (id: string): Promise<boolean> => {
     await apiClient.delete<void>(`/booths/${encodeURIComponent(id)}`);
     return true;
-  }
+  },
+
+  generateAgentKey: async (boothId: string): Promise<GenerateAgentKeyResponse> => {
+    return apiClient.post<GenerateAgentKeyResponse>(`/api/booths/${encodeURIComponent(boothId)}/agent-key`);
+  },
 };

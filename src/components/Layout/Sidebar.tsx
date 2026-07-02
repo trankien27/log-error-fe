@@ -8,6 +8,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   MessageSquare,
+  RadioTower,
   Settings,
   Shield,
   Store,
@@ -53,6 +54,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/users') return 'users';
     if (path === '/roles') return 'roles';
     if (path === '/booths') return 'booths';
+    if (path === '/remote-booth') return 'remote_booth';
     if (path === '/shifts') return 'shifts';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
@@ -79,6 +81,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'users': navigate('/users'); break;
       case 'roles': navigate('/roles'); break;
       case 'booths': navigate('/booths'); break;
+      case 'remote_booth': navigate('/remote-booth'); break;
       case 'shifts': navigate('/shifts'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
@@ -180,6 +183,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               <button onClick={() => navigateTo('booths')} className={navButtonClass(activeTab === 'booths')}>
                 <Store className="w-4 h-4" />
                 <span>Booth</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigateTo('remote_booth')} className={navButtonClass(activeTab === 'remote_booth')}>
+                <RadioTower className="w-4 h-4" />
+                <span>Remote Booth</span>
               </button>
             </li>
             <li>

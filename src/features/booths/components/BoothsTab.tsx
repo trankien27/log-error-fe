@@ -1,7 +1,9 @@
 import React, { useCallback, useState } from 'react';
-import { Plus, Search, Copy, Edit2, Trash2 } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { AlertTriangle, Plus, Search, Copy, Edit2, KeyRound, Loader2, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
+import { boothsService } from '../../../services/api/boothsService';
 import { lookupService } from '../../../services/api/lookupService';
 import { useBoothsStore } from '../../../stores/useBoothsStore';
 import { Booth } from '../../../types';
@@ -26,6 +28,24 @@ export default function BoothsTab() {
   const [boothNameField, setBoothNameField] = useState('');
   const [boothUltraviewField, setBoothUltraviewField] = useState('');
   const [boothStoresField, setBoothStoresField] = useState('');
+  const [agentKeyBooth, setAgentKeyBooth] = useState<Booth | null>(null);
+  const [generatedAgentKey, setGeneratedAgentKey] = useState('');
+
+  const generateAgentKeyMutation = useMutation({
+    mutationFn: boothsService.generateAgentKey,
+    onSuccess: response => {
+      const key = String(response.agentKey || response.AgentKey || response.key || '');
+      if (!key) {
+        toast.error('API không trả về AgentKey.');
+        return;
+      }
+      setGeneratedAgentKey(key);
+      toast.success('Đã tạo AgentKey.');
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Không thể tạo AgentKey.');
+    },
+  });
 
   const filteredBooths = getFilteredBooths();
   const loadBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
@@ -91,9 +111,25 @@ export default function BoothsTab() {
     });
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`Đã sao chép UltraView ID: ${text}`);
+  const handleGenerateAgentKey = (booth: Booth) => {
+    setAgentKeyBooth(booth);
+    setGeneratedAgentKey('');
+    generateAgentKeyMutation.mutate(booth.id);
+  };
+
+  const closeAgentKeyModal = () => {
+    if (generateAgentKeyMutation.isPending) return;
+    setAgentKeyBooth(null);
+    setGeneratedAgentKey('');
+  };
+
+  const copyToClipboard = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(successMessage);
+    } catch {
+      toast.error('Không thể sao chép vào clipboard.');
+    }
   };
 
   return (
@@ -137,7 +173,7 @@ export default function BoothsTab() {
                 <th className="py-4 px-5">Tên Trạm Kỹ Thuật</th>
                 <th className="py-4 px-5">ID Kết Nối Từ Xa</th>
                 <th className="py-4 px-5">Cửa hàng/Chi nhánh liên quan</th>
-                <th className="py-4 px-5 text-right w-24">Tác vụ</th>
+                <th className="py-4 px-5 text-right w-36">Tác vụ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f1f5f9]">
@@ -167,7 +203,7 @@ export default function BoothsTab() {
                           {b.ultraviewId}
                         </span>
                         <button
-                          onClick={() => copyToClipboard(b.ultraviewId)}
+                          onClick={() => copyToClipboard(b.ultraviewId, `Đã sao chép UltraView ID: ${b.ultraviewId}`)}
                           className="p-1 rounded text-gray-400 hover:text-primary hover:bg-[#ededf9] transition-all outline-none cursor-pointer"
                           title="Sao chép ID"
                         >
@@ -176,8 +212,16 @@ export default function BoothsTab() {
                       </div>
                     </td>
                     <td className="py-4 px-5 text-gray-600 font-medium">{b.relatedStores}</td>
-                    <td className="py-4 px-5 text-right w-24">
+                    <td className="py-4 px-5 text-right w-36">
                       <div className="flex justify-end gap-1.5">
+                        <button
+                          onClick={() => handleGenerateAgentKey(b)}
+                          className="p-1 px-1.5 border rounded hover:bg-amber-50 hover:text-amber-600 transition-colors border-outline-variant cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                          title="Generate Agent Key"
+                          disabled={generateAgentKeyMutation.isPending}
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           onClick={() => handleOpenBoothModal(b)}
                           className="p-1 px-1.5 border rounded hover:bg-blue-50 hover:text-primary transition-colors border-outline-variant cursor-pointer"
@@ -292,6 +336,69 @@ export default function BoothsTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {agentKeyBooth && (
+        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-start gap-4 mb-4 pb-2 border-b border-[#e2e8f0]">
+              <div>
+                <h3 className="text-lg font-bold text-on-surface">AgentKey cho {agentKeyBooth.id}</h3>
+                <p className="text-xs text-gray-500 mt-1">{agentKeyBooth.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeAgentKeyModal}
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-gray-500 hover:bg-gray-50 cursor-pointer"
+                aria-label="Đóng"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800 flex items-start gap-2 mb-4">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>Key này dùng cấu hình local agent tại booth trong appsettings.json, không public.</span>
+            </div>
+
+            {generateAgentKeyMutation.isPending ? (
+              <div className="py-8 text-center text-sm font-bold text-gray-500">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                Đang tạo AgentKey...
+              </div>
+            ) : generatedAgentKey ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">AgentKey</label>
+                  <div className="rounded-lg border border-outline-variant bg-[#f3f3fe] p-3 font-mono text-xs text-gray-900 break-all select-all">
+                    {generatedAgentKey}
+                  </div>
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeAgentKeyModal}
+                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(generatedAgentKey, 'Đã sao chép AgentKey.')}
+                    className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer inline-flex items-center justify-center gap-2 font-bold"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-center text-sm font-bold text-red-500">
+                Không có AgentKey để hiển thị.
+              </div>
+            )}
           </div>
         </div>
       )}

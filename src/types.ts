@@ -316,6 +316,7 @@ export type TabType =
   | 'users'
   | 'roles'
   | 'booths'
+  | 'remote_booth'
   | 'shifts'
   | 'notifications'
   | 'schedule'
