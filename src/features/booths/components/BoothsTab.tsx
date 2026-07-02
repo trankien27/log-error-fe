@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, Plus, Search, Copy, Edit2, KeyRound, Loader2, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Search, Copy, Edit2, KeyRound, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { boothsService } from '../../../services/api/boothsService';
@@ -12,15 +12,22 @@ export default function BoothsTab() {
   const {
     booths,
     searchQuery,
+    boothPageIndex,
+    boothPageSize,
+    boothTotalItems,
+    boothTotalPages,
+    error,
     isLoading,
     isBoothModalOpen,
     currentEditingBooth,
     setSearchQuery,
+    setBoothPageIndex,
+    setBoothPageSize,
     setIsBoothModalOpen,
     setCurrentEditingBooth,
+    fetchBooths,
     saveBooth,
     deleteBooth,
-    getFilteredBooths
   } = useBoothsStore();
 
   // Local Form states for edit/create booth
@@ -47,7 +54,14 @@ export default function BoothsTab() {
     },
   });
 
-  const filteredBooths = getFilteredBooths();
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      fetchBooths();
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [fetchBooths, searchQuery, boothPageIndex, boothPageSize]);
+
   const loadBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
     return lookupService.searchBooths(query);
   }, []);
@@ -58,7 +72,7 @@ export default function BoothsTab() {
   const handleOpenBoothModal = (b: Booth | null = null) => {
     if (b) {
       setCurrentEditingBooth(b);
-      setBoothIdField(b.id);
+      setBoothIdField(b.code || b.id);
       setBoothNameField(b.name);
       setBoothUltraviewField(b.ultraviewId);
       setBoothStoresField(b.relatedStores);
@@ -80,7 +94,8 @@ export default function BoothsTab() {
     }
 
     const payload: Booth = {
-      id: boothIdField,
+      id: currentEditingBooth?.id || boothIdField,
+      code: boothIdField.trim(),
       name: boothNameField.trim(),
       ultraviewId: boothUltraviewField.trim(),
       relatedStores: boothStoresField.trim()
@@ -154,14 +169,34 @@ export default function BoothsTab() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Tìm Booth ID, tên trạm hoặc địa điểm..."
+            placeholder="Tìm theo tên hoặc code booth..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg text-xs"
           />
         </div>
-        <span className="text-xs text-gray-400 font-medium text-center md:text-left">Toàn bộ booth đang vận hành bình thường</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400 font-medium text-center md:text-left">
+            {boothTotalItems} booth
+          </span>
+          <button
+            type="button"
+            onClick={() => fetchBooths()}
+            disabled={isLoading}
+            className="h-9 px-3 border border-outline-variant rounded-lg hover:bg-[#f3f3fe] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Data table booths */}
       <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
@@ -183,16 +218,16 @@ export default function BoothsTab() {
                     Đang tải dữ liệu Booth...
                   </td>
                 </tr>
-              ) : filteredBooths.length === 0 ? (
+              ) : booths.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
                     Không tìm thấy booth nào khớp với điều kiện tìm kiếm.
                   </td>
                 </tr>
               ) : (
-                filteredBooths.map(b => (
+                booths.map(b => (
                   <tr key={b.id} className="hover:bg-[#faf8ff] transition-colors group">
-                    <td className="py-4 px-5 font-mono font-bold text-[#004ac6] text-sm">{b.id}</td>
+                    <td className="py-4 px-5 font-mono font-bold text-[#004ac6] text-sm">{b.code || b.id}</td>
                     <td className="py-4 px-5">
                       <span className="font-bold text-gray-900 text-sm block">{b.name}</span>
                       <span className="text-[10px] text-gray-400">Hỗ trợ UltraView tự động kết nối</span>
@@ -244,6 +279,48 @@ export default function BoothsTab() {
             </tbody>
           </table>
         </div>
+
+        <div className="border-t border-outline-variant bg-gray-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>Hiển thị</span>
+            <select
+              value={boothPageSize}
+              onChange={event => setBoothPageSize(Number(event.target.value))}
+              className="h-8 px-2 border border-outline-variant rounded-lg bg-white text-xs font-bold focus:outline-[#004ac6]"
+            >
+              {[10, 20, 50, 100].map(size => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+            <span>mỗi trang</span>
+          </div>
+
+          <div className="flex items-center justify-between sm:justify-end gap-3">
+            <span className="text-xs font-semibold text-gray-500">
+              Trang {boothTotalPages === 0 ? 0 : boothPageIndex + 1}/{boothTotalPages}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setBoothPageIndex(Math.max(boothPageIndex - 1, 0))}
+                disabled={isLoading || boothPageIndex <= 0}
+                className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-white hover:bg-[#f3f3fe] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Trang trước"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoothPageIndex(boothPageIndex + 1)}
+                disabled={isLoading || boothTotalPages === 0 || boothPageIndex + 1 >= boothTotalPages}
+                className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-white hover:bg-[#f3f3fe] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Trang sau"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Booth CRUD Modal */}
@@ -265,7 +342,7 @@ export default function BoothsTab() {
                   emptyText="Không tìm thấy Booth."
                   loadOptions={loadBooths}
                   onSelect={item => {
-                    setBoothIdField(String(item.id));
+                    setBoothIdField(item.code || String(item.id));
                     setBoothNameField(item.name);
                     setBoothUltraviewField(item.code || boothUltraviewField);
                   }}
@@ -345,7 +422,7 @@ export default function BoothsTab() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-start gap-4 mb-4 pb-2 border-b border-[#e2e8f0]">
               <div>
-                <h3 className="text-lg font-bold text-on-surface">AgentKey cho {agentKeyBooth.id}</h3>
+                <h3 className="text-lg font-bold text-on-surface">AgentKey cho {agentKeyBooth.code || agentKeyBooth.id}</h3>
                 <p className="text-xs text-gray-500 mt-1">{agentKeyBooth.name}</p>
               </div>
               <button

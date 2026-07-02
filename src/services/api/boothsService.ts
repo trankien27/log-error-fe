@@ -1,6 +1,13 @@
 import { Booth, LookupItem, PagedResult } from '../../types';
 import { apiClient } from './apiClient';
 
+export type BoothsQuery = {
+  search?: string;
+  storeId?: string | number;
+  pageIndex?: number;
+  pageSize?: number;
+};
+
 export interface GenerateAgentKeyResponse {
   agentKey?: string;
   AgentKey?: string;
@@ -8,27 +15,90 @@ export interface GenerateAgentKeyResponse {
   [key: string]: unknown;
 }
 
-export const boothsService = {
-  getAll: async (): Promise<Booth[]> => {
-    const result = await apiClient.get<PagedResult<LookupItem>>('/api/booths?pageIndex=0&pageSize=50');
+function buildBoothsQuery({ search, storeId, pageIndex = 0, pageSize = 50 }: BoothsQuery = {}) {
+  const params = new URLSearchParams({
+    pageIndex: String(pageIndex),
+    pageSize: String(pageSize),
+  });
 
-    return result.items.map(item => ({
-      id: String(item.id),
-      name: item.name,
-      ultraviewId: item.code || String(item.id),
-      relatedStores: '',
-    }));
+  if (search?.trim()) {
+    params.set('search', search.trim());
+  }
+
+  if (storeId !== undefined && storeId !== '') {
+    params.set('storeId', String(storeId));
+  }
+
+  return params.toString();
+}
+
+function mapBooth(item: LookupItem | Booth): Booth {
+  const code = item.code || ('ultraviewId' in item ? item.ultraviewId : '') || String(item.id);
+  const storeId = item.storeId ?? null;
+
+  return {
+    id: String(item.id),
+    code,
+    agentKey: item.agentKey ?? null,
+    name: item.name,
+    storeId,
+    lastSyncedAt: item.lastSyncedAt ?? null,
+    ultraviewId: code,
+    relatedStores: 'relatedStores' in item && item.relatedStores
+      ? item.relatedStores
+      : storeId !== null
+        ? String(storeId)
+        : '',
+  };
+}
+
+export const boothsService = {
+  getPage: async (query: BoothsQuery = {}): Promise<PagedResult<Booth>> => {
+    const result = await apiClient.get<PagedResult<LookupItem>>(`/api/booths?${buildBoothsQuery(query)}`);
+
+    return {
+      ...result,
+      items: result.items.map(mapBooth),
+    };
+  },
+
+  getAll: async (query: BoothsQuery = {}): Promise<Booth[]> => {
+    const result = await boothsService.getPage(query);
+
+    return result.items;
+  },
+
+  search: async (name: string, pageIndex = 0, pageSize = 20): Promise<PagedResult<LookupItem>> => {
+    const params = new URLSearchParams({
+      pageIndex: String(pageIndex),
+      pageSize: String(pageSize),
+    });
+
+    if (name.trim()) {
+      params.set('name', name.trim());
+    }
+
+    return apiClient.get<PagedResult<LookupItem>>(`/api/booths/search?${params.toString()}`);
   },
 
   save: async (booth: Booth, isEdit: boolean): Promise<Booth> => {
+    const payload = {
+      ...booth,
+      code: booth.code || booth.ultraviewId || booth.id,
+      name: booth.name,
+      storeId: booth.storeId ?? undefined,
+    };
+
     if (isEdit) {
-      return apiClient.put<Booth>(`/booths/${encodeURIComponent(booth.id)}`, booth);
+      const saved = await apiClient.put<Booth | LookupItem>(`/api/booths/${encodeURIComponent(booth.id)}`, payload);
+      return mapBooth(saved);
     }
-    return apiClient.post<Booth>('/booths', booth);
+    const saved = await apiClient.post<Booth | LookupItem>('/api/booths', payload);
+    return mapBooth(saved);
   },
 
   delete: async (id: string): Promise<boolean> => {
-    await apiClient.delete<void>(`/booths/${encodeURIComponent(id)}`);
+    await apiClient.delete<void>(`/api/booths/${encodeURIComponent(id)}`);
     return true;
   },
 

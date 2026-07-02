@@ -9,6 +9,10 @@ interface BoothsState {
 
   // Search queries
   searchQuery: string;
+  boothPageIndex: number;
+  boothPageSize: number;
+  boothTotalItems: number;
+  boothTotalPages: number;
 
   // Modals & Form editing states
   isBoothModalOpen: boolean;
@@ -16,6 +20,8 @@ interface BoothsState {
 
   // Setters/Actions
   setSearchQuery: (query: string) => void;
+  setBoothPageIndex: (pageIndex: number) => void;
+  setBoothPageSize: (pageSize: number) => void;
   setIsBoothModalOpen: (isOpen: boolean) => void;
   setCurrentEditingBooth: (booth: Booth | null) => void;
 
@@ -33,18 +39,36 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
   error: null,
 
   searchQuery: '',
+  boothPageIndex: 0,
+  boothPageSize: 20,
+  boothTotalItems: 0,
+  boothTotalPages: 0,
   isBoothModalOpen: false,
   currentEditingBooth: null,
 
-  setSearchQuery: (searchQuery) => set({ searchQuery }),
+  setSearchQuery: (searchQuery) => set({ searchQuery, boothPageIndex: 0 }),
+  setBoothPageIndex: (boothPageIndex) => set({ boothPageIndex }),
+  setBoothPageSize: (boothPageSize) => set({ boothPageSize, boothPageIndex: 0 }),
   setIsBoothModalOpen: (isBoothModalOpen) => set({ isBoothModalOpen }),
   setCurrentEditingBooth: (currentEditingBooth) => set({ currentEditingBooth }),
 
   fetchBooths: async () => {
-    set({ isLoading: true });
+    const { searchQuery, boothPageIndex, boothPageSize } = get();
+    set({ isLoading: true, error: null });
     try {
-      const booths = await boothsService.getAll();
-      set({ booths, isLoading: false });
+      const result = await boothsService.getPage({
+        search: searchQuery,
+        pageIndex: boothPageIndex,
+        pageSize: boothPageSize,
+      });
+      set({
+        booths: result.items,
+        boothTotalItems: result.totalItems,
+        boothTotalPages: result.totalPages,
+        boothPageIndex: result.pageIndex,
+        boothPageSize: result.pageSize,
+        isLoading: false,
+      });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
     }
@@ -54,12 +78,13 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const savedBooth = await boothsService.save(booth, isEdit);
-      set((state) => {
-        const updated = isEdit
+      set((state) => ({
+        booths: isEdit
           ? state.booths.map(b => b.id === savedBooth.id ? savedBooth : b)
-          : [...state.booths, savedBooth];
-        return { booths: updated, isLoading: false };
-      });
+          : [savedBooth, ...state.booths].slice(0, state.boothPageSize),
+        isLoading: false,
+      }));
+      await get().fetchBooths();
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;
@@ -74,6 +99,7 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
         booths: state.booths.filter(b => b.id !== id),
         isLoading: false
       }));
+      await get().fetchBooths();
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;
@@ -87,7 +113,8 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
       return (
         b.name.toLowerCase().includes(sQuery) ||
         b.id.toLowerCase().includes(sQuery) ||
-        b.ultraviewId.includes(sQuery)
+        (b.code || '').toLowerCase().includes(sQuery) ||
+        b.ultraviewId.toLowerCase().includes(sQuery)
       );
     });
   }

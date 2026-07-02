@@ -72,7 +72,11 @@ export interface Role {
 
 export interface Booth {
   id: string;
+  code?: string;
+  agentKey?: string | null;
   name: string;
+  storeId?: number | string | null;
+  lastSyncedAt?: string | null;
   ultraviewId: string;
   relatedStores: string;
 }
@@ -80,7 +84,9 @@ export interface Booth {
 export interface LookupItem {
   id: string | number;
   code?: string;
+  agentKey?: string | null;
   name: string;
+  storeId?: number | string | null;
   lastSyncedAt?: string;
 }
 

@@ -293,13 +293,14 @@ export default function RemoteBoothTab() {
 
   const boothsQuery = useQuery({
     queryKey: ['remote-booth', 'booths'],
-    queryFn: boothsService.getAll,
+    queryFn: () => boothsService.getAll(),
   });
 
   const boothsByCode = useMemo(() => {
     const map = new Map<string, string>();
     (boothsQuery.data ?? []).forEach(booth => {
       if (booth.id) map.set(String(booth.id).toLowerCase(), booth.name);
+      if (booth.code) map.set(String(booth.code).toLowerCase(), booth.name);
       if (booth.ultraviewId) map.set(String(booth.ultraviewId).toLowerCase(), booth.name);
     });
     return map;
