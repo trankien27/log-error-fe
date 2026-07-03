@@ -265,6 +265,8 @@ export default function RemoteBoothTab() {
   const [machineSearch, setMachineSearch] = useState('');
   const [panelMode, setPanelMode] = useState<RemotePanelMode>('deploy');
   const [taskType, setTaskType] = useState<RemoteDeployTaskType>('update-version');
+  const [updateVersionMode, setUpdateVersionMode] = useState<'api' | 'manual'>('api');
+  const [selectedUpdateVersionId, setSelectedUpdateVersionId] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [waitForResult, setWaitForResult] = useState(true);
   const [waitTimeoutSeconds, setWaitTimeoutSeconds] = useState(600);
@@ -285,6 +287,7 @@ export default function RemoteBoothTab() {
   const [deployResult, setDeployResult] = useState<RemoteDeployResponse | null>(null);
   const [multiDeployResults, setMultiDeployResults] = useState<MultiDeployResult[]>([]);
   const [deployError, setDeployError] = useState('');
+  const [isResolvingVersionUrl, setIsResolvingVersionUrl] = useState(false);
 
   const machinesQuery = useQuery({
     queryKey: ['remote-deploy', 'machines'],
@@ -294,6 +297,12 @@ export default function RemoteBoothTab() {
   const boothsQuery = useQuery({
     queryKey: ['remote-booth', 'booths'],
     queryFn: () => boothsService.getAll(),
+  });
+
+  const updateVersionsQuery = useQuery({
+    queryKey: ['remote-deploy', 'file-versions', 2],
+    queryFn: () => remoteDeployService.getFileVersions(2),
+    enabled: panelMode === 'deploy' && taskType === 'update-version' && updateVersionMode === 'api',
   });
 
   const boothsByCode = useMemo(() => {
@@ -545,6 +554,8 @@ export default function RemoteBoothTab() {
 
   const resetDeployForm = () => {
     setTaskType('update-version');
+    setUpdateVersionMode('api');
+    setSelectedUpdateVersionId('');
     setDownloadUrl('');
     setWaitForResult(true);
     setWaitTimeoutSeconds(600);
@@ -584,7 +595,7 @@ export default function RemoteBoothTab() {
   };
 
   const closeDeployPanel = () => {
-    if (deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || transactionsMutation.isPending || printImageMutation.isPending) return;
+    if (deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || transactionsMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl) return;
     setSelectedMachine(null);
     setMultiDeployMachines([]);
   };
@@ -607,18 +618,48 @@ export default function RemoteBoothTab() {
     setSelectedMachineCodes(current => Array.from(new Set([...current, ...filteredCodes])));
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    const normalizedUrl = downloadUrl.trim();
+    let normalizedUrl = downloadUrl.trim();
+    const useVersionApi = panelMode === 'deploy' && taskType === 'update-version' && updateVersionMode === 'api';
 
     const targets = multiDeployMachines.length > 0 ? multiDeployMachines : selectedMachine ? [selectedMachine] : [];
     if (targets.length === 0) return;
-    if (!normalizedUrl) {
-      setDeployError('DownloadUrl là bắt buộc.');
-      return;
+
+    if (useVersionApi) {
+      const versionId = Number(selectedUpdateVersionId);
+      if (!Number.isFinite(versionId) || versionId <= 0) {
+        setDeployError('Vui lòng chọn version cần update.');
+        return;
+      }
+
+      try {
+        setIsResolvingVersionUrl(true);
+        const versionDetail = await remoteDeployService.getFileVersion(versionId);
+        normalizedUrl = versionDetail.fileUrl?.trim() ?? '';
+        if (versionDetail.fileType !== 2) {
+          setDeployError('Version đã chọn không phải fileType 2.');
+          return;
+        }
+      } catch (error) {
+        setDeployError(getErrorMessage(error, 'Không thể lấy fileUrl của version đã chọn.'));
+        return;
+      } finally {
+        setIsResolvingVersionUrl(false);
+      }
+    } else {
+      if (!normalizedUrl) {
+        setDeployError('DownloadUrl là bắt buộc.');
+        return;
+      }
+      if (!isValidUrl(normalizedUrl)) {
+        setDeployError('DownloadUrl phải là URL http/https hợp lệ.');
+        return;
+      }
     }
-    if (!isValidUrl(normalizedUrl)) {
-      setDeployError('DownloadUrl phải là URL http/https hợp lệ.');
+
+    if (!normalizedUrl || !isValidUrl(normalizedUrl)) {
+      setDeployError('FileUrl từ version không hợp lệ.');
       return;
     }
     if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
@@ -1151,7 +1192,17 @@ export default function RemoteBoothTab() {
                 <label className="block text-xs font-bold text-gray-600 mb-1.5">Loại task</label>
                 <select
                   value={taskType}
-                  onChange={event => setTaskType(event.target.value as RemoteDeployTaskType)}
+                  onChange={event => {
+                    const nextTaskType = event.target.value as RemoteDeployTaskType;
+                    setTaskType(nextTaskType);
+                    setDeployError('');
+                    if (nextTaskType !== 'update-version') {
+                      setUpdateVersionMode('manual');
+                      setSelectedUpdateVersionId('');
+                    } else {
+                      setUpdateVersionMode('api');
+                    }
+                  }}
                   className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white"
                 >
                   {taskOptions.map(option => (
@@ -1160,20 +1211,83 @@ export default function RemoteBoothTab() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-600 mb-1.5">DownloadUrl *</label>
-                <input
-                  type="url"
-                  required
-                  placeholder="https://domain/file.zip"
-                  value={downloadUrl}
-                  onChange={event => {
-                    setDownloadUrl(event.target.value);
-                    setDeployError('');
-                  }}
-                  className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
-                />
-              </div>
+              {taskType === 'update-version' && (
+                <div className="rounded-xl border border-outline-variant bg-gray-50 p-3 space-y-3">
+                  <div className="inline-flex rounded-lg border border-outline-variant bg-white p-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpdateVersionMode('api');
+                        setDeployError('');
+                      }}
+                      className={`h-8 px-3 rounded-md text-xs font-bold transition-colors ${
+                        updateVersionMode === 'api' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Update version
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpdateVersionMode('manual');
+                        setDeployError('');
+                      }}
+                      className={`h-8 px-3 rounded-md text-xs font-bold transition-colors ${
+                        updateVersionMode === 'manual' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      Thủ công
+                    </button>
+                  </div>
+
+                  {updateVersionMode === 'api' && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1.5">Version fileType 2 *</label>
+                      <select
+                        required
+                        value={selectedUpdateVersionId}
+                        onChange={event => {
+                          setSelectedUpdateVersionId(event.target.value);
+                          setDeployError('');
+                        }}
+                        disabled={updateVersionsQuery.isLoading}
+                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        <option value="">
+                          {updateVersionsQuery.isLoading ? 'Đang tải version...' : 'Chọn version'}
+                        </option>
+                        {(updateVersionsQuery.data ?? []).map(version => (
+                          <option key={version.id} value={version.id}>
+                            {version.version} - {version.name}
+                          </option>
+                        ))}
+                      </select>
+                      {updateVersionsQuery.isError && (
+                        <p className="mt-1.5 text-[11px] font-medium text-red-600">Không thể tải danh sách version từ FunStudio.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(taskType !== 'update-version' || updateVersionMode === 'manual') && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">
+                    {taskType === 'update-version' ? 'DownloadUrl thủ công *' : 'DownloadUrl *'}
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://domain/file.zip"
+                    value={downloadUrl}
+                    onChange={event => {
+                      setDownloadUrl(event.target.value);
+                      setDeployError('');
+                    }}
+                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                  />
+                </div>
+              )}
 
               <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-gray-700 cursor-pointer">
                 <input
@@ -1515,10 +1629,10 @@ export default function RemoteBoothTab() {
               <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 bg-white/95 backdrop-blur border-t border-outline-variant z-10">
                 <button
                   type="submit"
-                  disabled={deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || transactionsMutation.isPending || printImageMutation.isPending}
+                  disabled={deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || transactionsMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl}
                   className="w-full h-12 px-5 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 font-bold"
                 >
-                  {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending ? (
+                  {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : panelMode === 'deploy' ? (
                     <ClipboardList className="w-4 h-4" />
@@ -1529,8 +1643,8 @@ export default function RemoteBoothTab() {
                   ) : (
                     <FileCode2 className="w-4 h-4" />
                   )}
-                  {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending
-                    ? 'Đang gửi...'
+                  {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl
+                    ? isResolvingVersionUrl ? 'Đang lấy fileUrl...' : 'Đang gửi...'
                     : panelMode === 'deploy'
                       ? isMultiDeploy
                         ? `Deploy ${activeMachines.length} booth`

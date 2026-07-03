@@ -34,6 +34,20 @@ export interface RemoteDeployRequest {
   cleanTargetBeforeExtract?: boolean;
 }
 
+export interface RemoteFileVersion {
+  id: number;
+  name: string;
+  version: string;
+  fileUrl: string;
+  fileType: number;
+  fileSize: number;
+  isActive: boolean;
+}
+
+interface RemoteFileVersionsResponse {
+  items?: RemoteFileVersion[];
+}
+
 export type RemotePowerShellRunAs = 'admin' | 'user';
 export type RemotePowerShellMode = 'inline' | 'file';
 
@@ -171,6 +185,22 @@ export const remoteDeployService = {
 
   getTaskStatus: (taskId: string) =>
     apiClient.get<RemoteTaskStatusResponse>(`/api/remote-deploy/tasks/${encodeURIComponent(taskId)}`),
+
+  getFileVersions: async (fileType?: number): Promise<RemoteFileVersion[]> => {
+    const params = new URLSearchParams({
+      pageIndex: '0',
+      pageSize: '100',
+    });
+    if (fileType !== undefined) {
+      params.set('fileType', String(fileType));
+    }
+
+    const response = await apiClient.get<RemoteFileVersionsResponse>(`/api/remote-deploy/file-versions?${params.toString()}`);
+    return response.items ?? [];
+  },
+
+  getFileVersion: (id: number) =>
+    apiClient.get<RemoteFileVersion>(`/api/remote-deploy/file-versions/${encodeURIComponent(id)}`),
 
   deployUpdateVersion: (machineCode: string, body: RemoteDeployRequest) =>
     deploy(machineCode, 'update-version', body),
