@@ -24,6 +24,23 @@ export interface ErrorLog {
   lastUpdatedTime?: string | null;
 }
 
+export type TransactionErrorQueueStatus = 1 | 2 | 3;
+
+export interface TransactionErrorQueueItem {
+  id: string;
+  boothCode: string;
+  boothName: string;
+  storeName: string;
+  transactionId: string;
+  transactionCode: string;
+  transactionStatus?: number | null;
+  values?: Record<string, unknown> | null;
+  detectedAt: string;
+  lastSeenAt: string;
+  queueStatus: TransactionErrorQueueStatus;
+  errorLogId?: string | null;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -317,6 +334,7 @@ export interface UpdateWorkScheduleStatusRequest {
 export type TabType =
   | 'overview'
   | 'error_logs'
+  | 'transaction_error_queue'
   | 'tasks'
   | 'chat'
   | 'users'

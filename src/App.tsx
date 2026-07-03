@@ -4,6 +4,7 @@ import MainLayout from './components/Layout/MainLayout';
 import AuthPage from './features/auth/components/AuthPage';
 import OverviewTab from './features/dashboard/components/OverviewTab';
 import ErrorLogsTab from './features/logs/components/ErrorLogsTab';
+import TransactionErrorQueueTab from './features/transaction-error-queue/components/TransactionErrorQueueTab';
 import TasksTab from './features/tasks/components/TasksTab';
 import ChatTab from './features/chat/components/ChatTab';
 import UsersTab from './features/users/components/UsersTab';
@@ -41,6 +42,7 @@ export default function App() {
         <Route index element={<Navigate to="/overview" replace />} />
         <Route path="overview" element={<OverviewTab />} />
         <Route path="error-logs" element={<ErrorLogsTab />} />
+        <Route path="transaction-error-queue" element={<TransactionErrorQueueTab />} />
         <Route path="tasks" element={<TasksTab />} />
         <Route path="chat" element={<ChatTab />} />
         <Route path="users" element={<UsersTab />} />

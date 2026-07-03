@@ -49,6 +49,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     const path = location.pathname;
     if (path === '/overview') return 'overview';
     if (path === '/error-logs') return 'error_logs';
+    if (path === '/transaction-error-queue') return 'transaction_error_queue';
     if (path === '/tasks') return 'tasks';
     if (path === '/chat') return 'chat';
     if (path === '/users') return 'users';
@@ -76,6 +77,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     switch (tab) {
       case 'overview': navigate('/overview'); break;
       case 'error_logs': navigate('/error-logs'); break;
+      case 'transaction_error_queue': navigate('/transaction-error-queue'); break;
       case 'tasks': navigate('/tasks'); break;
       case 'chat': navigate('/chat'); break;
       case 'users': navigate('/users'); break;
@@ -183,6 +185,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               <button onClick={() => navigateTo('booths')} className={navButtonClass(activeTab === 'booths')}>
                 <Store className="w-4 h-4" />
                 <span>Booth</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigateTo('transaction_error_queue')} className={navButtonClass(activeTab === 'transaction_error_queue')}>
+                <AlertTriangle className="w-4 h-4" />
+                <span>Queue lỗi</span>
               </button>
             </li>
             <li>
