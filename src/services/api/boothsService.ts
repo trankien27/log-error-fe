@@ -8,7 +8,7 @@ export type BoothsQuery = {
   pageSize?: number;
 };
 
-export interface GenerateAgentKeyResponse {
+export interface AgentKeyResponse {
   agentKey?: string;
   AgentKey?: string;
   key?: string;
@@ -102,7 +102,11 @@ export const boothsService = {
     return true;
   },
 
-  generateAgentKey: async (boothId: string): Promise<GenerateAgentKeyResponse> => {
-    return apiClient.post<GenerateAgentKeyResponse>(`/api/booths/${encodeURIComponent(boothId)}/agent-key`);
+  generateAgentKey: async (boothId: string): Promise<AgentKeyResponse> => {
+    return apiClient.post<AgentKeyResponse>(`/api/booths/${encodeURIComponent(boothId)}/agent-key`);
+  },
+
+  getAgentKey: async (boothId: string): Promise<AgentKeyResponse> => {
+    return apiClient.get<AgentKeyResponse>(`/api/booths/${encodeURIComponent(boothId)}/agent-key`);
   },
 };

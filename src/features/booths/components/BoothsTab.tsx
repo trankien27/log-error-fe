@@ -36,21 +36,20 @@ export default function BoothsTab() {
   const [boothUltraviewField, setBoothUltraviewField] = useState('');
   const [boothStoresField, setBoothStoresField] = useState('');
   const [agentKeyBooth, setAgentKeyBooth] = useState<Booth | null>(null);
-  const [generatedAgentKey, setGeneratedAgentKey] = useState('');
+  const [viewAgentKey, setViewAgentKey] = useState('');
 
-  const generateAgentKeyMutation = useMutation({
-    mutationFn: boothsService.generateAgentKey,
+  const viewAgentKeyMutation = useMutation({
+    mutationFn: boothsService.getAgentKey,
     onSuccess: response => {
       const key = String(response.agentKey || response.AgentKey || response.key || '');
       if (!key) {
-        toast.error('API không trả về AgentKey.');
+        toast.error('Booth này chưa có AgentKey.');
         return;
       }
-      setGeneratedAgentKey(key);
-      toast.success('Đã tạo AgentKey.');
+      setViewAgentKey(key);
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Không thể tạo AgentKey.');
+      toast.error(error instanceof Error ? error.message : 'Không thể xem AgentKey.');
     },
   });
 
@@ -126,16 +125,16 @@ export default function BoothsTab() {
     });
   };
 
-  const handleGenerateAgentKey = (booth: Booth) => {
+  const handleViewAgentKey = (booth: Booth) => {
     setAgentKeyBooth(booth);
-    setGeneratedAgentKey('');
-    generateAgentKeyMutation.mutate(booth.id);
+    setViewAgentKey('');
+    viewAgentKeyMutation.mutate(booth.id);
   };
 
   const closeAgentKeyModal = () => {
-    if (generateAgentKeyMutation.isPending) return;
+    if (viewAgentKeyMutation.isPending) return;
     setAgentKeyBooth(null);
-    setGeneratedAgentKey('');
+    setViewAgentKey('');
   };
 
   const copyToClipboard = async (text: string, successMessage: string) => {
@@ -250,10 +249,10 @@ export default function BoothsTab() {
                     <td className="py-4 px-5 text-right w-36">
                       <div className="flex justify-end gap-1.5">
                         <button
-                          onClick={() => handleGenerateAgentKey(b)}
+                          onClick={() => handleViewAgentKey(b)}
                           className="p-1 px-1.5 border rounded hover:bg-amber-50 hover:text-amber-600 transition-colors border-outline-variant cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                          title="Generate Agent Key"
-                          disabled={generateAgentKeyMutation.isPending}
+                          title="View Agent Key"
+                          disabled={viewAgentKeyMutation.isPending}
                         >
                           <KeyRound className="w-3.5 h-3.5" />
                         </button>
@@ -422,7 +421,7 @@ export default function BoothsTab() {
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-start gap-4 mb-4 pb-2 border-b border-[#e2e8f0]">
               <div>
-                <h3 className="text-lg font-bold text-on-surface">AgentKey cho {agentKeyBooth.code || agentKeyBooth.id}</h3>
+                <h3 className="text-lg font-bold text-on-surface">View AgentKey cho {agentKeyBooth.code || agentKeyBooth.id}</h3>
                 <p className="text-xs text-gray-500 mt-1">{agentKeyBooth.name}</p>
               </div>
               <button
@@ -440,17 +439,17 @@ export default function BoothsTab() {
               <span>Key này dùng cấu hình local agent tại booth trong appsettings.json, không public.</span>
             </div>
 
-            {generateAgentKeyMutation.isPending ? (
+            {viewAgentKeyMutation.isPending ? (
               <div className="py-8 text-center text-sm font-bold text-gray-500">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                Đang tạo AgentKey...
+                Đang tải AgentKey...
               </div>
-            ) : generatedAgentKey ? (
+            ) : viewAgentKey ? (
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1.5">AgentKey</label>
                   <div className="rounded-lg border border-outline-variant bg-[#f3f3fe] p-3 font-mono text-xs text-gray-900 break-all select-all">
-                    {generatedAgentKey}
+                    {viewAgentKey}
                   </div>
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
@@ -463,7 +462,7 @@ export default function BoothsTab() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => copyToClipboard(generatedAgentKey, 'Đã sao chép AgentKey.')}
+                    onClick={() => copyToClipboard(viewAgentKey, 'Đã sao chép AgentKey.')}
                     className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer inline-flex items-center justify-center gap-2 font-bold"
                   >
                     <Copy className="w-4 h-4" />
