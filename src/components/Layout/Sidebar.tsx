@@ -6,6 +6,7 @@ import {
   Calendar,
   Clock3,
   ClipboardList,
+  History,
   LayoutDashboard,
   MessageSquare,
   RadioTower,
@@ -19,6 +20,7 @@ import { useLogsStore } from '../../stores/useLogsStore';
 import { useTasksStore } from '../../stores/useTasksStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useUsersStore } from '../../stores/useUsersStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { TabType } from '../../types';
 
 const navButtonClass = (isActive: boolean) =>
@@ -44,6 +46,8 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const { tasks } = useTasksStore();
   const { notifications } = useNotificationStore();
   const { setSelectedUserProfileUser } = useUsersStore();
+  const { hasAnyRole } = useAuthStore();
+  const isAdmin = hasAnyRole([1, 'Admin']);
 
   const getActiveTab = (): TabType => {
     const path = location.pathname;
@@ -51,6 +55,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/error-logs') return 'error_logs';
     if (path === '/transaction-error-queue') return 'transaction_error_queue';
     if (path === '/tasks') return 'tasks';
+    if (path === '/recent-activities') return 'recent_activities';
     if (path === '/chat') return 'chat';
     if (path === '/users') return 'users';
     if (path === '/roles') return 'roles';
@@ -79,6 +84,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'error_logs': navigate('/error-logs'); break;
       case 'transaction_error_queue': navigate('/transaction-error-queue'); break;
       case 'tasks': navigate('/tasks'); break;
+      case 'recent_activities': navigate('/recent-activities'); break;
       case 'chat': navigate('/chat'); break;
       case 'users': navigate('/users'); break;
       case 'roles': navigate('/roles'); break;
@@ -163,6 +169,14 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 )}
               </button>
             </li>
+            {isAdmin && (
+              <li>
+                <button onClick={() => navigateTo('recent_activities')} className={navButtonClass(activeTab === 'recent_activities')}>
+                  <History className="w-4 h-4" />
+                  <span>Hoạt động gần đây</span>
+                </button>
+              </li>
+            )}
             <li>
               <button onClick={() => navigateTo('chat')} className={navButtonClass(activeTab === 'chat')}>
                 <MessageSquare className="w-4 h-4" />

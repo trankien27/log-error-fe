@@ -336,6 +336,7 @@ export type TabType =
   | 'error_logs'
   | 'transaction_error_queue'
   | 'tasks'
+  | 'recent_activities'
   | 'chat'
   | 'users'
   | 'roles'

@@ -6,6 +6,7 @@ import OverviewTab from './features/dashboard/components/OverviewTab';
 import ErrorLogsTab from './features/logs/components/ErrorLogsTab';
 import TransactionErrorQueueTab from './features/transaction-error-queue/components/TransactionErrorQueueTab';
 import TasksTab from './features/tasks/components/TasksTab';
+import RecentActivities from './features/tasks/components/RecentActivities';
 import ChatTab from './features/chat/components/ChatTab';
 import UsersTab from './features/users/components/UsersTab';
 import RolesTab from './features/users/components/RolesTab';
@@ -21,6 +22,11 @@ import { useAuthStore } from './stores/useAuthStore';
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn } = useAuthStore();
   return isLoggedIn ? <>{children}</> : <Navigate to="/auth" replace />;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { hasAnyRole } = useAuthStore();
+  return hasAnyRole([1, 'Admin']) ? <>{children}</> : <Navigate to="/overview" replace />;
 }
 
 export default function App() {
@@ -44,6 +50,14 @@ export default function App() {
         <Route path="error-logs" element={<ErrorLogsTab />} />
         <Route path="transaction-error-queue" element={<TransactionErrorQueueTab />} />
         <Route path="tasks" element={<TasksTab />} />
+        <Route
+          path="recent-activities"
+          element={(
+            <AdminRoute>
+              <RecentActivities />
+            </AdminRoute>
+          )}
+        />
         <Route path="chat" element={<ChatTab />} />
         <Route path="users" element={<UsersTab />} />
         <Route path="roles" element={<RolesTab />} />

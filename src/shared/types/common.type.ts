@@ -12,6 +12,7 @@ export type TabType =
   | 'overview'
   | 'error_logs'
   | 'tasks'
+  | 'recent_activities'
   | 'users'
   | 'roles'
   | 'booths'
