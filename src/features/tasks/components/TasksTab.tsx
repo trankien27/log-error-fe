@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Plus, Clock, Paperclip, Edit2, Paperclip as PaperclipIcon, Columns3, List, ArrowRight, Check } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Plus, Clock, Paperclip, Edit2, Paperclip as PaperclipIcon, Columns3, CalendarDays, ChevronLeft, ChevronRight, ArrowRight, Check, ZoomIn, ZoomOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTasksStore } from '../../../stores/useTasksStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
@@ -43,13 +43,41 @@ export default function TasksTab() {
   const [taskAssignee, setTaskAssignee] = useState('');
   const [taskAttachments, setTaskAttachments] = useState<TaskAttachment[]>([]);
   const [taskNotesInput, setTaskNotesInput] = useState('');
-  const [activeTaskView, setActiveTaskView] = useState<'kanban' | 'list'>('kanban');
+  const [activeTaskView, setActiveTaskView] = useState<'kanban' | 'calendar'>('calendar');
+  const [calendarZoom, setCalendarZoom] = useState(1);
+  const [calendarDraggedTaskId, setCalendarDraggedTaskId] = useState<string | null>(null);
+  const [calendarDragOverSlot, setCalendarDragOverSlot] = useState<string | null>(null);
+  const [calendarDeadlineOverrides, setCalendarDeadlineOverrides] = useState<Record<string, string>>({});
+  const [calendarSlotDetails, setCalendarSlotDetails] = useState<{
+    title: string;
+    tasks: Task[];
+  } | null>(null);
+  const calendarScrollRef = useRef<HTMLDivElement | null>(null);
+  const [calendarWeekStart, setCalendarWeekStart] = useState(() => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    return start;
+  });
 
-  const getTodayInputValue = () => new Date().toISOString().slice(0, 10);
+  const toLocalDateTimeInputValue = (date: Date) => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+  const getTodayInputValue = () => toLocalDateTimeInputValue(new Date());
+  const getTodayDateKey = () => getDateKey(new Date());
   const toDateInputValue = (dateValue?: string) => {
+    if (!dateValue) return getTodayDateKey();
+    const date = new Date(dateValue);
+    return Number.isNaN(date.getTime()) ? dateValue.slice(0, 10) : getDateKey(date);
+  };
+  const toDateTimeInputValue = (dateValue?: string) => {
     if (!dateValue) return getTodayInputValue();
     const date = new Date(dateValue);
-    return Number.isNaN(date.getTime()) ? dateValue.slice(0, 10) : date.toISOString().slice(0, 10);
+    if (Number.isNaN(date.getTime())) {
+      return dateValue.length >= 16 ? dateValue.slice(0, 16) : `${dateValue.slice(0, 10)}T09:00`;
+    }
+    return toLocalDateTimeInputValue(date);
   };
   const isTaskAssigneeRole = (role: unknown) => role === 2 || String(role).toLowerCase() === 'it support';
   const assigneeUsers = users.filter(user => isTaskAssigneeRole(user.role));
@@ -74,19 +102,22 @@ export default function TasksTab() {
 
   const formatDueText = (dateValue: string) => {
     const date = new Date(dateValue);
-    return Number.isNaN(date.getTime()) ? dateValue : date.toLocaleDateString('vi-VN');
+    return Number.isNaN(date.getTime()) ? dateValue : date.toLocaleString('vi-VN', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
   };
 
-  const isOverdueDate = (dateValue: string) => Boolean(dateValue) && dateValue < getTodayInputValue();
+  const isOverdueDate = (dateValue: string) => Boolean(dateValue) && new Date(dateValue).getTime() < Date.now();
 
-  const handleOpenTaskModal = (t: Task | null = null) => {
+  const handleOpenTaskModal = (t: Task | null = null, defaultDueDate?: string) => {
     if (t) {
       const assigneeUser = findAssigneeUser(t.assigneeId, t.assigneeName);
       setCurrentEditingTask(t);
       setTaskTitle(t.title);
       setTaskDescription(t.description || '');
       setTaskStatusField(t.status);
-      setTaskDue(toDateInputValue(t.dueDate || t.dueText));
+      setTaskDue(toDateTimeInputValue(t.dueDate || t.dueText));
       setTaskAssigneeId(assigneeUser?.id || t.assigneeId || '');
       setTaskAssignee(assigneeUser?.name || t.assigneeName);
       setTaskAttachments(t.attachments || []);
@@ -96,7 +127,7 @@ export default function TasksTab() {
       setTaskTitle('');
       setTaskDescription('');
       setTaskStatusField('pending');
-      setTaskDue(getTodayInputValue());
+      setTaskDue(defaultDueDate || getTodayInputValue());
       setTaskAssigneeId(defaultAssignee?.id || '');
       setTaskAssignee(defaultAssignee?.name || '');
       setTaskAttachments([]);
@@ -213,6 +244,210 @@ export default function TasksTab() {
     }
   };
 
+  const handleCalendarTaskDragStart = (event: React.DragEvent, taskId: string) => {
+    event.stopPropagation();
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', taskId);
+    setCalendarDraggedTaskId(taskId);
+  };
+
+  const handleCalendarTaskDragEnd = () => {
+    setCalendarDraggedTaskId(null);
+    setCalendarDragOverSlot(null);
+  };
+
+  const handleCalendarSlotDragOver = (event: React.DragEvent, slotKey: string) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setCalendarDragOverSlot(current => (current === slotKey ? current : slotKey));
+  };
+
+  const handleCalendarSlotDrop = async (event: React.DragEvent, slotKey: string, slotDateTime: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const taskId = event.dataTransfer.getData('text/plain') || calendarDraggedTaskId;
+    setCalendarDraggedTaskId(null);
+    setCalendarDragOverSlot(null);
+
+    const task = calendarTasks.find(item => item.id === taskId);
+    if (!task) return;
+
+    const currentSlotKey = `${getTaskDateKey(task)}-${String(new Date(task.dueDate || task.dueText).getHours()).padStart(2, '0')}`;
+    if (currentSlotKey === slotKey) return;
+
+    setCalendarDeadlineOverrides(prev => ({
+      ...prev,
+      [task.id]: slotDateTime,
+    }));
+
+    try {
+      await saveTask({
+        id: task.id,
+        code: task.code,
+        title: task.title,
+        description: task.description || '',
+        priority: task.priority ?? 1,
+        status: task.status,
+        dueDate: slotDateTime,
+        dueText: formatDueText(slotDateTime),
+        assigneeId: task.assigneeId,
+        assigneeName: task.assigneeName,
+        assigneeAvatar: task.assigneeAvatar,
+        isOverdue: isOverdueDate(slotDateTime),
+        notes: task.notes || '',
+        attachments: task.attachments || [],
+      });
+      setCalendarDeadlineOverrides(prev => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+      toast.success('Đã cập nhật deadline tác vụ.');
+    } catch (err: any) {
+      setCalendarDeadlineOverrides(prev => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+      toast.error(err.message || 'Không thể cập nhật deadline tác vụ.');
+    }
+  };
+
+  const getDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getTaskDateKey = (task: Task) => {
+    const rawDate = task.dueDate || task.dueText;
+    if (!rawDate) return '';
+    return toDateInputValue(rawDate);
+  };
+
+  const calendarTasks = tasks.map(task => {
+    const overriddenDeadline = calendarDeadlineOverrides[task.id];
+    if (!overriddenDeadline) return task;
+
+    return {
+      ...task,
+      dueDate: overriddenDeadline,
+      dueText: formatDueText(overriddenDeadline),
+      isOverdue: isOverdueDate(overriddenDeadline),
+    };
+  });
+
+  const calendarDays = (() => {
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(calendarWeekStart);
+      date.setDate(calendarWeekStart.getDate() + index);
+      return {
+        date,
+        key: getDateKey(date),
+        isToday: getDateKey(date) === getTodayDateKey(),
+      };
+    });
+  })();
+
+  const calendarHours = Array.from({ length: 24 }, (_, index) => index);
+
+  const tasksByDateHour = calendarTasks.reduce<Record<string, Task[]>>((acc, task) => {
+    const key = getTaskDateKey(task);
+    if (!key) return acc;
+    const date = new Date(task.dueDate || task.dueText);
+    const hour = Number.isNaN(date.getTime()) ? 9 : date.getHours();
+    const slotKey = `${key}-${String(hour).padStart(2, '0')}`;
+    acc[slotKey] = acc[slotKey] || [];
+    acc[slotKey].push(task);
+    return acc;
+  }, {});
+
+  const moveCalendarWeek = (offset: number) => {
+    setCalendarWeekStart(prev => {
+      const next = new Date(prev);
+      next.setDate(prev.getDate() + offset * 7);
+      return next;
+    });
+  };
+
+  const resetCalendarWeek = () => {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    setCalendarWeekStart(start);
+  };
+
+  const statusClassByTask = (status: Task['status']) => {
+    if (status === 'pending') return 'border-gray-200 bg-gray-50 text-gray-700';
+    if (status === 'progress') return 'border-blue-200 bg-blue-50 text-[#004ac6]';
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  };
+
+  const getTaskDisplayPriority = (status: Task['status']) => {
+    if (status === 'progress') return 0;
+    if (status === 'pending') return 1;
+    return 2;
+  };
+
+  const sortTasksForCalendarSlot = (slotTasks: Task[]) => {
+    return [...slotTasks].sort((first, second) => {
+      const priorityDiff = getTaskDisplayPriority(first.status) - getTaskDisplayPriority(second.status);
+      if (priorityDiff !== 0) return priorityDiff;
+
+      return (first.title || '').localeCompare(second.title || '', 'vi');
+    });
+  };
+
+  const getSlotDateTime = (dateKey: string, hour: number) => `${dateKey}T${String(hour).padStart(2, '0')}:00`;
+  const getSlotTitle = (date: Date, hour: number) => {
+    return `${String(hour).padStart(2, '0')}:00 - ${date.toLocaleDateString('vi-VN', {
+      weekday: 'long',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })}`;
+  };
+  const calendarDayColumnWidth = Math.round(140 + (calendarZoom - 1) * 120);
+  const calendarSlotHeight = Math.round(82 + (calendarZoom - 1) * 70);
+  const calendarTaskPaddingClass = calendarZoom >= 1.35 ? 'px-3 py-2' : calendarZoom <= 0.8 ? 'px-1.5 py-1' : 'px-2 py-1.5';
+  const calendarTaskTitleClass = calendarZoom >= 1.35 ? 'text-xs' : 'text-[11px]';
+
+  const preferredCalendarHour = (() => {
+    let bestHour = 7;
+    let bestCount = 0;
+
+    calendarHours.forEach(hour => {
+      const hourKey = String(hour).padStart(2, '0');
+      const taskScore = calendarDays.reduce((total, day) => {
+        const slotTasks = tasksByDateHour[`${day.key}-${hourKey}`] || [];
+        const openTaskCount = slotTasks.filter(task => task.status !== 'done').length;
+        return total + openTaskCount * 10 + slotTasks.length;
+      }, 0);
+
+      if (taskScore > bestCount) {
+        bestHour = hour;
+        bestCount = taskScore;
+      }
+    });
+
+    return bestHour;
+  })();
+
+  useEffect(() => {
+    if (activeTaskView !== 'calendar') return;
+
+    const scrollContainer = calendarScrollRef.current;
+    if (!scrollContainer) return;
+
+    window.requestAnimationFrame(() => {
+      const headerOffset = 58;
+      const contextHour = Math.max(0, preferredCalendarHour - 1);
+      scrollContainer.scrollTop = Math.max(0, headerOffset + contextHour * calendarSlotHeight - 12);
+    });
+  }, [activeTaskView, calendarSlotHeight, preferredCalendarHour, tasks.length, calendarWeekStart]);
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Panel Header */}
@@ -221,15 +456,40 @@ export default function TasksTab() {
           <h2 className="text-xl font-bold text-gray-900 font-sans">Bảng Kanban điều phối nhiệm vụ IT</h2>
           <p className="text-xs text-gray-500 mt-1">Hệ thống hỗ trợ IT phân bổ công việc bằng cách kéo thả hoặc click thao tác nhanh.</p>
         </div>
-        <button
-          onClick={() => handleOpenTaskModal()}
-          className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Khởi tạo Tác vụ
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="inline-flex rounded-lg border border-outline-variant bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTaskView('kanban')}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
+                activeTaskView === 'kanban' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Columns3 className="w-4 h-4" />
+              Kanban
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTaskView('calendar')}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
+                activeTaskView === 'calendar' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Calendar
+            </button>
+          </div>
+          <button
+            onClick={() => handleOpenTaskModal()}
+            className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Khởi tạo Tác vụ
+          </button>
+        </div>
       </div>
 
       {/* Kanban columns grid wrapper */}
+      {activeTaskView === 'kanban' ? (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start text-left">
         
         {/* Column 1: CHỜ XỬ LÝ (pending) */}
@@ -497,6 +757,182 @@ export default function TasksTab() {
           </div>
         </div>
       </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-outline-variant overflow-hidden text-left">
+          <div className="p-4 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-gray-900">
+                {calendarDays[0]?.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                {' - '}
+                {calendarDays[6]?.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Cột ngang là ngày, cột dọc là giờ. Click vào ô giờ để tạo task, click vào task để sửa hoặc đổi trạng thái.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => moveCalendarWeek(-1)}
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-gray-50"
+                aria-label="Tháng trước"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={resetCalendarWeek}
+                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-gray-50"
+              >
+                Hôm nay
+              </button>
+              <button
+                type="button"
+                onClick={() => moveCalendarWeek(1)}
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-gray-50"
+                aria-label="Tháng sau"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="h-9 inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-white px-2">
+                <button
+                  type="button"
+                  onClick={() => setCalendarZoom(prev => Math.max(0.7, Number((prev - 0.1).toFixed(1))))}
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"
+                  aria-label="Thu nhỏ calendar"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <input
+                  type="range"
+                  min="0.7"
+                  max="1.6"
+                  step="0.1"
+                  value={calendarZoom}
+                  onChange={event => setCalendarZoom(Number(event.target.value))}
+                  className="w-24 accent-[#004ac6]"
+                  aria-label="Calendar zoom"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCalendarZoom(prev => Math.min(1.6, Number((prev + 0.1).toFixed(1))))}
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"
+                  aria-label="Phóng to calendar"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <span className="w-10 text-right text-[11px] font-bold text-gray-500">{Math.round(calendarZoom * 100)}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div ref={calendarScrollRef} className="max-h-[calc(100dvh-300px)] min-h-[420px] overflow-auto overscroll-contain">
+            <div style={{ minWidth: 72 + calendarDayColumnWidth * 7 }}>
+              <div
+                className="grid bg-gray-50 border-b border-outline-variant sticky top-0 z-20 shadow-sm"
+                style={{ gridTemplateColumns: `72px repeat(7, minmax(${calendarDayColumnWidth}px, 1fr))` }}
+              >
+                <div className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-500 border-r border-outline-variant bg-gray-50">
+                  Giờ
+                </div>
+                {calendarDays.map(day => (
+                  <div key={day.key} className="px-3 py-2 text-center border-r border-outline-variant bg-gray-50">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                      {day.date.toLocaleDateString('vi-VN', { weekday: 'short' })}
+                    </p>
+                    <p className={`mt-1 inline-flex min-w-8 h-8 items-center justify-center rounded-full text-xs font-bold ${
+                      day.isToday ? 'bg-primary text-white' : 'text-gray-800'
+                    }`}>
+                      {day.date.getDate()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div>
+                {calendarHours.map(hour => (
+                  <div
+                    key={hour}
+                    className="grid border-b border-outline-variant"
+                    style={{ gridTemplateColumns: `72px repeat(7, minmax(${calendarDayColumnWidth}px, 1fr))` }}
+                  >
+                    <div className="px-3 py-2 text-center text-xs font-bold text-gray-500 bg-gray-50 border-r border-outline-variant">
+                      {String(hour).padStart(2, '0')}:00
+                    </div>
+                    {calendarDays.map(day => {
+                      const slotKey = `${day.key}-${String(hour).padStart(2, '0')}`;
+                      const slotTasks = sortTasksForCalendarSlot(tasksByDateHour[slotKey] || []);
+                      const slotDateTime = getSlotDateTime(day.key, hour);
+                      const visibleSlotTasks = slotTasks.slice(0, 2);
+                      const hiddenSlotTasksCount = Math.max(0, slotTasks.length - visibleSlotTasks.length);
+
+                      return (
+                        <div
+                          key={slotKey}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleOpenTaskModal(null, slotDateTime)}
+                          onDragOver={(event) => handleCalendarSlotDragOver(event, slotKey)}
+                          onDragLeave={() => setCalendarDragOverSlot(null)}
+                          onDrop={(event) => handleCalendarSlotDrop(event, slotKey, slotDateTime)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              handleOpenTaskModal(null, slotDateTime);
+                            }
+                          }}
+                          className={`border-r border-outline-variant p-1.5 hover:bg-[#f8fafc] focus:outline-[#004ac6] cursor-pointer overflow-y-auto transition-colors ${
+                            calendarDragOverSlot === slotKey ? 'bg-blue-50 ring-2 ring-inset ring-[#004ac6]/40' : 'bg-white'
+                          }`}
+                          style={{ minHeight: calendarSlotHeight }}
+                        >
+                          <div className="space-y-1">
+                            {visibleSlotTasks.map(task => (
+                              <button
+                                key={task.id}
+                                type="button"
+                                draggable
+                                onDragStart={(event) => handleCalendarTaskDragStart(event, task.id)}
+                                onDragEnd={handleCalendarTaskDragEnd}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleOpenTaskModal(task);
+                                }}
+                                className={`w-full text-left rounded-lg border ${calendarTaskPaddingClass} shadow-sm hover:shadow transition-all cursor-grab active:cursor-grabbing ${
+                                  calendarDraggedTaskId === task.id ? 'opacity-40 scale-[0.98]' : ''
+                                } ${statusClassByTask(task.status)}`}
+                                title="Sửa tác vụ"
+                              >
+                                <span className={`block ${calendarTaskTitleClass} font-bold truncate`}>{task.title}</span>
+                                <span className="mt-0.5 flex items-center justify-between gap-2 text-[10px] opacity-80">
+                                  <span className="truncate">{getTaskAssigneeName(task)}</span>
+                                  <span className="shrink-0">{getTaskStatusLabel(task.status)}</span>
+                                </span>
+                              </button>
+                            ))}
+                            {hiddenSlotTasksCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setCalendarSlotDetails({
+                                    title: getSlotTitle(day.date, hour),
+                                    tasks: slotTasks,
+                                  });
+                                }}
+                                className="inline-flex max-w-full rounded-md border border-dashed border-[#004ac6]/30 bg-blue-50/70 px-1.5 py-0.5 text-[10px] font-bold leading-4 text-[#004ac6] hover:bg-blue-100 transition-colors"
+                              >
+                                +{hiddenSlotTasksCount} task khác
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <RecentActivities />
 
@@ -559,7 +995,7 @@ export default function TasksTab() {
                 <div>
                   <label className="block font-medium mb-1">Hạn xử lý</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={taskDue}
                     onChange={e => setTaskDue(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
@@ -634,6 +1070,50 @@ export default function TasksTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {calendarSlotDetails && (
+        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-hidden border border-outline-variant text-left">
+            <div className="flex items-center justify-between gap-3 p-4 border-b border-outline-variant">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Task trong khung giờ</h3>
+                <p className="text-xs text-gray-500 mt-1">{calendarSlotDetails.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCalendarSlotDetails(null)}
+                className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer px-2 py-1 rounded hover:bg-gray-100"
+              >
+                &#x2715;
+              </button>
+            </div>
+            <div className="p-4 space-y-2 max-h-[70dvh] overflow-y-auto bg-[#f8fafc]">
+              {calendarSlotDetails.tasks.map(task => (
+                <button
+                  key={task.id}
+                  type="button"
+                  onClick={() => {
+                    setCalendarSlotDetails(null);
+                    handleOpenTaskModal(task);
+                  }}
+                  className={`w-full text-left rounded-lg border px-3 py-2.5 shadow-sm hover:shadow transition-shadow bg-white ${statusClassByTask(task.status)}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold truncate">{task.title}</p>
+                      <p className="text-xs opacity-80 mt-1 truncate">{getTaskAssigneeName(task)}</p>
+                    </div>
+                    <span className="shrink-0 text-[11px] font-bold">{getTaskStatusLabel(task.status)}</span>
+                  </div>
+                  {task.description && (
+                    <p className="text-xs opacity-80 mt-2 line-clamp-2">{task.description}</p>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
