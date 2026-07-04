@@ -12,8 +12,6 @@ import {
   Loader2,
   Plus,
   Search,
-  Send,
-  Settings,
   Trash2,
   UserRound,
   X,
@@ -26,6 +24,7 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 import { useScheduleStore } from '../../../stores/useScheduleStore';
 import {
   MonthlyWorkScheduleStats,
+  OvertimeMonthlyReportRow,
   OvertimeRequestDto,
   OvertimeStatus,
   ShiftDto,
@@ -152,6 +151,27 @@ function toApiTime(value: string) {
   return value.length === 5 ? `${value}:00` : value;
 }
 
+function downloadOvertimeReportCsv(rows: OvertimeMonthlyReportRow[], year: number, month: number) {
+  const header = ['Tên', 'Ngày', 'Thời gian trực', 'Số tiếng trong tháng', 'Số giờ OT'];
+  const lines = rows.map(row => [
+    row.userFullName,
+    row.workDate ? formatDate(row.workDate) : '',
+    row.shiftTime || '',
+    String(row.monthlyWorkingHours),
+    String(row.approvedOvertimeHours),
+  ]);
+  const csv = [header, ...lines]
+    .map(cols => cols.map(value => `"${value.replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `bao-cao-ot-${String(month).padStart(2, '0')}-${year}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ScheduleTab() {
   const {
     shiftDefinitions,
@@ -171,7 +191,6 @@ export default function ScheduleTab() {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [scheduleUsers, setScheduleUsers] = useState<User[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSendingTelegram, setIsSendingTelegram] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isStatsLoading, setIsStatsLoading] = useState(false);
   const [statsYear, setStatsYear] = useState(() => getYearMonth(weekStart).year);
@@ -181,6 +200,7 @@ export default function ScheduleTab() {
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
   const [overtimeDraft, setOvertimeDraft] = useState<OvertimeDraft | null>(null);
   const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequestDto[]>([]);
+  const [isExportingOvertime, setIsExportingOvertime] = useState(false);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -621,8 +641,19 @@ export default function ScheduleTab() {
     }
   };
 
-  const exportExcel = () => {
-    toast.info('Chức năng xuất Excel sẽ gọi API export khi backend bàn giao endpoint.');
+  const exportExcel = async () => {
+    const { year, month } = getYearMonth(selectedDate);
+
+    setIsExportingOvertime(true);
+    try {
+      const rows = await overtimeService.getMonthlyReport({ year, month });
+      downloadOvertimeReportCsv(rows, year, month);
+      toast.success(`Đã xuất báo cáo OT tháng ${month}/${year}.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xuất báo cáo OT.');
+    } finally {
+      setIsExportingOvertime(false);
+    }
   };
 
   const loadMonthlyStats = async () => {
@@ -682,20 +713,6 @@ export default function ScheduleTab() {
       toast.error(err.message || 'Không thể ghi nhận OT.');
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const sendSelectedDateToTelegram = async () => {
-    if (!canManageSchedule) return;
-
-    setIsSendingTelegram(true);
-    try {
-      await scheduleService.sendToTelegram(selectedDate);
-      toast.success(`Đã gửi lịch ngày ${formatDate(selectedDate)} lên Telegram.`);
-    } catch (err: any) {
-      toast.error(err.message || 'Không thể gửi lịch lên Telegram.');
-    } finally {
-      setIsSendingTelegram(false);
     }
   };
 
@@ -939,19 +956,11 @@ export default function ScheduleTab() {
               <button
                 type="button"
                 onClick={exportExcel}
-                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                Xuất Excel
-              </button>
-              <button
-                type="button"
-                onClick={sendSelectedDateToTelegram}
-                disabled={!canManageSchedule || isSendingTelegram}
+                disabled={isExportingOvertime}
                 className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSendingTelegram ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Gửi Telegram
+                {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Xuất báo cáo
               </button>
               <button
                 type="button"
@@ -961,13 +970,6 @@ export default function ScheduleTab() {
               >
                 <Trash2 className="w-4 h-4" />
                 Xóa tất cả lịch
-              </button>
-              <button
-                type="button"
-                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer"
-              >
-                <Settings className="w-4 h-4" />
-                Cài đặt hiển thị
               </button>
             </div>
 

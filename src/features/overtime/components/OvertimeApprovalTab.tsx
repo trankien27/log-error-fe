@@ -39,9 +39,11 @@ function getStatusClass(status: OvertimeStatus) {
 }
 
 function downloadCsv(rows: OvertimeMonthlyReportRow[], year: number, month: number) {
-  const header = ['Tên', 'Số tiếng trong tháng', 'Số giờ OT'];
+  const header = ['Tên', 'Ngày', 'Thời gian trực', 'Số tiếng trong tháng', 'Số giờ OT'];
   const lines = rows.map(row => [
     row.userFullName,
+    row.workDate ? formatDate(row.workDate) : '',
+    row.shiftTime || '',
     String(row.monthlyWorkingHours),
     String(row.approvedOvertimeHours),
   ]);
@@ -293,20 +295,24 @@ export default function OvertimeApprovalTab() {
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-outline-variant">
-          <table className="w-full min-w-[520px] text-sm">
+          <table className="w-full min-w-[760px] text-sm">
             <thead>
               <tr className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500 font-bold">
                 <th className="py-3 px-4 text-left">Tên</th>
+                <th className="py-3 px-4 text-left">Ngày</th>
+                <th className="py-3 px-4 text-left">Thời gian trực</th>
                 <th className="py-3 px-4 text-right">Số tiếng trong tháng</th>
                 <th className="py-3 px-4 text-right">Số giờ OT</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {reportRows.length === 0 ? (
-                <tr><td colSpan={3} className="py-8 text-center text-sm font-semibold text-gray-400">Chưa có dữ liệu báo cáo.</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-sm font-semibold text-gray-400">Chưa có dữ liệu báo cáo.</td></tr>
               ) : reportRows.map(row => (
-                <tr key={row.userId} className="hover:bg-slate-50">
+                <tr key={`${row.userId}_${row.workDate}_${row.shiftTime}`} className="hover:bg-slate-50">
                   <td className="py-3 px-4 font-bold text-gray-950">{row.userFullName}</td>
+                  <td className="py-3 px-4 font-semibold">{row.workDate ? formatDate(row.workDate) : ''}</td>
+                  <td className="py-3 px-4 font-mono text-xs">{row.shiftTime || 'Không có ca'}</td>
                   <td className="py-3 px-4 text-right font-semibold">{formatNumber(row.monthlyWorkingHours)}h</td>
                   <td className="py-3 px-4 text-right font-black text-primary">{formatNumber(row.approvedOvertimeHours)}h</td>
                 </tr>

@@ -295,6 +295,8 @@ export interface CreateOvertimeRequest {
 export interface OvertimeMonthlyReportRow {
   userId: string;
   userFullName: string;
+  workDate: string;
+  shiftTime: string;
   monthlyWorkingHours: number;
   approvedOvertimeHours: number;
 }

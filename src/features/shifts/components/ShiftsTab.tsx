@@ -7,8 +7,8 @@ import { CreateShiftRequest, ShiftDto } from '../../../types';
 const emptyForm: CreateShiftRequest = {
   code: '',
   name: '',
-  startTime: '08:00:00',
-  endTime: '12:00:00',
+  startTime: '08:00',
+  endTime: '12:00',
   endDayOffset: 0,
   paidWorkingHours: 4,
   isExtraShift: false,
@@ -24,14 +24,18 @@ function formatDateTime(value?: string | null) {
 }
 
 function isTimeValue(value: string) {
-  return /^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(value);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function toApiTime(value: string) {
+  return value.length === 5 ? `${value}:00` : value;
 }
 
 function validateForm(form: CreateShiftRequest) {
   if (!form.code.trim()) return 'Vui lòng nhập mã ca.';
   if (!form.name.trim()) return 'Vui lòng nhập tên ca.';
-  if (!isTimeValue(form.startTime)) return 'Giờ bắt đầu phải có định dạng HH:mm:ss.';
-  if (!isTimeValue(form.endTime)) return 'Giờ kết thúc phải có định dạng HH:mm:ss.';
+  if (!isTimeValue(form.startTime)) return 'Giờ bắt đầu phải có định dạng 24h HH:mm.';
+  if (!isTimeValue(form.endTime)) return 'Giờ kết thúc phải có định dạng 24h HH:mm.';
   if (form.endDayOffset !== 0 && form.endDayOffset !== 1) return 'Ngày kết thúc chỉ nhận 0 hoặc 1.';
   if (!Number.isFinite(form.paidWorkingHours) || form.paidWorkingHours <= 0 || form.paidWorkingHours > 24) {
     return 'Giờ công phải lớn hơn 0 và nhỏ hơn hoặc bằng 24.';
@@ -102,6 +106,8 @@ export default function ShiftsTab() {
         ...form,
         code: form.code.trim(),
         name: form.name.trim(),
+        startTime: toApiTime(form.startTime),
+        endTime: toApiTime(form.endTime),
         isExtraShift: Boolean(form.isExtraShift),
       });
       toast.success('Đã tạo ca làm việc.');
@@ -356,18 +362,20 @@ export default function ShiftsTab() {
                 <label className="block text-sm font-semibold">
                   Bắt đầu *
                   <input
+                    type="time"
+                    step={60}
                     value={form.startTime}
                     onChange={event => setForm(current => ({ ...current, startTime: event.target.value }))}
-                    placeholder="08:00:00"
                     className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm font-mono focus:outline-primary"
                   />
                 </label>
                 <label className="block text-sm font-semibold">
                   Kết thúc *
                   <input
+                    type="time"
+                    step={60}
                     value={form.endTime}
                     onChange={event => setForm(current => ({ ...current, endTime: event.target.value }))}
-                    placeholder="12:00:00"
                     className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm font-mono focus:outline-primary"
                   />
                 </label>
