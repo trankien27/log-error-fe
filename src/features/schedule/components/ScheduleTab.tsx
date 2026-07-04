@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Copy,
   Download,
   Edit2,
@@ -19,10 +20,19 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { scheduleService } from '../../../services/api/scheduleService';
+import { overtimeService } from '../../../services/api/overtimeService';
 import { usersService } from '../../../services/api/usersService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useScheduleStore } from '../../../stores/useScheduleStore';
-import { MonthlyWorkScheduleStats, ShiftDto, User, WorkScheduleDto, WorkScheduleWeekUserDto } from '../../../types';
+import {
+  MonthlyWorkScheduleStats,
+  OvertimeRequestDto,
+  OvertimeStatus,
+  ShiftDto,
+  User,
+  WorkScheduleDto,
+  WorkScheduleWeekUserDto,
+} from '../../../types';
 import QuickArrangeScheduleButton from '../../work-schedules/components/QuickArrangeScheduleButton';
 
 type DraftPanel = {
@@ -40,6 +50,14 @@ type CellDraft = {
   workDate: string;
   originalSchedule?: WorkScheduleDto;
   shiftId: string;
+};
+
+type OvertimeDraft = {
+  userId: string;
+  workDate: string;
+  startTime: string;
+  endTime: string;
+  reason: string;
 };
 
 const shiftStyles: Record<string, string> = {
@@ -104,6 +122,20 @@ function getCellKey(userId: string, workDate: string) {
   return `${userId}_${workDate}`;
 }
 
+function getOvertimeStatusLabel(status: OvertimeStatus) {
+  if (status === 1) return 'Chờ duyệt';
+  if (status === 2) return 'Đã duyệt';
+  if (status === 3) return 'Từ chối';
+  return 'Đã hủy';
+}
+
+function getOvertimeStatusClass(status: OvertimeStatus) {
+  if (status === 1) return 'border-amber-200 bg-amber-50 text-amber-700';
+  if (status === 2) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  if (status === 3) return 'border-red-200 bg-red-50 text-red-600';
+  return 'border-slate-200 bg-slate-100 text-slate-600';
+}
+
 function getYearMonth(dateValue: string) {
   const date = new Date(`${dateValue}T00:00:00`);
   return {
@@ -114,6 +146,10 @@ function getYearMonth(dateValue: string) {
 
 function formatNumber(value: unknown) {
   return typeof value === 'number' ? value.toLocaleString('vi-VN') : '0';
+}
+
+function toApiTime(value: string) {
+  return value.length === 5 ? `${value}:00` : value;
 }
 
 export default function ScheduleTab() {
@@ -143,6 +179,8 @@ export default function ScheduleTab() {
   const [statsUserId, setStatsUserId] = useState('');
   const [monthlyStats, setMonthlyStats] = useState<MonthlyWorkScheduleStats[]>([]);
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
+  const [overtimeDraft, setOvertimeDraft] = useState<OvertimeDraft | null>(null);
+  const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequestDto[]>([]);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -224,6 +262,19 @@ export default function ScheduleTab() {
     ));
   }, [weekSchedule?.users]);
 
+  const overtimeByCell = useMemo(() => {
+    const result = new Map<string, OvertimeRequestDto[]>();
+
+    overtimeRequests.forEach(item => {
+      const key = getCellKey(item.userId, item.workDate);
+      const current = result.get(key) || [];
+      current.push(item);
+      result.set(key, current);
+    });
+
+    return result;
+  }, [overtimeRequests]);
+
   const monthlyStatsSummary = useMemo(() => {
     return monthlyStats.reduce(
       (summary, item) => ({
@@ -288,6 +339,17 @@ export default function ScheduleTab() {
   }, [fetchWeekSchedule, selectedDate]);
 
   useEffect(() => {
+    overtimeService.getAll({
+      fromDate: weekStart,
+      toDate: weekEnd,
+    })
+      .then(setOvertimeRequests)
+      .catch((err: any) => {
+        toast.error(err.message || 'Không thể tải OT trong tuần.');
+      });
+  }, [weekEnd, weekStart]);
+
+  useEffect(() => {
     usersService.getUsers({ role: 2 })
       .then(setScheduleUsers)
       .catch((err: any) => {
@@ -296,10 +358,17 @@ export default function ScheduleTab() {
   }, []);
 
   const reload = async () => {
-    await fetchWeekSchedule(selectedDate, {
-      shiftId: shiftFilter || undefined,
-      keyword: keyword || undefined,
-    });
+    const [weeklyOvertime] = await Promise.all([
+      overtimeService.getAll({
+        fromDate: weekStart,
+        toDate: weekEnd,
+      }),
+      fetchWeekSchedule(selectedDate, {
+        shiftId: shiftFilter || undefined,
+        keyword: keyword || undefined,
+      }),
+    ]);
+    setOvertimeRequests(weeklyOvertime);
   };
   const hasCellDrafts = Object.keys(cellDrafts).length > 0;
 
@@ -344,6 +413,16 @@ export default function ScheduleTab() {
     setStatsUserId('');
     setMonthlyStats([]);
     setIsStatsModalOpen(true);
+  };
+
+  const openOvertimeModal = (workDate = selectedDate, userId = '') => {
+    setOvertimeDraft({
+      userId,
+      workDate,
+      startTime: '18:00',
+      endTime: '20:00',
+      reason: '',
+    });
   };
 
   const togglePanelUser = (userId: string) => {
@@ -568,6 +647,44 @@ export default function ScheduleTab() {
     }
   };
 
+  const saveOvertime = async () => {
+    if (!overtimeDraft) return;
+    if (!overtimeDraft.userId) {
+      toast.error('Vui lòng chọn nhân viên OT.');
+      return;
+    }
+    if (!overtimeDraft.workDate || !overtimeDraft.startTime || !overtimeDraft.endTime) {
+      toast.error('Vui lòng nhập đủ ngày và giờ OT.');
+      return;
+    }
+    if (overtimeDraft.startTime >= overtimeDraft.endTime) {
+      toast.error('Giờ kết thúc OT phải lớn hơn giờ bắt đầu.');
+      return;
+    }
+    if (!overtimeDraft.reason.trim()) {
+      toast.error('Vui lòng nhập lý do OT chi tiết.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await overtimeService.create({
+        userId: overtimeDraft.userId,
+        workDate: overtimeDraft.workDate,
+        startTime: toApiTime(overtimeDraft.startTime),
+        endTime: toApiTime(overtimeDraft.endTime),
+        reason: overtimeDraft.reason.trim(),
+      });
+      toast.success('Đã ghi nhận OT, đang chờ duyệt.');
+      setOvertimeDraft(null);
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể ghi nhận OT.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const sendSelectedDateToTelegram = async () => {
     if (!canManageSchedule) return;
 
@@ -603,6 +720,25 @@ export default function ScheduleTab() {
     );
   };
 
+  const renderOvertimeBadges = (items: OvertimeRequestDto[]) => {
+    if (items.length === 0) return null;
+
+    return (
+      <div className="w-full max-w-[118px] space-y-1">
+        {items.map(item => (
+          <span
+            key={item.id}
+            title={`${formatTime(item.startTime)} - ${formatTime(item.endTime)} | ${getOvertimeStatusLabel(item.status)} | ${item.reason}`}
+            className={`block rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getOvertimeStatusClass(item.status)}`}
+          >
+            OT {formatNumber(item.totalHours)}h
+            <span className="block text-[9px] font-bold">{getOvertimeStatusLabel(item.status)}</span>
+          </span>
+        ))}
+      </div>
+    );
+  };
+
   const renderScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
     const schedule = row.schedules.find(item => item.workDate === date);
     const cellKey = getCellKey(row.userId, date);
@@ -610,14 +746,15 @@ export default function ScheduleTab() {
     const effectiveShiftId = draft ? draft.shiftId : schedule ? String(schedule.shiftId) : '';
     const effectiveShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
     const hasDraft = Boolean(draft);
+    const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
 
     if (canManageSchedule) {
       const isDeletedDraft = Boolean(schedule && draft && !draft.shiftId);
 
       return (
-        <div key={date} className={`min-h-[86px] w-full p-2 flex flex-col items-center justify-center gap-2 ${hasDraft ? 'bg-blue-50/70' : ''}`}>
+        <div key={date} className={`min-h-[112px] w-full p-2 flex flex-col items-center justify-center gap-2 ${hasDraft ? 'bg-blue-50/70' : ''}`}>
           {effectiveShift ? (
-            <span className={`relative w-full max-w-[104px] rounded-md border px-2 py-2 text-center shadow-sm ${getShiftClass(effectiveShift.code)}`}>
+            <span className={`relative block w-full max-w-[118px] rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(effectiveShift.code)}`}>
               <button
                 type="button"
                 disabled={isSaving}
@@ -627,9 +764,9 @@ export default function ScheduleTab() {
               >
                 <Trash2 className="h-3 w-3" />
               </button>
-              <span className="block text-sm font-black">{effectiveShift.code}</span>
-              <span className="block text-[11px] font-bold mt-1">{getShiftHours(effectiveShift)}</span>
-              {hasDraft && <span className="mt-1 inline-block text-[9px] font-bold text-primary">Chưa lưu</span>}
+              Ca {effectiveShift.code}
+              <span className="block text-[9px] font-bold">{getShiftHours(effectiveShift)}</span>
+              {hasDraft && <span className="block text-[9px] font-bold text-primary">Chưa lưu</span>}
             </span>
           ) : (
             <span className={`text-xs italic font-semibold ${hasDraft ? 'text-primary' : 'text-gray-500'}`}>
@@ -662,23 +799,20 @@ export default function ScheduleTab() {
               ))}
             </select>
           )}
+          {renderOvertimeBadges(cellOvertimeRequests)}
         </div>
       );
     }
 
     if (!schedule) {
       return (
-        <button
+        <div
           key={date}
-          type="button"
-          onClick={() => openCreatePanel(date, row.userId)}
-          disabled={!canManageSchedule}
-          className={`h-full min-h-[86px] w-full text-center text-xs italic font-semibold text-gray-500 transition-colors ${
-            canManageSchedule ? 'hover:bg-blue-50 cursor-pointer' : 'cursor-default'
-          }`}
+          className="h-full min-h-[112px] w-full p-2 text-center text-xs italic font-semibold text-gray-500 flex flex-col items-center justify-center gap-2"
         >
-          Nghỉ
-        </button>
+          <span>Nghỉ</span>
+          {renderOvertimeBadges(cellOvertimeRequests)}
+        </div>
       );
     }
 
@@ -688,15 +822,16 @@ export default function ScheduleTab() {
         type="button"
         onClick={() => openEditPanel(schedule, row)}
         disabled={!canManageSchedule}
-        className={`h-full min-h-[86px] w-full flex items-center justify-center p-2 transition-colors ${
+        className={`h-full min-h-[112px] w-full flex flex-col items-center justify-center gap-2 p-2 transition-colors ${
           canManageSchedule ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default'
         }`}
       >
-        <span className={`relative w-full max-w-[104px] rounded-md border px-2 py-2 text-center shadow-sm ${getShiftClass(schedule.shiftCode)}`}>
+        <span className={`relative block w-full max-w-[118px] rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(schedule.shiftCode)}`}>
           {canManageSchedule && <Edit2 className="absolute right-1.5 top-1.5 w-3 h-3 text-gray-400" />}
-          <span className="block text-sm font-black">{schedule.shiftCode}</span>
-          <span className="block text-[11px] font-bold mt-1">{getScheduleHours(schedule)}</span>
+          Ca {schedule.shiftCode}
+          <span className="block text-[9px] font-bold">{getScheduleHours(schedule)}</span>
         </span>
+        {renderOvertimeBadges(cellOvertimeRequests)}
       </button>
     );
   };
@@ -942,16 +1077,24 @@ export default function ScheduleTab() {
             </table>
 
             <div className="px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <button
-                type="button"
-                onClick={() => openCreatePanel(weekStart)}
-                disabled={!canManageSchedule}
+            <button
+              type="button"
+              onClick={() => openCreatePanel(weekStart)}
+              disabled={!canManageSchedule}
                 className="h-10 px-4 rounded-md border border-dashed border-outline-variant text-primary text-sm font-semibold inline-flex items-center gap-2 hover:bg-blue-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" />
-                Thêm nhân viên
-              </button>
-              {hasCellDrafts && (
+              <Plus className="w-4 h-4" />
+              Thêm nhân viên
+            </button>
+            <button
+              type="button"
+              onClick={() => openOvertimeModal(selectedDate)}
+              className="h-10 px-4 rounded-md border border-outline-variant text-primary text-sm font-semibold inline-flex items-center gap-2 hover:bg-blue-50 cursor-pointer"
+            >
+              <Clock3 className="w-4 h-4" />
+              Ghi OT
+            </button>
+            {hasCellDrafts && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-primary">
                     {Object.keys(cellDrafts).length} thay đổi chưa lưu
@@ -1225,6 +1368,102 @@ export default function ScheduleTab() {
                   Chọn điều kiện và bấm Xem thống kê.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {overtimeDraft && (
+        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-white shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-950">Ghi OT</h3>
+                <p className="text-xs text-gray-500 mt-1">OT sau khi tạo sẽ ở trạng thái chờ duyệt.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOvertimeDraft(null)}
+                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="block text-sm font-semibold">
+                Nhân viên
+                <select
+                  value={overtimeDraft.userId}
+                  onChange={event => setOvertimeDraft(current => current ? { ...current, userId: event.target.value } : current)}
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm focus:outline-primary"
+                >
+                  <option value="">Chọn nhân viên</option>
+                  {scheduleUsers.map(user => (
+                    <option key={user.id} value={user.id}>{user.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block text-sm font-semibold">
+                Ngày OT
+                <input
+                  type="date"
+                  value={overtimeDraft.workDate}
+                  onChange={event => setOvertimeDraft(current => current ? { ...current, workDate: event.target.value } : current)}
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-primary"
+                />
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="block text-sm font-semibold">
+                  Giờ bắt đầu
+                  <input
+                    type="time"
+                    value={overtimeDraft.startTime}
+                    onChange={event => setOvertimeDraft(current => current ? { ...current, startTime: event.target.value } : current)}
+                    className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-primary"
+                  />
+                </label>
+                <label className="block text-sm font-semibold">
+                  Giờ kết thúc
+                  <input
+                    type="time"
+                    value={overtimeDraft.endTime}
+                    onChange={event => setOvertimeDraft(current => current ? { ...current, endTime: event.target.value } : current)}
+                    className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-primary"
+                  />
+                </label>
+              </div>
+
+              <label className="block text-sm font-semibold">
+                Lý do chi tiết
+                <textarea
+                  value={overtimeDraft.reason}
+                  onChange={event => setOvertimeDraft(current => current ? { ...current, reason: event.target.value } : current)}
+                  rows={4}
+                  placeholder="Nhập lý do OT..."
+                  className="mt-1 w-full resize-none rounded-lg border border-outline-variant px-3 py-2 text-sm focus:outline-primary"
+                />
+              </label>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOvertimeDraft(null)}
+                  className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={saveOvertime}
+                  disabled={isSaving}
+                  className="h-10 px-5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary-container disabled:opacity-60 cursor-pointer"
+                >
+                  {isSaving ? 'Đang lưu...' : 'Ghi OT'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

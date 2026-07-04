@@ -45,7 +45,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Manager' | 'IT Support' | 'Staff' | 'User' | 1 | 2 | 3 | 4 | 5;
+  role: 'Admin' | 'Manager' | 'IT Support' | 'ITSupportManager' | 'Staff' | 'User' | 1 | 2 | 3 | 4 | 5;
   status: 'Hoạt động' | 'Vô hiệu hóa';
   avatar?: string;
   phone?: string;
@@ -260,6 +260,45 @@ export interface MonthlyWorkScheduleStats {
   shiftBreakdowns: MonthlyWorkScheduleShiftBreakdown[];
 }
 
+export type OvertimeStatus = 1 | 2 | 3 | 4;
+
+export interface OvertimeRequestDto {
+  id: number;
+  userId: string;
+  userFullName: string;
+  workDate: string;
+  startTime: string;
+  endTime: string;
+  totalHours: number;
+  reason: string;
+  status: OvertimeStatus;
+  statusName: string;
+  createdBy: string;
+  createdAt: string;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectedBy?: string | null;
+  rejectedAt?: string | null;
+  rejectReason?: string | null;
+}
+
+export interface CreateOvertimeRequest {
+  userId: string;
+  workDate: string;
+  startTime: string;
+  endTime: string;
+  reason: string;
+}
+
+export interface OvertimeMonthlyReportRow {
+  userId: string;
+  userFullName: string;
+  monthlyWorkingHours: number;
+  approvedOvertimeHours: number;
+}
+
 export interface CalendarDayDto {
   date: string;
   dayOfWeek: number;
@@ -345,4 +384,5 @@ export type TabType =
   | 'shifts'
   | 'notifications'
   | 'schedule'
+  | 'overtime_approval'
   | 'settings';

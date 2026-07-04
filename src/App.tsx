@@ -15,6 +15,7 @@ import RemoteBoothTab from './features/remote-booth/components/RemoteBoothTab';
 import ShiftsTab from './features/shifts/components/ShiftsTab';
 import NotificationsTab from './features/notifications/components/NotificationsTab';
 import ScheduleTab from './features/schedule/components/ScheduleTab';
+import OvertimeApprovalTab from './features/overtime/components/OvertimeApprovalTab';
 import SettingsTab from './features/settings/components/SettingsTab';
 import { useAuthStore } from './stores/useAuthStore';
 
@@ -27,6 +28,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { hasAnyRole } = useAuthStore();
   return hasAnyRole([1, 'Admin']) ? <>{children}</> : <Navigate to="/overview" replace />;
+}
+
+function OvertimeApprovalRoute({ children }: { children: React.ReactNode }) {
+  const { hasAnyRole } = useAuthStore();
+  return hasAnyRole([1, 3, 'Admin', 'ITSupportManager', 'IT Support']) ? <>{children}</> : <Navigate to="/schedule" replace />;
 }
 
 export default function App() {
@@ -66,6 +72,14 @@ export default function App() {
         <Route path="shifts" element={<ShiftsTab />} />
         <Route path="notifications" element={<NotificationsTab />} />
         <Route path="schedule" element={<ScheduleTab />} />
+        <Route
+          path="overtime-approval"
+          element={(
+            <OvertimeApprovalRoute>
+              <OvertimeApprovalTab />
+            </OvertimeApprovalRoute>
+          )}
+        />
         <Route path="settings" element={<SettingsTab />} />
       </Route>
 

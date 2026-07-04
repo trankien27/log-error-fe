@@ -13,6 +13,7 @@ import {
   Settings,
   Shield,
   Store,
+  TimerReset,
   Users,
   X,
 } from 'lucide-react';
@@ -48,6 +49,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const { setSelectedUserProfileUser } = useUsersStore();
   const { hasAnyRole } = useAuthStore();
   const isAdmin = hasAnyRole([1, 'Admin']);
+  const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager', 'IT Support']);
 
   const getActiveTab = (): TabType => {
     const path = location.pathname;
@@ -64,6 +66,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/shifts') return 'shifts';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
+    if (path === '/overtime-approval') return 'overtime_approval';
     if (path === '/settings') return 'settings';
     return 'overview';
   };
@@ -93,6 +96,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'shifts': navigate('/shifts'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
+      case 'overtime_approval': navigate('/overtime-approval'); break;
       case 'settings': navigate('/settings'); break;
       default: navigate('/overview');
     }
@@ -236,6 +240,14 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <span>Lịch làm việc</span>
               </button>
             </li>
+            {canApproveOvertime && (
+              <li>
+                <button onClick={() => navigateTo('overtime_approval')} className={navButtonClass(activeTab === 'overtime_approval')}>
+                  <TimerReset className="w-4 h-4" />
+                  <span>Duyệt OT</span>
+                </button>
+              </li>
+            )}
             <li>
               <button onClick={() => navigateTo('settings')} className={navButtonClass(activeTab === 'settings')}>
                 <Settings className="w-4 h-4" />

@@ -61,6 +61,7 @@ function resolveRoleNumber(role: unknown) {
     Admin: 1,
     Manager: 2,
     'IT Support': 3,
+    ITSupportManager: 3,
     Staff: 4,
     User: 5,
   };
