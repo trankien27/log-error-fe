@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Download, Loader2, Search, X } from 'lucide-react';
+import { Check, Loader2, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { overtimeService } from '../../../services/api/overtimeService';
 import { usersService } from '../../../services/api/usersService';
-import { OvertimeMonthlyReportRow, OvertimeRequestDto, OvertimeStatus, User } from '../../../types';
+import { OvertimeRequestDto, OvertimeStatus, User } from '../../../types';
 
 function toDateInput(date: Date) {
   const year = date.getFullYear();
@@ -38,27 +38,6 @@ function getStatusClass(status: OvertimeStatus) {
   return 'bg-slate-100 text-slate-600 border-slate-200';
 }
 
-function downloadCsv(rows: OvertimeMonthlyReportRow[], year: number, month: number) {
-  const header = ['Tên', 'Ngày', 'Thời gian trực', 'Số tiếng trong tháng', 'Số giờ OT'];
-  const lines = rows.map(row => [
-    row.userFullName,
-    row.workDate ? formatDate(row.workDate) : '',
-    row.shiftTime || '',
-    String(row.monthlyWorkingHours),
-    String(row.approvedOvertimeHours),
-  ]);
-  const csv = [header, ...lines]
-    .map(cols => cols.map(value => `"${value.replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `bao-cao-ot-${String(month).padStart(2, '0')}-${year}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
 export default function OvertimeApprovalTab() {
   const today = toDateInput(new Date());
   const [fromDate, setFromDate] = useState(today.slice(0, 8) + '01');
@@ -71,21 +50,14 @@ export default function OvertimeApprovalTab() {
   const [rejecting, setRejecting] = useState<OvertimeRequestDto | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  const [reportYear, setReportYear] = useState(new Date().getFullYear());
-  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
-  const [reportUserId, setReportUserId] = useState('');
-  const [reportRows, setReportRows] = useState<OvertimeMonthlyReportRow[]>([]);
-  const [isReportLoading, setIsReportLoading] = useState(false);
-
   const summary = useMemo(() => {
     return {
       pending: requests.filter(item => item.status === 1).length,
       approvedHours: requests
         .filter(item => item.status === 2)
         .reduce((total, item) => total + item.totalHours, 0),
-      reportOtHours: reportRows.reduce((total, item) => total + item.approvedOvertimeHours, 0),
     };
-  }, [reportRows, requests]);
+  }, [requests]);
 
   const loadRequests = async () => {
     setIsLoading(true);
@@ -104,23 +76,6 @@ export default function OvertimeApprovalTab() {
     }
   };
 
-  const loadReport = async () => {
-    setIsReportLoading(true);
-    try {
-      const result = await overtimeService.getMonthlyReport({
-        year: reportYear,
-        month: reportMonth,
-        userId: reportUserId || undefined,
-      });
-      setReportRows(result);
-      toast.success('Đã tải báo cáo OT tháng.');
-    } catch (err: any) {
-      toast.error(err.message || 'Không thể tải báo cáo OT.');
-    } finally {
-      setIsReportLoading(false);
-    }
-  };
-
   useEffect(() => {
     usersService.getUsers({ role: 2 })
       .then(setUsers)
@@ -136,7 +91,6 @@ export default function OvertimeApprovalTab() {
       await overtimeService.approve(item.id);
       toast.success('Đã duyệt OT.');
       await loadRequests();
-      if (reportRows.length > 0) await loadReport();
     } catch (err: any) {
       toast.error(err.message || 'Không thể duyệt OT.');
     }
@@ -169,7 +123,7 @@ export default function OvertimeApprovalTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-outline-variant bg-white p-4">
           <p className="text-xs font-semibold text-gray-500">Đang chờ duyệt</p>
           <p className="mt-2 text-2xl font-black text-amber-600">{summary.pending}</p>
@@ -177,10 +131,6 @@ export default function OvertimeApprovalTab() {
         <div className="rounded-lg border border-outline-variant bg-white p-4">
           <p className="text-xs font-semibold text-gray-500">Giờ OT đã duyệt trong bộ lọc</p>
           <p className="mt-2 text-2xl font-black text-emerald-600">{formatNumber(summary.approvedHours)}h</p>
-        </div>
-        <div className="rounded-lg border border-outline-variant bg-white p-4">
-          <p className="text-xs font-semibold text-gray-500">Giờ OT báo cáo tháng</p>
-          <p className="mt-2 text-2xl font-black text-primary">{formatNumber(summary.reportOtHours)}h</p>
         </div>
       </div>
 
@@ -260,61 +210,6 @@ export default function OvertimeApprovalTab() {
                       </button>
                     </div>
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="rounded-lg border border-outline-variant bg-white p-4 shadow-sm space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-end gap-3">
-          <label className="block text-sm font-semibold">
-            Năm
-            <input type="number" min={2020} max={2100} value={reportYear} onChange={event => setReportYear(Number(event.target.value))} className="mt-1 h-10 w-full lg:w-32 rounded-lg border border-outline-variant px-3 text-sm" />
-          </label>
-          <label className="block text-sm font-semibold">
-            Tháng
-            <input type="number" min={1} max={12} value={reportMonth} onChange={event => setReportMonth(Number(event.target.value))} className="mt-1 h-10 w-full lg:w-28 rounded-lg border border-outline-variant px-3 text-sm" />
-          </label>
-          <label className="block text-sm font-semibold lg:flex-1">
-            Nhân viên
-            <select value={reportUserId} onChange={event => setReportUserId(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm">
-              <option value="">Tất cả</option>
-              {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={loadReport} disabled={isReportLoading} className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-slate-50 disabled:opacity-60 cursor-pointer">
-            {isReportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Xem báo cáo
-          </button>
-          <button type="button" onClick={() => downloadCsv(reportRows, reportYear, reportMonth)} disabled={reportRows.length === 0} className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-            <Download className="w-4 h-4" />
-            Xuất báo cáo
-          </button>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-outline-variant">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="bg-gray-50 text-[11px] uppercase tracking-wider text-gray-500 font-bold">
-                <th className="py-3 px-4 text-left">Tên</th>
-                <th className="py-3 px-4 text-left">Ngày</th>
-                <th className="py-3 px-4 text-left">Thời gian trực</th>
-                <th className="py-3 px-4 text-right">Số tiếng trong tháng</th>
-                <th className="py-3 px-4 text-right">Số giờ OT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {reportRows.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-sm font-semibold text-gray-400">Chưa có dữ liệu báo cáo.</td></tr>
-              ) : reportRows.map(row => (
-                <tr key={`${row.userId}_${row.workDate}_${row.shiftTime}`} className="hover:bg-slate-50">
-                  <td className="py-3 px-4 font-bold text-gray-950">{row.userFullName}</td>
-                  <td className="py-3 px-4 font-semibold">{row.workDate ? formatDate(row.workDate) : ''}</td>
-                  <td className="py-3 px-4 font-mono text-xs">{row.shiftTime || 'Không có ca'}</td>
-                  <td className="py-3 px-4 text-right font-semibold">{formatNumber(row.monthlyWorkingHours)}h</td>
-                  <td className="py-3 px-4 text-right font-black text-primary">{formatNumber(row.approvedOvertimeHours)}h</td>
                 </tr>
               ))}
             </tbody>

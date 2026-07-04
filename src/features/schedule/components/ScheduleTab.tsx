@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
   CalendarDays,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -16,6 +15,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
+import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { scheduleService } from '../../../services/api/scheduleService';
 import { overtimeService } from '../../../services/api/overtimeService';
@@ -24,7 +24,6 @@ import { useAuthStore } from '../../../stores/useAuthStore';
 import { useScheduleStore } from '../../../stores/useScheduleStore';
 import {
   MonthlyWorkScheduleStats,
-  OvertimeMonthlyReportRow,
   OvertimeRequestDto,
   OvertimeStatus,
   ShiftDto,
@@ -151,25 +150,20 @@ function toApiTime(value: string) {
   return value.length === 5 ? `${value}:00` : value;
 }
 
-function downloadOvertimeReportCsv(rows: OvertimeMonthlyReportRow[], year: number, month: number) {
-  const header = ['Tên', 'Ngày', 'Thời gian trực', 'Số tiếng trong tháng', 'Số giờ OT'];
-  const lines = rows.map(row => [
-    row.userFullName,
-    row.workDate ? formatDate(row.workDate) : '',
-    row.shiftTime || '',
-    String(row.monthlyWorkingHours),
-    String(row.approvedOvertimeHours),
-  ]);
-  const csv = [header, ...lines]
-    .map(cols => cols.map(value => `"${value.replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `bao-cao-ot-${String(month).padStart(2, '0')}-${year}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+function base64ToBlob(base64Content: string, mimeType: string) {
+  const normalizedBase64 = (base64Content.includes(',') ? base64Content.split(',')[1] : base64Content).replace(/\s/g, '');
+  const binary = atob(normalizedBase64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new Blob([bytes], { type: mimeType });
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  saveAs(blob, fileName);
 }
 
 export default function ScheduleTab() {
@@ -200,6 +194,10 @@ export default function ScheduleTab() {
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
   const [overtimeDraft, setOvertimeDraft] = useState<OvertimeDraft | null>(null);
   const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequestDto[]>([]);
+  const [reportYear, setReportYear] = useState(() => getYearMonth(weekStart).year);
+  const [reportMonth, setReportMonth] = useState(() => getYearMonth(weekStart).month);
+  const [reportUserId, setReportUserId] = useState('');
+  const [isOvertimeExportModalOpen, setIsOvertimeExportModalOpen] = useState(false);
   const [isExportingOvertime, setIsExportingOvertime] = useState(false);
 
   const activeShifts = useMemo(
@@ -642,13 +640,29 @@ export default function ScheduleTab() {
   };
 
   const exportExcel = async () => {
-    const { year, month } = getYearMonth(selectedDate);
+    if (!reportYear || reportMonth < 1 || reportMonth > 12) {
+      toast.error('Vui lòng chọn năm và tháng hợp lệ.');
+      return;
+    }
 
     setIsExportingOvertime(true);
     try {
-      const rows = await overtimeService.getMonthlyReport({ year, month });
-      downloadOvertimeReportCsv(rows, year, month);
-      toast.success(`Đã xuất báo cáo OT tháng ${month}/${year}.`);
+      const result = await overtimeService.exportMonthlyReport({
+        year: reportYear,
+        month: reportMonth,
+        userId: reportUserId || undefined,
+      });
+
+      const blob = base64ToBlob(
+        result.data,
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      const fallbackFileName = `bao_cao_tang_ca_${String(reportMonth).padStart(2, '0')}_${reportYear}.xlsx`;
+      const fileName = result.fileName || fallbackFileName;
+
+      downloadBlob(blob, fileName);
+      setIsOvertimeExportModalOpen(false);
+      toast.success(`Đã xuất báo cáo tháng ${reportMonth}/${reportYear}.`);
     } catch (err: any) {
       toast.error(err.message || 'Không thể xuất báo cáo OT.');
     } finally {
@@ -926,14 +940,13 @@ export default function ScheduleTab() {
 
             <button
               type="button"
-              onClick={openStatsModal}
-              disabled={!canManageSchedule}
+              onClick={() => setIsOvertimeExportModalOpen(true)}
+              disabled={isExportingOvertime}
               className="h-11 px-5 rounded-md bg-primary !text-white text-sm font-bold inline-flex items-center gap-2 shadow-sm hover:bg-primary-container cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ color: '#fff' }}
             >
-              <BarChart3 className="w-4 h-4" />
-              Thống kê
-              <ChevronDown className="w-4 h-4" />
+              {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Xuất Excel
             </button>
             <QuickArrangeScheduleButton
               users={scheduleUsers}
@@ -952,15 +965,6 @@ export default function ScheduleTab() {
               >
                 <Copy className="w-4 h-4" />
                 Sao chép tuần
-              </button>
-              <button
-                type="button"
-                onClick={exportExcel}
-                disabled={isExportingOvertime}
-                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Xuất báo cáo
               </button>
               <button
                 type="button"
@@ -1370,6 +1374,85 @@ export default function ScheduleTab() {
                   Chọn điều kiện và bấm Xem thống kê.
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isOvertimeExportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-950">Xuất báo cáo OT</h3>
+                <p className="text-xs text-gray-500 mt-1">Chọn tháng, năm và nhân viên để xuất file Excel.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOvertimeExportModalOpen(false)}
+                disabled={isExportingOvertime}
+                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer disabled:opacity-60"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="block text-sm font-semibold">
+                Năm
+                <input
+                  type="number"
+                  min={2020}
+                  max={2100}
+                  value={reportYear}
+                  onChange={event => setReportYear(Number(event.target.value))}
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm"
+                />
+              </label>
+              <label className="block text-sm font-semibold">
+                Tháng
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={reportMonth}
+                  onChange={event => setReportMonth(Number(event.target.value))}
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm"
+                />
+              </label>
+              <label className="block text-sm font-semibold">
+                Nhân viên
+                <select
+                  value={reportUserId}
+                  onChange={event => setReportUserId(event.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm"
+                >
+                  <option value="">Tất cả</option>
+                  {scheduleUsers.map(user => (
+                    <option key={user.id} value={user.id}>{user.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsOvertimeExportModalOpen(false)}
+                  disabled={isExportingOvertime}
+                  className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={exportExcel}
+                  disabled={isExportingOvertime}
+                  className="h-10 px-5 rounded-lg bg-primary text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-primary-container disabled:opacity-60 cursor-pointer"
+                >
+                  {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  Xuất báo cáo
+                </button>
+              </div>
             </div>
           </div>
         </div>
