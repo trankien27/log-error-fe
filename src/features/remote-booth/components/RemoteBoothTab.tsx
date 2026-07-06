@@ -1537,7 +1537,7 @@ export default function RemoteBoothTab() {
                         setPowerShellScript(event.target.value);
                         setDeployError('');
                       }}
-                      className="mt-1.5 min-h-72 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs leading-relaxed focus:outline-[#004ac6]"
+                      className="mt-1.5 min-h-72 w-full resize-y rounded-lg border border-[#2f2f2f] bg-[#0d0d0d] px-3 py-2 font-mono text-xs leading-relaxed text-white focus:outline-emerald-500 placeholder:text-slate-500"
                       spellCheck={false}
                     />
                   </label>
