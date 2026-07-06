@@ -360,14 +360,16 @@ export default function RemoteBoothTab() {
   }, [boothsQuery.data]);
 
   const storeOptions = useMemo(() => {
-    const values = new Set<string>();
+    const values = new Map<string, string>();
     (boothsQuery.data ?? []).forEach(booth => {
       const storeValue = booth.storeId ?? booth.relatedStores;
+      const storeLabel = booth.storeName || booth.relatedStores || String(storeValue ?? '');
       if (storeValue !== null && storeValue !== undefined && String(storeValue).trim()) {
-        values.add(String(storeValue).trim());
+        values.set(String(storeValue).trim(), storeLabel.trim());
       }
     });
-    return Array.from(values).sort((left, right) => left.localeCompare(right, 'vi'));
+    return Array.from(values, ([value, label]) => ({ value, label }))
+      .sort((left, right) => left.label.localeCompare(right.label, 'vi'));
   }, [boothsQuery.data]);
 
   const machines = useMemo(() => machinesQuery.data?.machines ?? [], [machinesQuery.data]);
@@ -953,8 +955,8 @@ export default function RemoteBoothTab() {
           >
             <option value="">Tất cả store</option>
             {storeOptions.map(store => (
-              <option key={store} value={store}>
-                Store {store}
+              <option key={store.value} value={store.value}>
+                {store.label}
               </option>
             ))}
           </select>
@@ -1205,13 +1207,55 @@ export default function RemoteBoothTab() {
       </div>
 
       {activeMachines.length > 0 && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm z-50 flex items-end sm:items-stretch sm:justify-end animate-fadeIn">
-          <button type="button" aria-label="Đóng form deploy" onClick={closeDeployPanel} className="hidden sm:block flex-1 cursor-default" />
-          <aside className={`bg-white h-[92dvh] sm:h-full w-full shadow-2xl border-t sm:border-t-0 sm:border-l border-outline-variant overflow-y-auto rounded-t-2xl sm:rounded-none ${panelMode === 'print' ? 'sm:max-w-5xl' : 'sm:max-w-xl'}`}>
+        <div
+          className={`fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm z-50 flex animate-fadeIn ${
+            panelMode === 'powershell'
+              ? 'items-center justify-center p-2 sm:p-6'
+              : 'items-end sm:items-stretch sm:justify-end'
+          }`}
+        >
+          <button
+            type="button"
+            aria-label="Đóng form deploy"
+            onClick={closeDeployPanel}
+            className={panelMode === 'powershell' ? 'absolute inset-0 cursor-default' : 'hidden sm:block flex-1 cursor-default'}
+          />
+          <aside
+            className={
+              panelMode === 'powershell'
+                ? 'relative z-10 h-[92dvh] w-full max-w-6xl overflow-hidden rounded-lg border border-[#3a3a3a] bg-[#0b0b0b] shadow-2xl'
+                : `bg-white h-[92dvh] sm:h-full w-full shadow-2xl border-t sm:border-t-0 sm:border-l border-outline-variant overflow-y-auto rounded-t-2xl sm:rounded-none ${panelMode === 'print' ? 'sm:max-w-5xl' : 'sm:max-w-xl'}`
+            }
+          >
+            {panelMode === 'powershell' ? (
+              <div className="bg-[#2b2b2b] border-b border-[#3a3a3a]">
+                <div className="flex h-11 items-center justify-between gap-3 px-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="flex h-8 min-w-0 items-center gap-2 rounded-t-md bg-[#111111] px-3 text-slate-100">
+                      <Terminal className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate font-mono text-xs font-bold">
+                        C:\WINDOWS\system32\cmd... · {isMultiDeploy ? `${activeMachines.length} booth` : activeMachines[0].machineCode}
+                      </span>
+                      <button type="button" onClick={closeDeployPanel} className="ml-2 text-slate-400 hover:text-white" aria-label="Đóng tab">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <button type="button" className="hidden h-8 w-8 items-center justify-center rounded text-slate-300 hover:bg-white/10 sm:inline-flex" aria-label="Tab mới">
+                      +
+                    </button>
+                  </div>
+                  <div className="flex h-11 items-center text-slate-200">
+                    <button type="button" className="h-11 w-11 hover:bg-white/10" aria-label="Thu nhỏ">-</button>
+                    <button type="button" className="h-11 w-11 hover:bg-white/10" aria-label="Phóng to">□</button>
+                    <button type="button" onClick={closeDeployPanel} className="h-11 w-11 hover:bg-red-600" aria-label="Đóng">×</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="sticky top-0 bg-white border-b border-outline-variant p-4 sm:p-5 flex items-start justify-between gap-4 z-20">
               <div className="min-w-0">
                 <h3 className="text-base sm:text-lg font-bold text-on-surface truncate">
-                  {panelMode === 'deploy' ? 'Deploy tới' : panelMode === 'powershell' ? 'PowerShell tới' : 'In ảnh tại'}{' '}
+                  {panelMode === 'deploy' ? 'Deploy tới' : 'In ảnh tại'}{' '}
                   {isMultiDeploy ? `${activeMachines.length} booth` : activeMachines[0].machineCode}
                 </h3>
                 <p className="text-xs text-gray-500 mt-1 line-clamp-2">
@@ -1229,8 +1273,17 @@ export default function RemoteBoothTab() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+            )}
 
-            <form onSubmit={panelMode === 'deploy' ? handleSubmit : panelMode === 'powershell' ? handlePowerShellSubmit : handlePrintSubmit} className="p-4 sm:p-5 pb-6 space-y-5 text-sm">
+            <form
+              onSubmit={panelMode === 'deploy' ? handleSubmit : panelMode === 'powershell' ? handlePowerShellSubmit : handlePrintSubmit}
+              className={
+                panelMode === 'powershell'
+                  ? 'flex h-[calc(92dvh-45px)] flex-col overflow-y-auto bg-[#0b0b0b] p-3 sm:p-4 pb-0 text-sm text-slate-100'
+                  : 'p-4 sm:p-5 pb-6 space-y-5 text-sm'
+              }
+            >
+              {panelMode !== 'powershell' && (
               <div className="grid grid-cols-3 gap-2 rounded-xl bg-gray-50 border border-outline-variant p-1">
                 <button
                   type="button"
@@ -1255,9 +1308,8 @@ export default function RemoteBoothTab() {
                     setDeployResult(null);
                   }}
                   disabled={isMultiDeploy}
-                  className={`h-10 sm:h-9 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
-                    panelMode === 'powershell' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-800'
-                  } ${isMultiDeploy ? 'opacity-40 cursor-not-allowed hover:text-gray-500' : ''
+                  className={`h-10 sm:h-9 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-gray-500 hover:text-gray-800 ${
+                    isMultiDeploy ? 'opacity-40 cursor-not-allowed hover:text-gray-500' : ''
                   }`}
                 >
                   <Terminal className="w-3.5 h-3.5" />
@@ -1284,6 +1336,7 @@ export default function RemoteBoothTab() {
                   Print
                 </button>
               </div>
+              )}
 
               {panelMode === 'deploy' ? (
               <>
@@ -1454,13 +1507,12 @@ export default function RemoteBoothTab() {
                   </div>
                 )}
 
-                <div className="overflow-hidden rounded-xl border border-slate-700 bg-[#0c1222] shadow-inner">
-                  <div className="flex items-center justify-between border-b border-slate-700 bg-[#111827] px-3 py-2">
+                <div className="overflow-hidden rounded-md border border-[#222] bg-[#070707] shadow-inner">
+                  <div className="flex items-center justify-between border-b border-[#222] bg-[#0f0f0f] px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <span className="h-3 w-3 rounded-full bg-red-500" />
-                      <span className="h-3 w-3 rounded-full bg-yellow-400" />
-                      <span className="h-3 w-3 rounded-full bg-emerald-500" />
-                      <span className="ml-2 text-xs font-black text-slate-200">Windows PowerShell</span>
+                      <span className="font-mono text-xs font-bold text-slate-300">
+                        PS {powerShellWorkingDirectory.trim() || 'C:\\'}&gt;
+                      </span>
                     </div>
                     <span className={`rounded px-2 py-1 text-[10px] font-black ${
                       powerShellRunAs === 'admin'
@@ -1478,7 +1530,7 @@ export default function RemoteBoothTab() {
                     <select
                       value={powerShellMode}
                       onChange={event => setPowerShellMode(event.target.value as RemotePowerShellMode)}
-                          className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
+                          className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
                     >
                       <option value="inline">Inline script</option>
                       <option value="file">File .ps1</option>
@@ -1489,7 +1541,7 @@ export default function RemoteBoothTab() {
                     <select
                       value={powerShellRunAs}
                       onChange={event => setPowerShellRunAs(event.target.value as RemotePowerShellRunAs)}
-                          className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
+                          className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
                     >
                       <option value="admin">Admin</option>
                       <option value="user">User</option>
@@ -1500,9 +1552,9 @@ export default function RemoteBoothTab() {
                 {powerShellMode === 'inline' ? (
                       <label className="block text-xs font-bold text-slate-300">
                         Command
-                        <div className="mt-1.5 overflow-hidden rounded-md border border-slate-700 bg-[#020617]">
-                          <div className="border-b border-slate-800 px-3 py-2 font-mono text-xs text-emerald-300">
-                            PS {powerShellWorkingDirectory.trim() || 'C:\\'}&gt;
+                        <div className="mt-1.5 overflow-hidden rounded-md border border-[#222] bg-[#050505]">
+                          <div className="border-b border-[#1f1f1f] px-3 py-2 font-mono text-xs text-emerald-300">
+                            [{new Date().toLocaleTimeString('vi-VN', { hour12: false })}] [Admin task/INFO]:
                           </div>
                     <textarea
                       required
@@ -1511,7 +1563,7 @@ export default function RemoteBoothTab() {
                         setPowerShellScript(event.target.value);
                         setDeployError('');
                       }}
-                            className="min-h-64 w-full resize-y border-0 bg-[#020617] px-3 py-3 font-mono text-xs leading-relaxed text-slate-100 outline-none placeholder:text-slate-500"
+                            className="min-h-72 w-full resize-y border-0 bg-[#050505] px-3 py-3 font-mono text-xs leading-relaxed text-slate-100 outline-none placeholder:text-slate-500"
                       spellCheck={false}
                     />
                         </div>
@@ -1528,7 +1580,7 @@ export default function RemoteBoothTab() {
                         setPowerShellScriptPath(event.target.value);
                         setDeployError('');
                       }}
-                            className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                            className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                       />
                         </label>
                         <label className="block text-xs font-bold text-slate-300">
@@ -1537,7 +1589,7 @@ export default function RemoteBoothTab() {
                         placeholder="-Name booth01"
                         value={powerShellArguments}
                         onChange={event => setPowerShellArguments(event.target.value)}
-                            className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                            className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                       />
                         </label>
                       </div>
@@ -1549,7 +1601,7 @@ export default function RemoteBoothTab() {
                     placeholder="D:\\FunStudio"
                     value={powerShellWorkingDirectory}
                     onChange={event => setPowerShellWorkingDirectory(event.target.value)}
-                        className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                        className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                   />
                     </label>
 
@@ -1562,14 +1614,14 @@ export default function RemoteBoothTab() {
                       setPowerShellEnvironmentText(event.target.value);
                       setDeployError('');
                     }}
-                        className="mt-1.5 min-h-24 w-full resize-y rounded-md border border-slate-600 bg-[#020617] px-3 py-2 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                        className="mt-1.5 min-h-24 w-full resize-y rounded-md border border-[#2f2f2f] bg-[#121212] px-3 py-2 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                     spellCheck={false}
                   />
                     </label>
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-gray-700 cursor-pointer">
+                <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-slate-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={waitForResult}
@@ -1581,24 +1633,24 @@ export default function RemoteBoothTab() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">TimeoutSeconds</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">TimeoutSeconds</label>
                     <input
                       type="number"
                       min={1}
                       value={powerShellTimeoutSeconds}
                       onChange={event => setPowerShellTimeoutSeconds(Number(event.target.value))}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6]"
+                      className="w-full h-11 sm:h-10 rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-slate-100 focus:outline-emerald-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">WaitTimeoutSeconds</label>
+                    <label className="block text-xs font-bold text-slate-300 mb-1.5">WaitTimeoutSeconds</label>
                     <input
                       type="number"
                       min={1}
                       value={waitTimeoutSeconds}
                       onChange={event => setWaitTimeoutSeconds(Number(event.target.value))}
                       disabled={!waitForResult}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] disabled:bg-gray-100 disabled:text-gray-400"
+                      className="w-full h-11 sm:h-10 rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-slate-100 focus:outline-emerald-400 disabled:bg-[#181818] disabled:text-slate-500"
                     />
                   </div>
                 </div>
@@ -1770,11 +1822,21 @@ export default function RemoteBoothTab() {
                 </div>
               )}
 
-              <div className="sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 bg-white/95 backdrop-blur border-t border-outline-variant z-10">
+              <div
+                className={
+                  panelMode === 'powershell'
+                    ? 'sticky bottom-0 -mx-3 sm:-mx-4 mt-auto border-t border-[#252525] bg-[#0b0b0b]/95 px-3 py-3 backdrop-blur sm:px-4 z-10'
+                    : 'sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 bg-white/95 backdrop-blur border-t border-outline-variant z-10'
+                }
+              >
                 <button
                   type="submit"
                   disabled={deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || transactionsMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl}
-                  className="w-full h-12 px-5 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 font-bold"
+                  className={`w-full h-12 px-5 text-white cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 font-bold ${
+                    panelMode === 'powershell'
+                      ? 'rounded-md bg-emerald-600 hover:bg-emerald-500'
+                      : 'bg-primary rounded-lg hover:bg-primary-container'
+                  }`}
                 >
                   {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -93,6 +93,7 @@ export interface Booth {
   agentKey?: string | null;
   name: string;
   storeId?: number | string | null;
+  storeName?: string | null;
   lastSyncedAt?: string | null;
   ultraviewId: string;
   relatedStores: string;
@@ -104,6 +105,8 @@ export interface LookupItem {
   agentKey?: string | null;
   name: string;
   storeId?: number | string | null;
+  storeName?: string | null;
+  relatedStores?: string | null;
   lastSyncedAt?: string;
 }
 

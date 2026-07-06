@@ -49,10 +49,13 @@ function mapBooth(item: LookupItem | Booth): Booth {
     agentKey: item.agentKey ?? null,
     name: item.name,
     storeId,
+    storeName: item.storeName ?? null,
     lastSyncedAt: item.lastSyncedAt ?? null,
     ultraviewId: code,
-    relatedStores: 'relatedStores' in item && item.relatedStores
+    relatedStores: item.relatedStores
       ? item.relatedStores
+      : item.storeName
+        ? item.storeName
       : storeId !== null
         ? String(storeId)
         : '',
