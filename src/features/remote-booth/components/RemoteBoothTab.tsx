@@ -923,70 +923,65 @@ export default function RemoteBoothTab() {
 
   return (
     <div className="space-y-5 sm:space-y-6 text-left animate-fadeIn">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900 font-sans">Remote Booth</h2>
           <p className="text-xs text-gray-500 mt-1">Theo dõi agent booth đang online và gửi gói deploy từ xa.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(240px,1fr)_minmax(180px,220px)_auto_auto] gap-2 w-full xl:w-auto">
-          <label className="relative block w-full sm:min-w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={machineSearch}
-              onChange={event => setMachineSearch(event.target.value)}
-              placeholder="Tìm tên booth hoặc mã booth..."
-              className="w-full h-11 sm:h-10 pl-9 pr-9 border border-outline-variant rounded-lg focus:outline-[#004ac6] text-sm sm:text-xs font-medium"
-            />
-            {machineSearch && (
-              <button
-                type="button"
-                onClick={() => setMachineSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-6 sm:w-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 inline-flex items-center justify-center"
-                aria-label="Xóa tìm kiếm"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </label>
-          <select
-            value={storeFilter}
-            onChange={event => setStoreFilter(event.target.value)}
-            className="h-11 sm:h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm sm:text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer"
-          >
-            <option value="">Tất cả store</option>
-            {storeOptions.map(store => (
-              <option key={store.value} value={store.value}>
-                {store.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => machinesQuery.refetch()}
-            disabled={machinesQuery.isFetching}
-            className="h-11 sm:h-10 bg-white border border-outline-variant text-gray-700 hover:bg-[#f3f3fe] px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${machinesQuery.isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => syncBoothsMutation.mutate()}
-            disabled={syncBoothsMutation.isPending}
-            className="h-11 sm:h-10 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
-            Sync Booth
-          </button>
-          <button
-            type="button"
-            onClick={openMultiDeployPanel}
-            disabled={selectedMachines.length === 0}
-            className="h-11 sm:h-10 bg-primary text-white hover:bg-primary-container px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ClipboardList className="w-4 h-4" />
-            Deploy selected ({selectedMachines.length})
-          </button>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(260px,420px)_minmax(180px,240px)]">
+            <label className="relative block w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={machineSearch}
+                onChange={event => setMachineSearch(event.target.value)}
+                placeholder="Tìm tên booth hoặc mã booth..."
+                className="w-full h-11 sm:h-10 pl-9 pr-9 border border-outline-variant rounded-lg focus:outline-[#004ac6] text-sm sm:text-xs font-medium"
+              />
+              {machineSearch && (
+                <button
+                  type="button"
+                  onClick={() => setMachineSearch('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-6 sm:w-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 inline-flex items-center justify-center"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </label>
+            <select
+              value={storeFilter}
+              onChange={event => setStoreFilter(event.target.value)}
+              className="h-11 sm:h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm sm:text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer"
+            >
+              <option value="">Tất cả store</option>
+              {storeOptions.map(store => (
+                <option key={store.value} value={store.value}>
+                  {store.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
+            <button
+              type="button"
+              onClick={() => syncBoothsMutation.mutate()}
+              disabled={syncBoothsMutation.isPending}
+              className="h-11 sm:h-10 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
+              Sync Booth
+            </button>
+            <button
+              type="button"
+              onClick={openMultiDeployPanel}
+              disabled={selectedMachines.length === 0}
+              className="h-11 sm:h-10 bg-primary text-white hover:bg-primary-container px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ClipboardList className="w-4 h-4" />
+              Deploy ({selectedMachines.length})
+            </button>
+          </div>
         </div>
       </div>
 
