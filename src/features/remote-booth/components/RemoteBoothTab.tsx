@@ -631,6 +631,29 @@ export default function RemoteBoothTab() {
     setDeployError('');
   };
 
+  const handleMachineAction = (machine: RemoteMachine, action: string) => {
+    if (!action) return;
+
+    if (action === 'deploy') {
+      openRemotePanel(machine, 'deploy');
+      return;
+    }
+
+    if (action === 'powershell') {
+      openRemotePanel(machine, 'powershell');
+      return;
+    }
+
+    if (action === 'update-agent') {
+      openUpdateAgentServiceTask(machine);
+      return;
+    }
+
+    if (action === 'print') {
+      openRemotePanel(machine, 'print');
+    }
+  };
+
   const openMultiDeployPanel = () => {
     if (selectedMachines.length === 0) {
       toast.error('Vui lòng chọn ít nhất một booth.');
@@ -996,46 +1019,21 @@ export default function RemoteBoothTab() {
                       </span>
                     </td>
                     <td className="py-4 px-5">
-                      <button
-                        type="button"
-                        onClick={() => openRemotePanel(machine, 'deploy')}
-                        className="w-full px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary-container transition-colors inline-flex items-center justify-center gap-1.5 font-bold cursor-pointer"
-                        title="Deploy"
+                      <select
+                        value=""
+                        onChange={event => {
+                          handleMachineAction(machine, event.target.value);
+                          event.currentTarget.value = '';
+                        }}
+                        className="h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer"
+                        aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                       >
-                        <Play className="w-3.5 h-3.5" />
-                        Deploy
-                      </button>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openRemotePanel(machine, 'powershell')}
-                          className="px-3 py-2 border border-outline-variant bg-white text-gray-700 rounded-lg hover:bg-[#f3f3fe] transition-colors inline-flex items-center justify-center gap-1.5 font-bold cursor-pointer"
-                          title="PowerShell"
-                        >
-                          <Terminal className="w-3.5 h-3.5" />
-                          PowerShell
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openUpdateAgentServiceTask(machine)}
-                          className="px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center justify-center gap-1.5 font-bold cursor-pointer"
-                          title="update agent service"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                          Update Agent
-                        </button>
-                      </div>
-                      <div className="mt-2 grid grid-cols-1 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openRemotePanel(machine, 'print')}
-                          className="px-3 py-2 border border-outline-variant bg-white text-gray-700 rounded-lg hover:bg-[#f3f3fe] transition-colors inline-flex items-center justify-center gap-1.5 font-bold cursor-pointer"
-                          title="Print Image"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          Print Image
-                        </button>
-                      </div>
+                        <option value="">Chọn thao tác</option>
+                        <option value="deploy">Deploy</option>
+                        <option value="powershell">PowerShell</option>
+                        <option value="update-agent">Update Agent Service</option>
+                        <option value="print">Print Image</option>
+                      </select>
                     </td>
                   </tr>
                 ))
@@ -1119,44 +1117,21 @@ export default function RemoteBoothTab() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openRemotePanel(machine, 'deploy')}
-                      className="h-11 px-2 bg-primary text-white rounded-lg hover:bg-primary-container transition-colors inline-flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
-                      title="Deploy"
-                    >
-                      <Play className="w-3.5 h-3.5" />
-                      Deploy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openRemotePanel(machine, 'powershell')}
-                      className="h-11 px-2 border border-outline-variant bg-white text-gray-700 rounded-lg hover:bg-[#f3f3fe] transition-colors inline-flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
-                      title="PowerShell"
-                    >
-                      <Terminal className="w-3.5 h-3.5" />
-                      PS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openUpdateAgentServiceTask(machine)}
-                      className="h-11 px-2 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
-                      title="update agent service"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Agent
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openRemotePanel(machine, 'print')}
-                      className="h-11 px-2 border border-outline-variant bg-white text-gray-700 rounded-lg hover:bg-[#f3f3fe] transition-colors inline-flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
-                      title="Print Image"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      Print
-                    </button>
-                  </div>
+                  <select
+                    value=""
+                    onChange={event => {
+                      handleMachineAction(machine, event.target.value);
+                      event.currentTarget.value = '';
+                    }}
+                    className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm font-bold text-gray-700 focus:outline-primary cursor-pointer"
+                    aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
+                  >
+                    <option value="">Chọn thao tác</option>
+                    <option value="deploy">Deploy</option>
+                    <option value="powershell">PowerShell</option>
+                    <option value="update-agent">Update Agent Service</option>
+                    <option value="print">Print Image</option>
+                  </select>
                 </article>
               ))}
             </div>
