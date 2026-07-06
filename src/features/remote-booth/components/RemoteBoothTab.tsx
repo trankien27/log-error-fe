@@ -1503,33 +1503,33 @@ export default function RemoteBoothTab() {
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Kiểu chạy</label>
+                  <label className="block text-xs font-bold text-gray-600">
+                    Kiểu chạy
                     <select
                       value={powerShellMode}
                       onChange={event => setPowerShellMode(event.target.value as RemotePowerShellMode)}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white text-xs font-bold"
+                      className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white text-xs"
                     >
                       <option value="inline">Inline script</option>
                       <option value="file">File .ps1</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Run as</label>
+                  </label>
+                  <label className="block text-xs font-bold text-gray-600">
+                    Run as
                     <select
                       value={powerShellRunAs}
                       onChange={event => setPowerShellRunAs(event.target.value as RemotePowerShellRunAs)}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white text-xs font-bold"
+                      className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white text-xs"
                     >
                       <option value="admin">Admin</option>
                       <option value="user">User</option>
                     </select>
-                  </div>
+                  </label>
                 </div>
 
                 {powerShellMode === 'inline' ? (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Command</label>
+                  <label className="block text-xs font-bold text-gray-600">
+                    Command
                     <textarea
                       required
                       value={powerShellScript}
@@ -1537,14 +1537,14 @@ export default function RemoteBoothTab() {
                         setPowerShellScript(event.target.value);
                         setDeployError('');
                       }}
-                      className="min-h-72 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs leading-relaxed focus:outline-[#004ac6]"
+                      className="mt-1.5 min-h-72 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs leading-relaxed focus:outline-[#004ac6]"
                       spellCheck={false}
                     />
-                  </div>
+                  </label>
                 ) : (
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1.5">ScriptPath</label>
+                    <label className="block text-xs font-bold text-gray-600">
+                      ScriptPath
                       <input
                         required
                         placeholder="D:\\FunStudio\\scripts\\test.ps1"
@@ -1553,33 +1553,33 @@ export default function RemoteBoothTab() {
                           setPowerShellScriptPath(event.target.value);
                           setDeployError('');
                         }}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                        className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1.5">Arguments</label>
+                    </label>
+                    <label className="block text-xs font-bold text-gray-600">
+                      Arguments
                       <input
                         placeholder="-Name booth01"
                         value={powerShellArguments}
                         onChange={event => setPowerShellArguments(event.target.value)}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                        className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
                       />
-                    </div>
+                    </label>
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5">WorkingDirectory</label>
+                <label className="block text-xs font-bold text-gray-600">
+                  WorkingDirectory
                   <input
                     placeholder="D:\\FunStudio"
                     value={powerShellWorkingDirectory}
                     onChange={event => setPowerShellWorkingDirectory(event.target.value)}
-                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                    className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5">Environment Variables</label>
+                <label className="block text-xs font-bold text-gray-600">
+                  Environment Variables
                   <textarea
                     placeholder={'KEY=VALUE\nTEST=123'}
                     value={powerShellEnvironmentText}
@@ -1587,10 +1587,10 @@ export default function RemoteBoothTab() {
                       setPowerShellEnvironmentText(event.target.value);
                       setDeployError('');
                     }}
-                    className="min-h-24 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs focus:outline-[#004ac6]"
+                    className="mt-1.5 min-h-24 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs focus:outline-[#004ac6]"
                     spellCheck={false}
                   />
-                </div>
+                </label>
 
                 <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-gray-700 cursor-pointer">
                   <input
