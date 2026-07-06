@@ -53,6 +53,24 @@ export default function BoothsTab() {
     },
   });
 
+  const generateAgentKeyMutation = useMutation({
+    mutationFn: boothsService.generateAgentKey,
+    onSuccess: response => {
+      const key = String(response.agentKey || response.AgentKey || response.key || '');
+      if (!key) {
+        toast.error('Không tạo được AgentKey.');
+        return;
+      }
+
+      setViewAgentKey(key);
+      toast.success('Đã tạo AgentKey.');
+      fetchBooths();
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Không thể tạo AgentKey.');
+    },
+  });
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       fetchBooths();
@@ -132,9 +150,14 @@ export default function BoothsTab() {
   };
 
   const closeAgentKeyModal = () => {
-    if (viewAgentKeyMutation.isPending) return;
+    if (viewAgentKeyMutation.isPending || generateAgentKeyMutation.isPending) return;
     setAgentKeyBooth(null);
     setViewAgentKey('');
+  };
+
+  const handleGenerateAgentKey = () => {
+    if (!agentKeyBooth) return;
+    generateAgentKeyMutation.mutate(agentKeyBooth.id);
   };
 
   const copyToClipboard = async (text: string, successMessage: string) => {
@@ -456,13 +479,24 @@ export default function BoothsTab() {
                   <button
                     type="button"
                     onClick={closeAgentKeyModal}
+                    disabled={generateAgentKeyMutation.isPending}
                     className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
                   >
                     Đóng
                   </button>
                   <button
                     type="button"
+                    onClick={handleGenerateAgentKey}
+                    disabled={generateAgentKeyMutation.isPending}
+                    className="px-5 py-2 border border-amber-200 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 cursor-pointer inline-flex items-center justify-center gap-2 font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                    Tạo nếu chưa có
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => copyToClipboard(viewAgentKey, 'Đã sao chép AgentKey.')}
+                    disabled={generateAgentKeyMutation.isPending}
                     className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer inline-flex items-center justify-center gap-2 font-bold"
                   >
                     <Copy className="w-4 h-4" />
@@ -471,8 +505,17 @@ export default function BoothsTab() {
                 </div>
               </div>
             ) : (
-              <div className="py-8 text-center text-sm font-bold text-red-500">
-                Không có AgentKey để hiển thị.
+              <div className="py-8 text-center">
+                <p className="text-sm font-bold text-red-500">Booth này chưa có AgentKey.</p>
+                <button
+                  type="button"
+                  onClick={handleGenerateAgentKey}
+                  disabled={generateAgentKeyMutation.isPending}
+                  className="mt-4 px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer inline-flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                  Gen key
+                </button>
               </div>
             )}
           </div>

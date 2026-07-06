@@ -11,6 +11,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -31,6 +32,7 @@ import {
   WorkScheduleDto,
   WorkScheduleWeekUserDto,
 } from '../../../types';
+import MonthlySuggestionModal from './MonthlySuggestionModal';
 import QuickArrangeScheduleButton from '../../work-schedules/components/QuickArrangeScheduleButton';
 
 type DraftPanel = {
@@ -120,6 +122,18 @@ function getCellKey(userId: string, workDate: string) {
   return `${userId}_${workDate}`;
 }
 
+function getSchedulesForDate(row: WorkScheduleWeekUserDto, workDate: string) {
+  return row.schedules
+    .filter(item => item.workDate === workDate)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+}
+
+function getSchedulesTotalHours(schedules: WorkScheduleDto[]) {
+  return schedules.reduce((total, schedule) => (
+    total + (schedule.paidWorkingHours || schedule.workingHours || 0)
+  ), 0);
+}
+
 function getOvertimeStatusLabel(status: OvertimeStatus) {
   if (status === 1) return 'Chờ duyệt';
   if (status === 2) return 'Đã duyệt';
@@ -199,6 +213,7 @@ export default function ScheduleTab() {
   const [reportUserId, setReportUserId] = useState('');
   const [isOvertimeExportModalOpen, setIsOvertimeExportModalOpen] = useState(false);
   const [isExportingOvertime, setIsExportingOvertime] = useState(false);
+  const [isMonthlySuggestionOpen, setIsMonthlySuggestionOpen] = useState(false);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -251,7 +266,7 @@ export default function ScheduleTab() {
   const visibleTotalWorkingHours = useMemo(() => {
     return filteredRows.reduce((total, row) => {
       const rowTotal = (weekSchedule?.days || []).reduce((rowSum, day) => {
-        const schedule = row.schedules.find(item => item.workDate === day.date);
+        const schedules = getSchedulesForDate(row, day.date);
         const draft = cellDrafts[getCellKey(row.userId, day.date)];
 
         if (draft) {
@@ -259,7 +274,7 @@ export default function ScheduleTab() {
           return rowSum + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
         }
 
-        return rowSum + (schedule?.paidWorkingHours || schedule?.workingHours || 0);
+        return rowSum + getSchedulesTotalHours(schedules);
       }, 0);
 
       return total + rowTotal;
@@ -772,7 +787,7 @@ export default function ScheduleTab() {
 
   const getRowTotalHours = (row: WorkScheduleWeekUserDto) => {
     return (weekSchedule?.days || []).reduce((total, day) => {
-      const schedule = row.schedules.find(item => item.workDate === day.date);
+      const schedules = getSchedulesForDate(row, day.date);
       const draft = cellDrafts[getCellKey(row.userId, day.date)];
 
       if (draft) {
@@ -780,12 +795,13 @@ export default function ScheduleTab() {
         return total + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
       }
 
-      return total + (schedule?.paidWorkingHours || schedule?.workingHours || 0);
+      return total + getSchedulesTotalHours(schedules);
     }, 0);
   };
 
   const renderMobileScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
-    const schedule = row.schedules.find(item => item.workDate === date);
+    const schedules = getSchedulesForDate(row, date);
+    const schedule = schedules[0];
     const cellKey = getCellKey(row.userId, date);
     const draft = cellDrafts[cellKey];
     const effectiveShiftId = draft ? draft.shiftId : schedule ? String(schedule.shiftId) : '';
@@ -796,7 +812,25 @@ export default function ScheduleTab() {
 
     return (
       <div className={`flex min-w-0 flex-1 flex-col items-end gap-2 text-right ${hasDraft ? 'text-primary' : ''}`}>
-        {effectiveShift ? (
+        {!draft && schedules.length > 0 ? (
+          <div className="w-full space-y-2">
+            {schedules.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                disabled={!canManageSchedule || isSaving}
+                onClick={() => openEditPanel(item, row)}
+                className={`relative w-full rounded border px-3 py-2 text-left text-xs font-black leading-tight ${getShiftClass(item.shiftCode)} ${
+                  canManageSchedule ? 'cursor-pointer' : 'cursor-default'
+                }`}
+              >
+                <span className="block pr-7">Ca {item.shiftCode} - {item.shiftName}</span>
+                <span className="mt-0.5 block text-[11px] font-bold">{getScheduleHours(item)}</span>
+                {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
+              </button>
+            ))}
+          </div>
+        ) : effectiveShift ? (
           <button
             type="button"
             disabled={!canManageSchedule || isSaving}
@@ -863,7 +897,8 @@ export default function ScheduleTab() {
   };
 
   const renderScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
-    const schedule = row.schedules.find(item => item.workDate === date);
+    const schedules = getSchedulesForDate(row, date);
+    const schedule = schedules[0];
     const cellKey = getCellKey(row.userId, date);
     const draft = cellDrafts[cellKey];
     const effectiveShiftId = draft ? draft.shiftId : schedule ? String(schedule.shiftId) : '';
@@ -876,7 +911,23 @@ export default function ScheduleTab() {
 
       return (
         <div key={date} className={`min-h-[112px] w-full p-2 flex flex-col items-center justify-center gap-2 ${hasDraft ? 'bg-blue-50/70' : ''}`}>
-          {effectiveShift ? (
+          {!draft && schedules.length > 0 ? (
+            <div className="w-full max-w-[118px] space-y-1.5">
+              {schedules.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  disabled={isSaving}
+                  onClick={() => openEditPanel(item, row)}
+                  className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
+                >
+                  <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-500" />
+                  Ca {item.shiftCode}
+                  <span className="block text-[9px] font-bold">{getScheduleHours(item)}</span>
+                </button>
+              ))}
+            </div>
+          ) : effectiveShift ? (
             <span className={`relative block w-full max-w-[118px] rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(effectiveShift.code)}`}>
               <button
                 type="button"
@@ -897,7 +948,7 @@ export default function ScheduleTab() {
             </span>
           )}
 
-          {effectiveShift ? null : isDeletedDraft ? (
+          {effectiveShift || schedules.length > 0 ? null : isDeletedDraft ? (
             <button
               type="button"
               disabled={isSaving}
@@ -927,7 +978,7 @@ export default function ScheduleTab() {
       );
     }
 
-    if (!schedule) {
+    if (schedules.length === 0) {
       return (
         <div
           key={date}
@@ -940,22 +991,29 @@ export default function ScheduleTab() {
     }
 
     return (
-      <button
+      <div
         key={date}
-        type="button"
-        onClick={() => openEditPanel(schedule, row)}
-        disabled={!canManageSchedule}
         className={`h-full min-h-[112px] w-full flex flex-col items-center justify-center gap-2 p-2 transition-colors ${
           canManageSchedule ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default'
         }`}
       >
-        <span className={`relative block w-full max-w-[118px] rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(schedule.shiftCode)}`}>
-          {canManageSchedule && <Edit2 className="absolute right-1.5 top-1.5 w-3 h-3 text-gray-400" />}
-          Ca {schedule.shiftCode}
-          <span className="block text-[9px] font-bold">{getScheduleHours(schedule)}</span>
-        </span>
+        <div className="w-full max-w-[118px] space-y-1.5">
+          {schedules.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => openEditPanel(item, row)}
+              disabled={!canManageSchedule}
+              className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
+            >
+              {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-400" />}
+              Ca {item.shiftCode}
+              <span className="block text-[9px] font-bold">{getScheduleHours(item)}</span>
+            </button>
+          ))}
+        </div>
         {renderOvertimeBadges(cellOvertimeRequests)}
-      </button>
+      </div>
     );
   };
 
@@ -1040,6 +1098,15 @@ export default function ScheduleTab() {
               {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               Xuất Excel
             </button>
+            <button
+              type="button"
+              onClick={() => setIsMonthlySuggestionOpen(true)}
+              disabled={!canManageSchedule}
+              className="h-11 px-5 rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-bold inline-flex items-center gap-2 shadow-sm hover:bg-emerald-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-4 h-4" />
+              Đề xuất lịch tháng
+            </button>
             <QuickArrangeScheduleButton
               users={scheduleUsers}
               disabled={!canManageSchedule}
@@ -1084,6 +1151,15 @@ export default function ScheduleTab() {
             </div>
           </div>
         </div>
+
+        <MonthlySuggestionModal
+          open={isMonthlySuggestionOpen}
+          users={scheduleUsers}
+          shifts={activeShifts}
+          initialDate={selectedDate}
+          onClose={() => setIsMonthlySuggestionOpen(false)}
+          onSuccess={reload}
+        />
 
         <div className="px-4 lg:px-6 py-4 border-b border-outline-variant">
           <div className="flex flex-wrap items-center gap-4">
@@ -1213,13 +1289,13 @@ export default function ScheduleTab() {
                       ))}
                       <td className="border border-outline-variant text-center text-base font-semibold">
                         {(weekSchedule?.days || []).reduce((total, day) => {
-                          const schedule = row.schedules.find(item => item.workDate === day.date);
+                          const schedules = getSchedulesForDate(row, day.date);
                           const draft = cellDrafts[getCellKey(row.userId, day.date)];
                           if (draft) {
                             const draftShift = activeShifts.find(shift => String(shift.id) === draft.shiftId);
                             return total + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
                           }
-                          return total + (schedule?.paidWorkingHours || schedule?.workingHours || 0);
+                          return total + getSchedulesTotalHours(schedules);
                         }, 0).toFixed(1)}h
                       </td>
                     </tr>

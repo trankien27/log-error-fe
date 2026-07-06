@@ -375,6 +375,86 @@ export interface UpdateWorkScheduleStatusRequest {
   note?: string | null;
 }
 
+export interface MonthlyUnwantedShiftRuleRequest {
+  shiftId: number;
+  weekdays: number[];
+  dates: string[];
+}
+
+export interface MonthlyEmployeeRuleRequest {
+  userId: string;
+  unavailableWeekdays: number[];
+  unavailableDates: string[];
+  unwantedShiftRules: MonthlyUnwantedShiftRuleRequest[];
+}
+
+export interface MonthlySuggestionPreviewRequest {
+  year: number;
+  month: number;
+  userIds: string[];
+  shiftIds: number[];
+  monthlyOffDays: number;
+  monthlyTargetHours?: number | null;
+  overwriteExisting: boolean;
+  employeeRules: MonthlyEmployeeRuleRequest[];
+}
+
+export interface MonthlySuggestionDay {
+  date: string;
+  shiftId?: number | null;
+  shiftCode?: string | null;
+  shiftName?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  totalHours: number;
+  isOff: boolean;
+  isExisting: boolean;
+  isGenerated: boolean;
+  warnings: string[];
+}
+
+export interface MonthlySuggestionUser {
+  userId: string;
+  userName: string;
+  days: MonthlySuggestionDay[];
+  summary: {
+    workingDays: number;
+    offDays: number;
+    totalHours: number;
+    warningCount: number;
+  };
+  warnings: string[];
+}
+
+export interface MonthlySuggestionPreviewResponse {
+  year: number;
+  month: number;
+  monthlyOffDays: number;
+  monthlyTargetHours?: number | null;
+  users: MonthlySuggestionUser[];
+  warnings: string[];
+}
+
+export interface MonthlySuggestionApplyRequest {
+  year: number;
+  month: number;
+  monthlyOffDays?: number | null;
+  monthlyTargetHours?: number | null;
+  overwriteExisting: boolean;
+  items: Array<{
+    userId: string;
+    workDate: string;
+    shiftId?: number | null;
+  }>;
+}
+
+export interface MonthlySuggestionApplyResponse {
+  created: number;
+  deletedExisting: number;
+  items: WorkScheduleDto[];
+  warnings: string[];
+}
+
 export type TabType =
   | 'overview'
   | 'error_logs'

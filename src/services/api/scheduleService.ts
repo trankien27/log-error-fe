@@ -11,6 +11,10 @@ import {
   UpdateWorkScheduleRequest,
   UpdateWorkScheduleStatusRequest,
   MonthlyWorkScheduleStats,
+  MonthlySuggestionApplyRequest,
+  MonthlySuggestionApplyResponse,
+  MonthlySuggestionPreviewRequest,
+  MonthlySuggestionPreviewResponse,
   WorkScheduleWeekResponse,
   WorkScheduleDto,
 } from '../../types';
@@ -147,5 +151,13 @@ export const scheduleService = {
 
   copyWeek: (request: CopyWeekWorkScheduleRequest): Promise<BulkCreateResponse> => {
     return apiClient.post<BulkCreateResponse>('/api/work-schedules/copy-week', request);
+  },
+
+  previewMonthlySuggestion: (request: MonthlySuggestionPreviewRequest): Promise<MonthlySuggestionPreviewResponse> => {
+    return apiClient.post<MonthlySuggestionPreviewResponse>('/api/work-schedules/monthly-suggestions/preview', request);
+  },
+
+  applyMonthlySuggestion: (request: MonthlySuggestionApplyRequest): Promise<MonthlySuggestionApplyResponse> => {
+    return apiClient.post<MonthlySuggestionApplyResponse>('/api/work-schedules/monthly-suggestions/apply', request);
   },
 };

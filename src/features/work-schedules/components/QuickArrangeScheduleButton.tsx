@@ -20,9 +20,8 @@ export default function QuickArrangeScheduleButton({ users, disabled = false, on
         icon={<ThunderboltOutlined />}
         disabled={disabled}
         onClick={() => setOpen(true)}
-      >
-        Sắp xếp lịch nhanh
-      </Button>
+        aria-label="Tự xếp lịch"
+      />
       <AutoArrangeScheduleModal
         open={open}
         users={users}
