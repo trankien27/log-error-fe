@@ -296,6 +296,7 @@ export default function RemoteBoothTab() {
   const [multiDeployMachines, setMultiDeployMachines] = useState<RemoteMachine[]>([]);
   const [selectedMachineCodes, setSelectedMachineCodes] = useState<string[]>([]);
   const [machineSearch, setMachineSearch] = useState('');
+  const [storeFilter, setStoreFilter] = useState('');
   const [panelMode, setPanelMode] = useState<RemotePanelMode>('deploy');
   const [taskType, setTaskType] = useState<RemoteDeployTaskType>('update-version');
   const [updateVersionMode, setUpdateVersionMode] = useState<'api' | 'manual'>('api');
@@ -348,13 +349,44 @@ export default function RemoteBoothTab() {
     return map;
   }, [boothsQuery.data]);
 
+  const boothsByMachineCode = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof boothsQuery.data>[number]>();
+    (boothsQuery.data ?? []).forEach(booth => {
+      if (booth.id) map.set(String(booth.id).toLowerCase(), booth);
+      if (booth.code) map.set(String(booth.code).toLowerCase(), booth);
+      if (booth.ultraviewId) map.set(String(booth.ultraviewId).toLowerCase(), booth);
+    });
+    return map;
+  }, [boothsQuery.data]);
+
+  const storeOptions = useMemo(() => {
+    const values = new Set<string>();
+    (boothsQuery.data ?? []).forEach(booth => {
+      const storeValue = booth.storeId ?? booth.relatedStores;
+      if (storeValue !== null && storeValue !== undefined && String(storeValue).trim()) {
+        values.add(String(storeValue).trim());
+      }
+    });
+    return Array.from(values).sort((left, right) => left.localeCompare(right, 'vi'));
+  }, [boothsQuery.data]);
+
   const machines = useMemo(() => machinesQuery.data?.machines ?? [], [machinesQuery.data]);
   const getMachineBoothName = (machine: RemoteMachine) => boothsByCode.get(machine.machineCode.toLowerCase()) || '';
+  const getMachineBooth = (machine: RemoteMachine) => boothsByMachineCode.get(machine.machineCode.toLowerCase());
   const filteredMachines = useMemo(() => {
     const keyword = machineSearch.trim().toLowerCase();
-    if (!keyword) return machines;
 
     return machines.filter(machine => {
+      const booth = getMachineBooth(machine);
+      if (storeFilter) {
+        const boothStore = booth?.storeId ?? booth?.relatedStores ?? '';
+        if (String(boothStore) !== storeFilter) {
+          return false;
+        }
+      }
+
+      if (!keyword) return true;
+
       const boothName = getMachineBoothName(machine).toLowerCase();
       return [
         machine.machineCode,
@@ -366,7 +398,7 @@ export default function RemoteBoothTab() {
         .filter(Boolean)
         .some(value => String(value).toLowerCase().includes(keyword));
     });
-  }, [boothsByCode, machineSearch, machines]);
+  }, [boothsByCode, boothsByMachineCode, machineSearch, machines, storeFilter]);
   const selectedMachineCodeSet = useMemo(() => new Set(selectedMachineCodes), [selectedMachineCodes]);
   const selectedMachines = useMemo(
     () => machines.filter(machine => selectedMachineCodeSet.has(machine.machineCode)),
@@ -882,7 +914,7 @@ export default function RemoteBoothTab() {
           <h2 className="text-xl font-bold text-gray-900 font-sans">Remote Booth</h2>
           <p className="text-xs text-gray-500 mt-1">Theo dõi agent booth đang online và gửi gói deploy từ xa.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(260px,1fr)_auto_auto] gap-2 w-full xl:w-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-[minmax(240px,1fr)_minmax(180px,220px)_auto_auto] gap-2 w-full xl:w-auto">
           <label className="relative block w-full sm:min-w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -902,6 +934,18 @@ export default function RemoteBoothTab() {
               </button>
             )}
           </label>
+          <select
+            value={storeFilter}
+            onChange={event => setStoreFilter(event.target.value)}
+            className="h-11 sm:h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm sm:text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer"
+          >
+            <option value="">Tất cả store</option>
+            {storeOptions.map(store => (
+              <option key={store} value={store}>
+                Store {store}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             onClick={() => machinesQuery.refetch()}
@@ -1389,34 +1433,56 @@ export default function RemoteBoothTab() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Kiểu chạy</label>
+                <div className="overflow-hidden rounded-xl border border-slate-700 bg-[#0c1222] shadow-inner">
+                  <div className="flex items-center justify-between border-b border-slate-700 bg-[#111827] px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className="h-3 w-3 rounded-full bg-red-500" />
+                      <span className="h-3 w-3 rounded-full bg-yellow-400" />
+                      <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                      <span className="ml-2 text-xs font-black text-slate-200">Windows PowerShell</span>
+                    </div>
+                    <span className={`rounded px-2 py-1 text-[10px] font-black ${
+                      powerShellRunAs === 'admin'
+                        ? 'bg-red-500/15 text-red-200'
+                        : 'bg-sky-500/15 text-sky-200'
+                    }`}>
+                      {powerShellRunAs === 'admin' ? 'ADMIN' : 'USER'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 p-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="block text-xs font-bold text-slate-300">
+                        Kiểu chạy
                     <select
                       value={powerShellMode}
                       onChange={event => setPowerShellMode(event.target.value as RemotePowerShellMode)}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white"
+                          className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
                     >
                       <option value="inline">Inline script</option>
                       <option value="file">File .ps1</option>
                     </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Run as</label>
+                      </label>
+                      <label className="block text-xs font-bold text-slate-300">
+                        Run as
                     <select
                       value={powerShellRunAs}
                       onChange={event => setPowerShellRunAs(event.target.value as RemotePowerShellRunAs)}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white"
+                          className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
                     >
                       <option value="admin">Admin</option>
                       <option value="user">User</option>
                     </select>
-                  </div>
-                </div>
+                      </label>
+                    </div>
 
                 {powerShellMode === 'inline' ? (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Script *</label>
+                      <label className="block text-xs font-bold text-slate-300">
+                        Command
+                        <div className="mt-1.5 overflow-hidden rounded-md border border-slate-700 bg-[#020617]">
+                          <div className="border-b border-slate-800 px-3 py-2 font-mono text-xs text-emerald-300">
+                            PS {powerShellWorkingDirectory.trim() || 'C:\\'}&gt;
+                          </div>
                     <textarea
                       required
                       value={powerShellScript}
@@ -1424,14 +1490,15 @@ export default function RemoteBoothTab() {
                         setPowerShellScript(event.target.value);
                         setDeployError('');
                       }}
-                      className="w-full min-h-44 px-3 py-2 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs resize-y"
+                            className="min-h-64 w-full resize-y border-0 bg-[#020617] px-3 py-3 font-mono text-xs leading-relaxed text-slate-100 outline-none placeholder:text-slate-500"
                       spellCheck={false}
                     />
-                  </div>
+                        </div>
+                      </label>
                 ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1.5">ScriptPath *</label>
+                      <div className="space-y-3">
+                        <label className="block text-xs font-bold text-slate-300">
+                          ScriptPath
                       <input
                         required
                         placeholder="D:\\FunStudio\\scripts\\test.ps1"
@@ -1440,33 +1507,33 @@ export default function RemoteBoothTab() {
                         setPowerShellScriptPath(event.target.value);
                         setDeployError('');
                       }}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                            className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                       />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-600 mb-1.5">Arguments</label>
+                        </label>
+                        <label className="block text-xs font-bold text-slate-300">
+                          Arguments
                       <input
                         placeholder="-Name booth01"
                         value={powerShellArguments}
                         onChange={event => setPowerShellArguments(event.target.value)}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                            className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                       />
-                    </div>
-                  </div>
+                        </label>
+                      </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5">WorkingDirectory</label>
+                    <label className="block text-xs font-bold text-slate-300">
+                      WorkingDirectory
                   <input
                     placeholder="D:\\FunStudio"
                     value={powerShellWorkingDirectory}
                     onChange={event => setPowerShellWorkingDirectory(event.target.value)}
-                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
+                        className="mt-1.5 h-10 w-full rounded-md border border-slate-600 bg-[#020617] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                   />
-                </div>
+                    </label>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5">Environment Variables</label>
+                    <label className="block text-xs font-bold text-slate-300">
+                      Environment Variables
                   <textarea
                     placeholder={'KEY=VALUE\nTEST=123'}
                     value={powerShellEnvironmentText}
@@ -1474,9 +1541,11 @@ export default function RemoteBoothTab() {
                       setPowerShellEnvironmentText(event.target.value);
                       setDeployError('');
                     }}
-                    className="w-full min-h-24 px-3 py-2 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs resize-y"
+                        className="mt-1.5 min-h-24 w-full resize-y rounded-md border border-slate-600 bg-[#020617] px-3 py-2 font-mono text-xs text-slate-100 focus:outline-emerald-400"
                     spellCheck={false}
                   />
+                    </label>
+                  </div>
                 </div>
 
                 <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-gray-700 cursor-pointer">
