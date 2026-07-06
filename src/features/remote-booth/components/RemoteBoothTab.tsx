@@ -599,6 +599,18 @@ export default function RemoteBoothTab() {
     },
   });
 
+  const syncBoothsMutation = useMutation({
+    mutationFn: boothsService.syncBooths,
+    onSuccess: result => {
+      boothsQuery.refetch();
+      machinesQuery.refetch();
+      toast.success(`Đã sync booth: +${result.added}, cập nhật ${result.updated}, xóa ${result.deleted}.`);
+    },
+    onError: error => {
+      toast.error(getErrorMessage(error, 'Không thể sync booth.'));
+    },
+  });
+
   const resetPowerShellForm = () => {
     setPowerShellMode('inline');
     setPowerShellRunAs('admin');
@@ -954,6 +966,15 @@ export default function RemoteBoothTab() {
           >
             <RefreshCw className={`w-4 h-4 ${machinesQuery.isFetching ? 'animate-spin' : ''}`} />
             Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => syncBoothsMutation.mutate()}
+            disabled={syncBoothsMutation.isPending}
+            className="h-11 sm:h-10 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
+            Sync Booth
           </button>
           <button
             type="button"

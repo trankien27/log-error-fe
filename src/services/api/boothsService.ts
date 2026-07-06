@@ -15,6 +15,13 @@ export interface AgentKeyResponse {
   [key: string]: unknown;
 }
 
+export interface SyncBoothsResponse {
+  added: number;
+  updated: number;
+  deleted: number;
+  total: number;
+}
+
 function buildBoothsQuery({ search, storeId, pageIndex = 0, pageSize = 50 }: BoothsQuery = {}) {
   const params = new URLSearchParams({
     pageIndex: String(pageIndex),
@@ -66,6 +73,10 @@ export const boothsService = {
     const result = await boothsService.getPage(query);
 
     return result.items;
+  },
+
+  syncBooths: async (): Promise<SyncBoothsResponse> => {
+    return apiClient.post<SyncBoothsResponse>('/api/booths/sync');
   },
 
   search: async (name: string, pageIndex = 0, pageSize = 20): Promise<PagedResult<LookupItem>> => {
