@@ -1502,55 +1502,34 @@ export default function RemoteBoothTab() {
                   </div>
                 )}
 
-                <div className="overflow-hidden rounded-md border border-[#222] bg-[#070707] shadow-inner">
-                  <div className="flex items-center justify-between border-b border-[#222] bg-[#0f0f0f] px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-300">
-                        PS {powerShellWorkingDirectory.trim() || 'C:\\'}&gt;
-                      </span>
-                    </div>
-                    <span className={`rounded px-2 py-1 text-[10px] font-black ${
-                      powerShellRunAs === 'admin'
-                        ? 'bg-red-500/15 text-red-200'
-                        : 'bg-sky-500/15 text-sky-200'
-                    }`}>
-                      {powerShellRunAs === 'admin' ? 'ADMIN' : 'USER'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 p-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <label className="block text-xs font-bold text-slate-300">
-                        Kiểu chạy
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Kiểu chạy</label>
                     <select
                       value={powerShellMode}
                       onChange={event => setPowerShellMode(event.target.value as RemotePowerShellMode)}
-                          className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
+                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white text-xs font-bold"
                     >
                       <option value="inline">Inline script</option>
                       <option value="file">File .ps1</option>
                     </select>
-                      </label>
-                      <label className="block text-xs font-bold text-slate-300">
-                        Run as
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Run as</label>
                     <select
                       value={powerShellRunAs}
                       onChange={event => setPowerShellRunAs(event.target.value as RemotePowerShellRunAs)}
-                          className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-xs font-bold text-slate-100 focus:outline-emerald-400"
+                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] bg-white text-xs font-bold"
                     >
                       <option value="admin">Admin</option>
                       <option value="user">User</option>
                     </select>
-                      </label>
-                    </div>
+                  </div>
+                </div>
 
                 {powerShellMode === 'inline' ? (
-                      <label className="block text-xs font-bold text-slate-300">
-                        Command
-                        <div className="mt-1.5 overflow-hidden rounded-md border border-[#222] bg-[#050505]">
-                          <div className="border-b border-[#1f1f1f] px-3 py-2 font-mono text-xs text-emerald-300">
-                            [{new Date().toLocaleTimeString('vi-VN', { hour12: false })}] [Admin task/INFO]:
-                          </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5">Command</label>
                     <textarea
                       required
                       value={powerShellScript}
@@ -1558,50 +1537,49 @@ export default function RemoteBoothTab() {
                         setPowerShellScript(event.target.value);
                         setDeployError('');
                       }}
-                            className="min-h-72 w-full resize-y border-0 bg-[#050505] px-3 py-3 font-mono text-xs leading-relaxed text-slate-100 outline-none placeholder:text-slate-500"
+                      className="min-h-72 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs leading-relaxed focus:outline-[#004ac6]"
                       spellCheck={false}
                     />
-                        </div>
-                      </label>
+                  </div>
                 ) : (
-                      <div className="space-y-3">
-                        <label className="block text-xs font-bold text-slate-300">
-                          ScriptPath
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1.5">ScriptPath</label>
                       <input
                         required
                         placeholder="D:\\FunStudio\\scripts\\test.ps1"
                         value={powerShellScriptPath}
-                      onChange={event => {
-                        setPowerShellScriptPath(event.target.value);
-                        setDeployError('');
-                      }}
-                            className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                        onChange={event => {
+                          setPowerShellScriptPath(event.target.value);
+                          setDeployError('');
+                        }}
+                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
                       />
-                        </label>
-                        <label className="block text-xs font-bold text-slate-300">
-                          Arguments
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1.5">Arguments</label>
                       <input
                         placeholder="-Name booth01"
                         value={powerShellArguments}
                         onChange={event => setPowerShellArguments(event.target.value)}
-                            className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
                       />
-                        </label>
-                      </div>
+                    </div>
+                  </div>
                 )}
 
-                    <label className="block text-xs font-bold text-slate-300">
-                      WorkingDirectory
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">WorkingDirectory</label>
                   <input
                     placeholder="D:\\FunStudio"
                     value={powerShellWorkingDirectory}
                     onChange={event => setPowerShellWorkingDirectory(event.target.value)}
-                        className="mt-1.5 h-10 w-full rounded-md border border-[#2f2f2f] bg-[#121212] px-3 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] font-mono text-xs"
                   />
-                    </label>
+                </div>
 
-                    <label className="block text-xs font-bold text-slate-300">
-                      Environment Variables
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1.5">Environment Variables</label>
                   <textarea
                     placeholder={'KEY=VALUE\nTEST=123'}
                     value={powerShellEnvironmentText}
@@ -1609,14 +1587,12 @@ export default function RemoteBoothTab() {
                       setPowerShellEnvironmentText(event.target.value);
                       setDeployError('');
                     }}
-                        className="mt-1.5 min-h-24 w-full resize-y rounded-md border border-[#2f2f2f] bg-[#121212] px-3 py-2 font-mono text-xs text-slate-100 focus:outline-emerald-400"
+                    className="min-h-24 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs focus:outline-[#004ac6]"
                     spellCheck={false}
                   />
-                    </label>
-                  </div>
                 </div>
 
-                <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-slate-300 cursor-pointer">
+                <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={waitForResult}
@@ -1628,24 +1604,24 @@ export default function RemoteBoothTab() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">TimeoutSeconds</label>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5">TimeoutSeconds</label>
                     <input
                       type="number"
                       min={1}
                       value={powerShellTimeoutSeconds}
                       onChange={event => setPowerShellTimeoutSeconds(Number(event.target.value))}
-                      className="w-full h-11 sm:h-10 rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-slate-100 focus:outline-emerald-400"
+                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-300 mb-1.5">WaitTimeoutSeconds</label>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5">WaitTimeoutSeconds</label>
                     <input
                       type="number"
                       min={1}
                       value={waitTimeoutSeconds}
                       onChange={event => setWaitTimeoutSeconds(Number(event.target.value))}
                       disabled={!waitForResult}
-                      className="w-full h-11 sm:h-10 rounded-md border border-[#2f2f2f] bg-[#121212] px-3 text-slate-100 focus:outline-emerald-400 disabled:bg-[#181818] disabled:text-slate-500"
+                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-[#004ac6] disabled:bg-gray-100 disabled:text-gray-400"
                     />
                   </div>
                 </div>

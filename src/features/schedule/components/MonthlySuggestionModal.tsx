@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Loader2, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { scheduleService } from '../../../services/api/scheduleService';
 import {
@@ -49,16 +49,6 @@ function getYearNumber(monthValue?: string) {
 
 function buildMonthValue(year: number, month: number) {
   return `${year}-${String(month).padStart(2, '0')}`;
-}
-
-function getDaysInMonthFromMonthValue(monthValue?: string) {
-  const year = getYearNumber(monthValue);
-  const month = getMonthNumber(monthValue);
-  return new Date(year, month, 0).getDate();
-}
-
-function calculateDefaultMonthlyTargetHours(monthValue: string, monthlyOffDays: number) {
-  return Math.max(0, getDaysInMonthFromMonthValue(monthValue) - monthlyOffDays) * 9;
 }
 
 function toggleNumber(values: number[], value: number) {
@@ -180,16 +170,16 @@ function getMondayOfWeek(dateValue: string) {
 export default function MonthlySuggestionModal({ open, users, shifts, initialDate, onClose, onSuccess }: Props) {
   const [monthValue, setMonthValue] = useState(() => toMonthValue(initialDate));
   const [monthlyOffDays, setMonthlyOffDays] = useState(DEFAULT_MONTHLY_OFF_DAYS);
-  const [monthlyTargetHours, setMonthlyTargetHours] = useState(() => (
-    calculateDefaultMonthlyTargetHours(toMonthValue(initialDate), DEFAULT_MONTHLY_OFF_DAYS)
-  ));
+  const [monthlyTargetHours, setMonthlyTargetHours] = useState(0);
   const [overwriteExisting, setOverwriteExisting] = useState(false);
+  const [allowFlexibleShifts, setAllowFlexibleShifts] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(() => users.map(user => user.id));
   const [selectedShiftIds, setSelectedShiftIds] = useState<number[]>(() => shifts.map(shift => shift.id));
   const [rules, setRules] = useState<Record<string, RuleState>>(() => (
     Object.fromEntries(users.map(user => [user.id, createRuleState(shifts)]))
   ));
   const [preview, setPreview] = useState<MonthlySuggestionPreviewResponse | null>(null);
+  const [previewError, setPreviewError] = useState('');
   const [previewWeekStart, setPreviewWeekStart] = useState('');
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
@@ -218,11 +208,6 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
       return next;
     });
   }, [open, shifts, users]);
-
-  useEffect(() => {
-    if (!open) return;
-    setMonthlyTargetHours(calculateDefaultMonthlyTargetHours(monthValue, monthlyOffDays));
-  }, [monthValue, monthlyOffDays, open]);
 
   const selectedUsers = useMemo(
     () => users.filter(user => selectedUserIds.includes(user.id)),
@@ -278,7 +263,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
       toast.error('Vui lòng chọn nhân viên.');
       return;
     }
-    if (selectedShiftIds.length === 0) {
+    if (!allowFlexibleShifts && selectedShiftIds.length === 0) {
       toast.error('Vui lòng chọn ca được dùng.');
       return;
     }
@@ -286,6 +271,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
     const year = getYearNumber(monthValue);
     const month = getMonthNumber(monthValue);
     setIsPreviewing(true);
+    setPreviewError('');
     try {
       const result = await scheduleService.previewMonthlySuggestion({
         year,
@@ -293,15 +279,19 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
         userIds: selectedUserIds,
         shiftIds: selectedShiftIds,
         monthlyOffDays,
-        monthlyTargetHours,
+        monthlyTargetHours: monthlyTargetHours > 0 ? monthlyTargetHours : null,
         overwriteExisting,
+        allowFlexibleShifts,
         employeeRules: buildEmployeeRules(),
       });
       setPreview(result);
       setPreviewWeekStart(getMondayOfWeek(result.users[0]?.days[0]?.date || buildMonthValue(year, month) + '-01'));
       toast.success('Đã tạo preview lịch tháng.');
     } catch (err: any) {
-      toast.error(err.message || 'Không thể tạo preview lịch tháng.');
+      const message = err.message || 'Không thể tạo preview lịch tháng.';
+      setPreview(null);
+      setPreviewError(message);
+      toast.error(message);
     } finally {
       setIsPreviewing(false);
     }
@@ -329,7 +319,12 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                 isOff: true,
                 isGenerated: true,
                 isExisting: false,
+                isTemporaryShift: false,
               };
+            }
+
+            if (nextShiftId === 'temporary-flex') {
+              return day;
             }
 
             const shift = shifts.find(item => String(item.id) === nextShiftId);
@@ -344,6 +339,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
               isOff: false,
               isGenerated: true,
               isExisting: false,
+              isTemporaryShift: false,
             };
           });
 
@@ -373,26 +369,32 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
       toast.error(`Có ${invalidUsers.length} nhân viên chưa nghỉ đúng ${preview.monthlyOffDays} ngày.`);
       return;
     }
-    if (preview.monthlyTargetHours) {
+    if (preview.monthlyTargetHours && preview.monthlyTargetHours > 0) {
       const invalidHourUsers = preview.users.filter(user => user.summary.totalHours !== preview.monthlyTargetHours);
       if (invalidHourUsers.length > 0) {
         toast.error(`Có ${invalidHourUsers.length} nhân viên chưa đúng ${preview.monthlyTargetHours} giờ/tháng.`);
         return;
       }
     }
-
     setIsApplying(true);
     try {
       const result = await scheduleService.applyMonthlySuggestion({
         year: preview.year,
         month: preview.month,
         monthlyOffDays: preview.monthlyOffDays,
-        monthlyTargetHours: preview.monthlyTargetHours,
+        monthlyTargetHours: preview.monthlyTargetHours && preview.monthlyTargetHours > 0 ? preview.monthlyTargetHours : null,
         overwriteExisting,
         items: preview.users.flatMap(user => user.days.map(day => ({
           userId: user.userId,
           workDate: day.date,
           shiftId: day.isOff ? null : day.shiftId,
+          shiftCode: day.shiftCode,
+          shiftName: day.shiftName,
+          startTime: day.startTime,
+          endTime: day.endTime,
+          endDayOffset: day.startTime && day.endTime && day.endTime <= day.startTime ? 1 : 0,
+          totalHours: day.totalHours,
+          isTemporaryShift: day.isTemporaryShift,
         }))),
       });
       toast.success(`Đã áp dụng ${result.created} lịch tháng.`);
@@ -416,18 +418,34 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
         </td>
         {previewWeekDates.map(date => {
           const day = daysByDate.get(date);
+          const currentShiftOption = day && !day.isOff && day.shiftId && !selectedShifts.some(shift => shift.id === day.shiftId)
+            ? {
+                id: day.shiftId,
+                code: day.shiftCode || 'LĐ',
+                name: day.shiftName || 'Ca linh động',
+                startTime: day.startTime || '',
+                endTime: day.endTime || '',
+                paidWorkingHours: day.totalHours,
+                workingHours: day.totalHours,
+                isExtraShift: false,
+                shiftType: 2,
+                isActive: true,
+              } as ShiftDto
+            : null;
 
           return (
             <td key={date} className="w-[112px] min-w-[112px] border-r border-slate-100 px-2 py-3 align-top">
               {day ? (
                 <>
                   <select
-                    value={day.isOff ? '' : String(day.shiftId || '')}
+                    value={day.isOff ? '' : day.shiftId ? String(day.shiftId) : 'temporary-flex'}
                     onChange={event => updatePreviewCell(user.userId, date, event.target.value)}
-                    className={`h-10 w-full rounded border px-2 text-xs font-black ${day.isOff ? 'border-slate-200 bg-slate-100 text-slate-500' : getShiftClass(day.shiftCode)}`}
+                    className={`h-10 w-full rounded border px-2 text-xs font-black ${day.isOff ? 'border-slate-200 bg-slate-100 text-slate-500' : day.isTemporaryShift ? 'border-blue-200 bg-blue-50 text-blue-700' : getShiftClass(day.shiftCode)}`}
                     title={day.warnings.join('\n')}
                   >
                     <option value="">OFF</option>
+                    {day.isTemporaryShift && !day.shiftId && <option value="temporary-flex">{day.shiftCode || 'LĐ'} tạm</option>}
+                    {currentShiftOption && <option value={currentShiftOption.id}>{currentShiftOption.code}</option>}
                     {selectedShifts.map(shift => (
                       <option key={shift.id} value={shift.id}>{shift.code}</option>
                     ))}
@@ -446,8 +464,8 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
           );
         })}
         <td className="sticky right-[82px] z-10 w-[82px] min-w-[82px] border-l border-slate-200 bg-white px-2 py-3 text-center shadow-[-1px_0_0_#e5e7eb]">
-          <p className={`text-sm font-black ${preview?.monthlyTargetHours && user.summary.totalHours !== preview.monthlyTargetHours ? 'text-red-600' : 'text-slate-900'}`}>
-            {preview?.monthlyTargetHours ? `${user.summary.totalHours}/${preview.monthlyTargetHours}` : user.summary.totalHours}
+          <p className={`text-sm font-black ${preview?.monthlyTargetHours && preview.monthlyTargetHours > 0 && user.summary.totalHours !== preview.monthlyTargetHours ? 'text-red-600' : 'text-slate-900'}`}>
+            {preview?.monthlyTargetHours && preview.monthlyTargetHours > 0 ? `${user.summary.totalHours}/${preview.monthlyTargetHours}` : user.summary.totalHours}
           </p>
           <p className="text-[10px] font-bold text-slate-500">giờ</p>
         </td>
@@ -540,7 +558,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                   className="mt-1 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
                 />
                 <span className="mt-1 block text-[11px] font-semibold text-slate-500">
-                  Mặc định: (số ngày trong tháng - số ngày nghỉ) x 9
+                  Nhập 0 để không giới hạn và không validate min/max số tiếng.
                 </span>
               </label>
             </div>
@@ -553,6 +571,21 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                 className="h-4 w-4 accent-primary"
               />
               Ghi đè lịch cũ trong tháng
+            </label>
+
+            <label className="mt-3 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
+              <input
+                type="checkbox"
+                checked={allowFlexibleShifts}
+                onChange={event => setAllowFlexibleShifts(event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-primary"
+              />
+              <span>
+                Cho phép ca linh động
+                <span className="mt-1 block text-[11px] font-semibold text-blue-700">
+                  Hệ thống dùng ca linh động để lấp khoảng hở. Ca tạm cần được tạo thành ca thật trước khi áp dụng.
+                </span>
+              </span>
             </label>
 
             <div className="mt-4 space-y-2">
@@ -645,8 +678,20 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
             </div>
 
             {!preview ? (
-              <div className="flex h-[520px] items-center justify-center text-center text-sm font-semibold text-slate-400">
-                Chọn cấu hình bên trái rồi bấm Tạo preview.
+              <div className="flex h-[520px] items-center justify-center px-4 text-center text-sm font-semibold text-slate-400">
+                {previewError ? (
+                  <div className="w-full max-w-2xl rounded-lg border border-red-200 bg-red-50 p-4 text-left text-red-700">
+                    <div className="mb-2 flex items-center gap-2 text-sm font-black">
+                      <AlertTriangle className="h-4 w-4" />
+                      Preview không tạo được
+                    </div>
+                    <pre className="max-h-72 whitespace-pre-wrap break-words rounded-md bg-white/70 p-3 font-mono text-xs leading-relaxed text-red-800">
+                      {previewError}
+                    </pre>
+                  </div>
+                ) : (
+                  <span>Chọn cấu hình bên trái rồi bấm Tạo preview.</span>
+                )}
               </div>
             ) : (
               <div className="h-[calc(94dvh-123px)] overflow-auto">
@@ -680,7 +725,15 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                 </div>
                 {preview.warnings.length > 0 && (
                   <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
-                    {preview.warnings.slice(0, 4).map(warning => <p key={warning}>{warning}</p>)}
+                    <div className="mb-2 flex items-center gap-2 font-black">
+                      <AlertTriangle className="h-4 w-4" />
+                      Cảnh báo preview ({preview.warnings.length})
+                    </div>
+                    <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-white/60 p-2">
+                      {preview.warnings.map((warning, index) => (
+                        <p key={`${index}-${warning}`}>{warning}</p>
+                      ))}
+                    </div>
                   </div>
                 )}
                 <table className="w-max min-w-full border-collapse text-left">

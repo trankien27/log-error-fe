@@ -184,6 +184,7 @@ export interface ShiftDto {
   paidWorkingHours?: number;
   workingHours?: number;
   isExtraShift: boolean;
+  shiftType?: number;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string | null;
@@ -197,6 +198,7 @@ export interface CreateShiftRequest {
   endDayOffset: 0 | 1;
   paidWorkingHours: number;
   isExtraShift?: boolean;
+  shiftType?: number;
 }
 
 export interface WorkScheduleDto {
@@ -204,7 +206,7 @@ export interface WorkScheduleDto {
   workDate: string;
   userId: string;
   userName?: string;
-  shiftId: number;
+  shiftId?: number | null;
   shiftCode: string;
   shiftName: string;
   startTime: string;
@@ -241,7 +243,7 @@ export interface WorkScheduleWeekResponse {
 }
 
 export interface MonthlyWorkScheduleShiftBreakdown {
-  shiftId: number;
+  shiftId?: number | null;
   shiftCode: string;
   shiftName: string;
   scheduleCount: number;
@@ -327,7 +329,14 @@ export interface CalendarResponseDto {
 export interface CreateWorkScheduleRequest {
   workDate: string;
   userId: string;
-  shiftId: number;
+  shiftId?: number | null;
+  shiftCode?: string | null;
+  shiftName?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  endDayOffset?: number;
+  paidWorkingHours?: number;
+  workingHours?: number;
   note?: string | null;
 }
 
@@ -355,7 +364,14 @@ export interface CopyWeekWorkScheduleRequest {
 export interface UpdateWorkScheduleRequest {
   workDate: string;
   userId: string;
-  shiftId: number;
+  shiftId?: number | null;
+  shiftCode?: string | null;
+  shiftName?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  endDayOffset?: number;
+  paidWorkingHours?: number;
+  workingHours?: number;
   status?: number;
   note?: string | null;
 }
@@ -396,6 +412,7 @@ export interface MonthlySuggestionPreviewRequest {
   monthlyOffDays: number;
   monthlyTargetHours?: number | null;
   overwriteExisting: boolean;
+  allowFlexibleShifts: boolean;
   employeeRules: MonthlyEmployeeRuleRequest[];
 }
 
@@ -410,6 +427,7 @@ export interface MonthlySuggestionDay {
   isOff: boolean;
   isExisting: boolean;
   isGenerated: boolean;
+  isTemporaryShift: boolean;
   warnings: string[];
 }
 
@@ -445,6 +463,13 @@ export interface MonthlySuggestionApplyRequest {
     userId: string;
     workDate: string;
     shiftId?: number | null;
+    shiftCode?: string | null;
+    shiftName?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
+    endDayOffset?: number;
+    totalHours?: number;
+    isTemporaryShift?: boolean;
   }>;
 }
 

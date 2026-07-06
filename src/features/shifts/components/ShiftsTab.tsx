@@ -12,6 +12,7 @@ const emptyForm: CreateShiftRequest = {
   endDayOffset: 0,
   paidWorkingHours: 4,
   isExtraShift: false,
+  shiftType: 1,
 };
 
 function formatTime(value: string) {
@@ -109,6 +110,7 @@ export default function ShiftsTab() {
         startTime: toApiTime(form.startTime),
         endTime: toApiTime(form.endTime),
         isExtraShift: Boolean(form.isExtraShift),
+        shiftType: form.shiftType || 1,
       });
       toast.success('Đã tạo ca làm việc.');
       setIsCreateModalOpen(false);
@@ -239,9 +241,14 @@ export default function ShiftsTab() {
                       </td>
                       <td className="py-4 px-5 font-bold">{(shift.paidWorkingHours || shift.workingHours || 0).toFixed(1)}h</td>
                       <td className="py-4 px-5">
-                        <span className={`rounded px-2 py-1 text-[11px] font-bold ${shift.isExtraShift ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
-                          {shift.isExtraShift ? 'Tăng cường' : 'Tiêu chuẩn'}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          <span className={`rounded px-2 py-1 text-[11px] font-bold ${shift.isExtraShift ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {shift.isExtraShift ? 'Tăng cường' : 'Tiêu chuẩn'}
+                          </span>
+                          {shift.shiftType === 2 && (
+                            <span className="rounded bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700">Linh động</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-5">
                         <span className={`rounded px-2 py-1 text-[11px] font-bold ${shift.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
@@ -305,6 +312,10 @@ export default function ShiftsTab() {
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500">Ca tăng cường</dt>
                   <dd className="font-bold">{selectedShift.isExtraShift ? 'Có' : 'Không'}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-gray-500">Loại ca</dt>
+                  <dd className="font-bold">{selectedShift.shiftType === 2 ? 'Linh động' : 'Ca thường'}</dd>
                 </div>
                 <div className="flex justify-between gap-4">
                   <dt className="text-gray-500">Tạo lúc</dt>
@@ -415,6 +426,21 @@ export default function ShiftsTab() {
                   className="h-4 w-4 accent-primary"
                 />
                 Ca tăng cường
+              </label>
+
+              <label className="block text-sm font-semibold">
+                Loại ca
+                <select
+                  value={form.shiftType || 1}
+                  onChange={event => setForm(current => ({ ...current, shiftType: Number(event.target.value) }))}
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm focus:outline-primary"
+                >
+                  <option value={1}>Ca thường</option>
+                  <option value={2}>Ca linh động</option>
+                </select>
+                <span className="mt-1 block text-xs font-medium text-gray-500">
+                  Ca linh động không hiển thị trong API danh sách ca thường.
+                </span>
               </label>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
