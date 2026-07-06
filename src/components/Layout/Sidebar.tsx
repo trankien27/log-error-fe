@@ -187,18 +187,22 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <span>Chat</span>
               </button>
             </li>
-            <li>
-              <button onClick={() => navigateTo('users')} className={navButtonClass(activeTab === 'users')}>
-                <Users className="w-4 h-4" />
-                <span>Người dùng</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('roles')} className={navButtonClass(activeTab === 'roles')}>
-                <Shield className="w-4 h-4" />
-                <span>Vai trò</span>
-              </button>
-            </li>
+            {isAdmin && (
+              <>
+                <li>
+                  <button onClick={() => navigateTo('users')} className={navButtonClass(activeTab === 'users')}>
+                    <Users className="w-4 h-4" />
+                    <span>Người dùng</span>
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => navigateTo('roles')} className={navButtonClass(activeTab === 'roles')}>
+                    <Shield className="w-4 h-4" />
+                    <span>Vai trò</span>
+                  </button>
+                </li>
+              </>
+            )}
             <li>
               <button onClick={() => navigateTo('booths')} className={navButtonClass(activeTab === 'booths')}>
                 <Store className="w-4 h-4" />

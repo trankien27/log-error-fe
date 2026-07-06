@@ -20,9 +20,11 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useUsersStore } from '../../../stores/useUsersStore';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import { User } from '../../../types';
 
 export default function UsersTab() {
+  const canCreateUser = useAuthStore(state => state.hasAnyRole([1]));
   const {
     users,
     searchQuery,
@@ -44,6 +46,7 @@ export default function UsersTab() {
   // Local Form states for edit user (or create)
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
   const [userRole, setUserRole] = useState<User['role']>('Staff');
   const [userStatus, setUserStatus] = useState<'Hoạt động' | 'Vô hiệu hóa'>('Hoạt động');
 
@@ -66,16 +69,23 @@ export default function UsersTab() {
   const filteredUsers = getFilteredUsers();
 
   const handleOpenUserModal = (u: User | null = null) => {
+    if (!u && !canCreateUser) {
+      toast.error('Chỉ role 1 mới được tạo người dùng.');
+      return;
+    }
+
     if (u) {
       setCurrentEditingUser(u);
       setUserName(u.name);
       setUserEmail(u.email);
+      setUserPassword('');
       setUserRole(u.role);
       setUserStatus(u.status);
     } else {
       setCurrentEditingUser(null);
       setUserName('');
       setUserEmail('');
+      setUserPassword('');
       setUserRole('Staff');
       setUserStatus('Hoạt động');
     }
@@ -88,10 +98,15 @@ export default function UsersTab() {
       toast.error('Vui lòng điền đủ tên và địa chỉ email.');
       return;
     }
+    if (!currentEditingUser && !userPassword.trim()) {
+      toast.error('Vui lòng nhập mật khẩu ban đầu cho người dùng.');
+      return;
+    }
 
     const payload = {
       name: userName.trim(),
       email: userEmail.trim(),
+      password: userPassword.trim() || undefined,
       role: userRole,
       status: userStatus
     };
@@ -395,12 +410,14 @@ export default function UsersTab() {
             <h2 className="text-xl font-bold text-gray-900 font-sans">Danh bạ người dùng & Phân cấp đội ngũ</h2>
             <p className="text-xs text-gray-500 mt-1">Quản trị danh sách nhân sự, phân bổ chức vụ và gán trạng thái vận hành.</p>
           </div>
-          <button
-            onClick={() => handleOpenUserModal()}
-            className="bg-[#004ac6] text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Đăng ký thành viên
-          </button>
+          {canCreateUser && (
+            <button
+              onClick={() => handleOpenUserModal()}
+              className="bg-[#004ac6] text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Tạo người dùng
+            </button>
+          )}
         </div>
 
         {/* Filter Row */}
@@ -555,7 +572,7 @@ export default function UsersTab() {
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
                 <h3 className="text-lg font-bold text-on-surface">
-                  {currentEditingUser ? 'Cập nhật thành viên' : 'Đăng ký thành viên mới'}
+                  {currentEditingUser ? 'Cập nhật người dùng' : 'Tạo người dùng mới'}
                 </h3>
                 <button onClick={() => setIsUserModalOpen(false)} className="text-gray-400 hover:text-gray-650 font-bold cursor-pointer">&#x2715;</button>
               </div>
@@ -582,6 +599,19 @@ export default function UsersTab() {
                     className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
                   />
                 </div>
+                {!currentEditingUser && (
+                  <div>
+                    <label className="block font-medium mb-1">Mật khẩu ban đầu *</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Nhập mật khẩu ban đầu"
+                      value={userPassword}
+                      onChange={e => setUserPassword(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                    />
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-medium mb-1">Vai trò quyền hạn</label>

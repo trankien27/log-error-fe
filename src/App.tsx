@@ -65,8 +65,22 @@ export default function App() {
           )}
         />
         <Route path="chat" element={<ChatTab />} />
-        <Route path="users" element={<UsersTab />} />
-        <Route path="roles" element={<RolesTab />} />
+        <Route
+          path="users"
+          element={(
+            <AdminRoute>
+              <UsersTab />
+            </AdminRoute>
+          )}
+        />
+        <Route
+          path="roles"
+          element={(
+            <AdminRoute>
+              <RolesTab />
+            </AdminRoute>
+          )}
+        />
         <Route path="booths" element={<BoothsTab />} />
         <Route path="remote-booth" element={<RemoteBoothTab />} />
         <Route path="shifts" element={<ShiftsTab />} />
