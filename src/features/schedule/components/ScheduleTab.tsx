@@ -770,6 +770,98 @@ export default function ScheduleTab() {
     );
   };
 
+  const getRowTotalHours = (row: WorkScheduleWeekUserDto) => {
+    return (weekSchedule?.days || []).reduce((total, day) => {
+      const schedule = row.schedules.find(item => item.workDate === day.date);
+      const draft = cellDrafts[getCellKey(row.userId, day.date)];
+
+      if (draft) {
+        const draftShift = activeShifts.find(shift => String(shift.id) === draft.shiftId);
+        return total + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
+      }
+
+      return total + (schedule?.paidWorkingHours || schedule?.workingHours || 0);
+    }, 0);
+  };
+
+  const renderMobileScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
+    const schedule = row.schedules.find(item => item.workDate === date);
+    const cellKey = getCellKey(row.userId, date);
+    const draft = cellDrafts[cellKey];
+    const effectiveShiftId = draft ? draft.shiftId : schedule ? String(schedule.shiftId) : '';
+    const effectiveShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
+    const hasDraft = Boolean(draft);
+    const isDeletedDraft = Boolean(schedule && draft && !draft.shiftId);
+    const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
+
+    return (
+      <div className={`flex min-w-0 flex-1 flex-col items-end gap-2 text-right ${hasDraft ? 'text-primary' : ''}`}>
+        {effectiveShift ? (
+          <button
+            type="button"
+            disabled={!canManageSchedule || isSaving}
+            onClick={() => schedule ? openEditPanel(schedule, row) : undefined}
+            className={`relative w-full rounded border px-3 py-2 text-left text-xs font-black leading-tight ${getShiftClass(effectiveShift.code)} ${
+              canManageSchedule ? 'cursor-pointer' : 'cursor-default'
+            }`}
+          >
+            <span className="block pr-7">Ca {effectiveShift.code} - {effectiveShift.name}</span>
+            <span className="mt-0.5 block text-[11px] font-bold">
+              {schedule ? getScheduleHours(schedule) : getShiftHours(effectiveShift)}
+            </span>
+            {hasDraft && <span className="mt-0.5 block text-[10px] font-black text-primary">Chưa lưu</span>}
+            {canManageSchedule && schedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
+          </button>
+        ) : (
+          <div className="w-full text-right">
+            <span className={`text-sm italic font-semibold ${hasDraft ? 'text-primary' : 'text-gray-500'}`}>
+              Nghỉ{hasDraft ? ' - chưa lưu' : ''}
+            </span>
+          </div>
+        )}
+
+        {canManageSchedule && effectiveShift && (
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => stageCellShift(row, date, schedule, '')}
+            className="h-8 rounded border border-red-200 bg-white px-3 text-xs font-bold text-red-600 disabled:opacity-60"
+          >
+            Xóa ca
+          </button>
+        )}
+
+        {canManageSchedule && !effectiveShift && (isDeletedDraft ? (
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => stageCellShift(row, date, schedule, String(schedule?.shiftId || ''))}
+            className="h-8 rounded border border-outline-variant bg-white px-3 text-xs font-bold text-primary disabled:opacity-60"
+          >
+            Hủy xóa
+          </button>
+        ) : (
+          <select
+            value=""
+            disabled={isSaving}
+            onChange={event => stageCellShift(row, date, schedule, event.target.value)}
+            className="h-9 w-full rounded border border-outline-variant bg-white px-2 text-xs font-semibold focus:outline-primary disabled:opacity-60"
+            title="Chọn ca trực"
+          >
+            <option value="">Chọn ca</option>
+            {activeShifts.map(shift => (
+              <option key={shift.id} value={shift.id}>
+                {shift.code} - {shift.name} ({getShiftHours(shift)})
+              </option>
+            ))}
+          </select>
+        ))}
+
+        {renderOvertimeBadges(cellOvertimeRequests)}
+      </div>
+    );
+  };
+
   const renderScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
     const schedule = row.schedules.find(item => item.workDate === date);
     const cellKey = getCellKey(row.userId, date);
@@ -1011,7 +1103,61 @@ export default function ScheduleTab() {
 
         <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[1fr_320px]">
           <div className="min-w-0 overflow-auto">
-            <table className="w-full min-w-[1040px] border-collapse text-sm">
+            <div className="lg:hidden divide-y divide-slate-100">
+              {isLoading ? (
+                <div className="py-14 text-center text-gray-400 font-semibold">
+                  <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" />
+                  Đang tải lịch làm việc...
+                </div>
+              ) : filteredRows.length === 0 ? (
+                <div className="py-14 text-center text-gray-400 font-semibold">
+                  Không có lịch phù hợp bộ lọc.
+                </div>
+              ) : (
+                filteredRows.map(row => (
+                  <article key={row.userId} className="bg-white px-4 py-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {row.avatarUrl ? (
+                          <img src={row.avatarUrl} alt={row.userName} className="h-10 w-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+                            <UserRound className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="truncate text-base font-black text-gray-950">{row.userName}</p>
+                          <p className="truncate text-xs font-semibold text-gray-500">{row.departmentName || 'Chưa có phòng ban'}</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 rounded-md bg-blue-50 px-3 py-2 text-right">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-primary">Tổng</p>
+                        <p className="text-sm font-black text-primary">{getRowTotalHours(row).toFixed(1)}h</p>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-lg border border-outline-variant">
+                      {(weekSchedule?.days || []).map(day => (
+                        <div key={day.date} className="flex gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
+                          <button
+                            type="button"
+                            onClick={() => openCreatePanel(day.date, row.userId)}
+                            disabled={!canManageSchedule}
+                            className="w-[74px] shrink-0 rounded-md bg-slate-50 px-2 py-2 text-left disabled:cursor-default"
+                          >
+                            <span className="block text-xs font-black text-gray-950">{day.dayName.replace('Thứ ', 'T')}</span>
+                            <span className="block text-[11px] font-semibold text-gray-500">{formatShortDate(day.date)}</span>
+                          </button>
+                          {renderMobileScheduleCell(row, day.date)}
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+
+            <table className="hidden lg:table w-full min-w-[1040px] border-collapse text-sm">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr>
                   <th className="w-[170px] border border-outline-variant px-4 py-5 text-center text-sm font-semibold">
@@ -1082,26 +1228,29 @@ export default function ScheduleTab() {
               </tbody>
             </table>
 
-            <div className="px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => openCreatePanel(weekStart)}
-              disabled={!canManageSchedule}
-                className="h-10 px-4 rounded-md border border-dashed border-outline-variant text-primary text-sm font-semibold inline-flex items-center gap-2 hover:bg-blue-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-              <Plus className="w-4 h-4" />
-              Thêm nhân viên
-            </button>
-            <button
-              type="button"
-              onClick={() => openOvertimeModal(selectedDate)}
-              className="h-10 px-4 rounded-md border border-outline-variant text-primary text-sm font-semibold inline-flex items-center gap-2 hover:bg-blue-50 cursor-pointer"
-            >
-              <Clock3 className="w-4 h-4" />
-              Ghi OT
-            </button>
-            {hasCellDrafts && (
-                <div className="flex items-center gap-2">
+            <div className="px-4 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => openCreatePanel(weekStart)}
+                  disabled={!canManageSchedule}
+                  className="h-10 px-4 rounded-md border border-dashed border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-blue-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="w-4 h-4" />
+                  Thêm nhân viên
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openOvertimeModal(selectedDate)}
+                  className="h-10 px-4 rounded-md border border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-blue-50 cursor-pointer"
+                >
+                  <Clock3 className="w-4 h-4" />
+                  Ghi OT
+                </button>
+              </div>
+
+              {hasCellDrafts && (
+                <div className="flex flex-col gap-2 rounded-md border border-blue-100 bg-blue-50 p-3 sm:flex-row sm:items-center">
                   <span className="text-xs font-semibold text-primary">
                     {Object.keys(cellDrafts).length} thay đổi chưa lưu
                   </span>
@@ -1123,10 +1272,11 @@ export default function ScheduleTab() {
                   </button>
                 </div>
               )}
-              <div className="text-left sm:text-right">
+
+              <div className="rounded-md bg-slate-50 px-3 py-2 text-left lg:text-right">
                 <p className="text-base font-bold">
                   Tổng giờ của tuần:
-                  <span className="ml-8">{visibleTotalWorkingHours.toFixed(1)}h</span>
+                  <span className="ml-3">{visibleTotalWorkingHours.toFixed(1)}h</span>
                 </p>
                 <p className="text-xs text-gray-500 mt-1">(Tính theo thời gian thực tế)</p>
               </div>

@@ -70,6 +70,12 @@ export type ErrorLogByStoreQuery = {
   ascending: boolean;
 };
 
+export type TransactionImageUploadResponse = {
+  transactionId: string;
+  uploadedCount: number;
+  responseBody: string;
+};
+
 function buildQuery(params: ErrorLogQuery = {}) {
   const searchParams = new URLSearchParams();
 
@@ -190,5 +196,37 @@ export const logsService = {
       blob: await response.blob(),
       fileName: getFileName(response),
     };
+  },
+
+  uploadTransactionImages: async (
+    transactionId: string,
+    images: File[],
+  ): Promise<TransactionImageUploadResponse> => {
+    const formData = new FormData();
+    images.forEach(image => formData.append('images', image));
+
+    const headers = new Headers();
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/error-logs/transactions/${encodeURIComponent(transactionId)}/upload-images`,
+      {
+        method: 'POST',
+        headers,
+        body: formData,
+      },
+    );
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.message || `Không thể upload ảnh. Status: ${response.status}`);
+    }
+
+    const payload = await response.json();
+    return payload?.data ?? payload;
   },
 };

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, Plus, RefreshCw, Search, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -158,6 +158,9 @@ export default function ErrorLogsTab() {
   const [preliminaryCause, setPreliminaryCause] = useState('');
   const [solution, setSolution] = useState('');
   const [note, setNote] = useState('');
+  const [uploadTransactionId, setUploadTransactionId] = useState('');
+  const [uploadImages, setUploadImages] = useState<File[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const filteredLogs = getFilteredLogs();
   const selectedLogIdSet = new Set(selectedLogIds);
@@ -378,6 +381,34 @@ export default function ErrorLogsTab() {
     }
   };
 
+  const handleUploadTransactionImages = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const transactionId = uploadTransactionId.trim();
+
+    if (!transactionId) {
+      toast.error('Vui lòng nhập mã giao dịch.');
+      return;
+    }
+
+    if (uploadImages.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một ảnh.');
+      return;
+    }
+
+    setIsUploadingImages(true);
+    try {
+      const result = await logsService.uploadTransactionImages(transactionId, uploadImages);
+      toast.success(`Đã upload ${result.uploadedCount || uploadImages.length} ảnh cho giao dịch.`);
+      setUploadTransactionId('');
+      setUploadImages([]);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể upload ảnh giao dịch.');
+    } finally {
+      setIsUploadingImages(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -421,6 +452,56 @@ export default function ErrorLogsTab() {
           </button>
         </div>
       </div>
+
+      <form
+        onSubmit={handleUploadTransactionImages}
+        className="rounded-xl border border-outline-variant bg-white p-4 shadow-sm text-left"
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          <label className="block text-sm font-semibold lg:flex-1">
+            Mã giao dịch cần upload ảnh
+            <input
+              value={uploadTransactionId}
+              onChange={event => setUploadTransactionId(event.target.value)}
+              placeholder="bf2b4b62-2785-466a-871c-8f41f68ceedb"
+              className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-primary"
+            />
+          </label>
+
+          <label className="block text-sm font-semibold lg:flex-1">
+            Ảnh lỗi giao dịch
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={event => setUploadImages(Array.from(event.target.files || []))}
+              className="mt-1 block h-10 w-full rounded-lg border border-outline-variant bg-white px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-xs file:font-bold file:text-primary"
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={isUploadingImages}
+            className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-primary-container disabled:opacity-60 cursor-pointer"
+          >
+            {isUploadingImages ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {isUploadingImages ? 'Đang upload...' : 'Upload ảnh'}
+          </button>
+        </div>
+
+        {uploadImages.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {uploadImages.map(file => (
+              <span
+                key={`${file.name}_${file.size}_${file.lastModified}`}
+                className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600"
+              >
+                {file.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </form>
 
       <div className="bg-white rounded-xl border border-outline-variant p-4 shadow-sm text-left">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-3">

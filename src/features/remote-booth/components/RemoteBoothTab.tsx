@@ -36,6 +36,39 @@ const taskOptions: TaskOption[] = [
   { value: 'app-form', label: 'Deploy AppForm' },
 ];
 
+const updateAgentServiceScript = `# Link GitHub Release
+$url = "https://github.com/trankien27/fun-agent/releases/download/Fun-agent/agent.zip"
+
+# Duong dan luu file tai ve
+$downloadPath = "D:\\FunStudio\\agent.zip"
+
+# Thu muc giai nen
+$extractPath = "D:\\FunStudio\\agent"
+
+# Ten service
+$serviceName = "FunStudioWindowsMaintenanceAgent"
+
+Write-Host "Dang tai agent.zip..."
+curl.exe -L $url -o $downloadPath
+
+Write-Host "Dang dung service $serviceName..."
+Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+
+if (!(Test-Path $extractPath)) {
+    New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
+}
+
+Write-Host "Dang xoa file cu trong folder agent..."
+Get-ChildItem -Path $extractPath -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+
+Write-Host "Dang giai nen agent.zip..."
+Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+
+Write-Host "Dang chay lai service $serviceName..."
+Start-Service -Name $serviceName
+
+Write-Host "Hoan tat update agent."`;
+
 const endpointLabels: Record<RemoteDeployTaskType, string> = {
   'update-version': 'Update Version',
   'fs-async-transaction': 'FSAsyncTransaction',
@@ -578,6 +611,26 @@ export default function RemoteBoothTab() {
     }
   };
 
+  const openUpdateAgentServiceTask = (machine: RemoteMachine) => {
+    setSelectedMachine(machine);
+    setMultiDeployMachines([]);
+    setPanelMode('powershell');
+    resetDeployForm();
+    resetPrintForm();
+    setPowerShellMode('inline');
+    setPowerShellRunAs('admin');
+    setPowerShellScript(updateAgentServiceScript);
+    setPowerShellScriptPath('');
+    setPowerShellArguments('');
+    setPowerShellWorkingDirectory('');
+    setPowerShellEnvironmentText('TASK_NAME=update agent service');
+    setPowerShellTimeoutSeconds(600);
+    setWaitForResult(true);
+    setWaitTimeoutSeconds(900);
+    setDeployResult(null);
+    setDeployError('');
+  };
+
   const openMultiDeployPanel = () => {
     if (selectedMachines.length === 0) {
       toast.error('Vui lòng chọn ít nhất một booth.');
@@ -964,6 +1017,17 @@ export default function RemoteBoothTab() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => openUpdateAgentServiceTask(machine)}
+                          className="px-3 py-2 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center justify-center gap-1.5 font-bold cursor-pointer"
+                          title="update agent service"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          Update Agent
+                        </button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-1 gap-2">
+                        <button
+                          type="button"
                           onClick={() => openRemotePanel(machine, 'print')}
                           className="px-3 py-2 border border-outline-variant bg-white text-gray-700 rounded-lg hover:bg-[#f3f3fe] transition-colors inline-flex items-center justify-center gap-1.5 font-bold cursor-pointer"
                           title="Print Image"
@@ -1055,7 +1119,7 @@ export default function RemoteBoothTab() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <button
                       type="button"
                       onClick={() => openRemotePanel(machine, 'deploy')}
@@ -1073,6 +1137,15 @@ export default function RemoteBoothTab() {
                     >
                       <Terminal className="w-3.5 h-3.5" />
                       PS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openUpdateAgentServiceTask(machine)}
+                      className="h-11 px-2 border border-emerald-200 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors inline-flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer"
+                      title="update agent service"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Agent
                     </button>
                     <button
                       type="button"
@@ -1335,6 +1408,12 @@ export default function RemoteBoothTab() {
               </>
               ) : panelMode === 'powershell' ? (
               <>
+                {powerShellScript === updateAgentServiceScript && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                    Task: <span className="font-black">update agent service</span> · chạy PowerShell quyền Admin để tải, giải nén và restart service agent.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-600 mb-1.5">Kiểu chạy</label>
