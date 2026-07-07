@@ -51,13 +51,7 @@ function buildMonthValue(year: number, month: number) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
-function toggleNumber(values: number[], value: number) {
-  return values.includes(value)
-    ? values.filter(item => item !== value)
-    : [...values, value].sort((a, b) => a - b);
-}
-
-function createRuleState(shifts: ShiftDto[]): RuleState {
+function createRuleState(): RuleState {
   return {
     ruleText: '',
   };
@@ -172,11 +166,9 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
   const [monthlyOffDays, setMonthlyOffDays] = useState(DEFAULT_MONTHLY_OFF_DAYS);
   const [monthlyTargetHours, setMonthlyTargetHours] = useState(0);
   const [overwriteExisting, setOverwriteExisting] = useState(false);
-  const [allowFlexibleShifts, setAllowFlexibleShifts] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(() => users.map(user => user.id));
-  const [selectedShiftIds, setSelectedShiftIds] = useState<number[]>(() => shifts.map(shift => shift.id));
   const [rules, setRules] = useState<Record<string, RuleState>>(() => (
-    Object.fromEntries(users.map(user => [user.id, createRuleState(shifts)]))
+    Object.fromEntries(users.map(user => [user.id, createRuleState()]))
   ));
   const [preview, setPreview] = useState<MonthlySuggestionPreviewResponse | null>(null);
   const [previewError, setPreviewError] = useState('');
@@ -193,12 +185,6 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
       return next.length > 0 ? next : users.map(user => user.id);
     });
 
-    setSelectedShiftIds(current => {
-      const availableIds = new Set(shifts.map(shift => shift.id));
-      const next = current.filter(id => availableIds.has(id));
-      return next.length > 0 ? next : shifts.map(shift => shift.id);
-    });
-
     setRules(current => {
       const next: Record<string, RuleState> = {};
       users.forEach(user => {
@@ -207,16 +193,11 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
       });
       return next;
     });
-  }, [open, shifts, users]);
+  }, [open, users]);
 
   const selectedUsers = useMemo(
     () => users.filter(user => selectedUserIds.includes(user.id)),
     [selectedUserIds, users],
-  );
-
-  const selectedShifts = useMemo(
-    () => shifts.filter(shift => selectedShiftIds.includes(shift.id)),
-    [selectedShiftIds, shifts],
   );
 
   const previewMonthDates = useMemo(
@@ -248,7 +229,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
 
   const buildEmployeeRules = (): MonthlyEmployeeRuleRequest[] => selectedUsers.map(user => {
     const rule = normalizeRuleState(rules[user.id]);
-    const parsedRule = parseEmployeeRuleText(rule.ruleText, selectedShifts);
+    const parsedRule = parseEmployeeRuleText(rule.ruleText, shifts);
 
     return {
       userId: user.id,
@@ -263,10 +244,6 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
       toast.error('Vui lòng chọn nhân viên.');
       return;
     }
-    if (!allowFlexibleShifts && selectedShiftIds.length === 0) {
-      toast.error('Vui lòng chọn ca được dùng.');
-      return;
-    }
 
     const year = getYearNumber(monthValue);
     const month = getMonthNumber(monthValue);
@@ -277,11 +254,11 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
         year,
         month,
         userIds: selectedUserIds,
-        shiftIds: selectedShiftIds,
+        shiftIds: [],
         monthlyOffDays,
         monthlyTargetHours: monthlyTargetHours > 0 ? monthlyTargetHours : null,
         overwriteExisting,
-        allowFlexibleShifts,
+        allowFlexibleShifts: true,
         employeeRules: buildEmployeeRules(),
       });
       setPreview(result);
@@ -327,20 +304,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
               return day;
             }
 
-            const shift = shifts.find(item => String(item.id) === nextShiftId);
-            return {
-              ...day,
-              shiftId: shift?.id || null,
-              shiftCode: shift?.code || null,
-              shiftName: shift?.name || null,
-              startTime: shift?.startTime || null,
-              endTime: shift?.endTime || null,
-              totalHours: shift?.paidWorkingHours || shift?.workingHours || 0,
-              isOff: false,
-              isGenerated: true,
-              isExisting: false,
-              isTemporaryShift: false,
-            };
+            return day;
           });
 
           const offDays = nextDays.filter(day => day.isOff).length;
@@ -418,37 +382,18 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
         </td>
         {previewWeekDates.map(date => {
           const day = daysByDate.get(date);
-          const currentShiftOption = day && !day.isOff && day.shiftId && !selectedShifts.some(shift => shift.id === day.shiftId)
-            ? {
-                id: day.shiftId,
-                code: day.shiftCode || 'LĐ',
-                name: day.shiftName || 'Ca linh động',
-                startTime: day.startTime || '',
-                endTime: day.endTime || '',
-                paidWorkingHours: day.totalHours,
-                workingHours: day.totalHours,
-                isExtraShift: false,
-                shiftType: 2,
-                isActive: true,
-              } as ShiftDto
-            : null;
-
           return (
             <td key={date} className="w-[112px] min-w-[112px] border-r border-slate-100 px-2 py-3 align-top">
               {day ? (
                 <>
                   <select
-                    value={day.isOff ? '' : day.shiftId ? String(day.shiftId) : 'temporary-flex'}
+                    value={day.isOff ? '' : 'temporary-flex'}
                     onChange={event => updatePreviewCell(user.userId, date, event.target.value)}
                     className={`h-10 w-full rounded border px-2 text-xs font-black ${day.isOff ? 'border-slate-200 bg-slate-100 text-slate-500' : day.isTemporaryShift ? 'border-blue-200 bg-blue-50 text-blue-700' : getShiftClass(day.shiftCode)}`}
                     title={day.warnings.join('\n')}
                   >
                     <option value="">OFF</option>
-                    {day.isTemporaryShift && !day.shiftId && <option value="temporary-flex">{day.shiftCode || 'LĐ'} tạm</option>}
-                    {currentShiftOption && <option value={currentShiftOption.id}>{currentShiftOption.code}</option>}
-                    {selectedShifts.map(shift => (
-                      <option key={shift.id} value={shift.id}>{shift.code}</option>
-                    ))}
+                    {!day.isOff && <option value="temporary-flex">{day.shiftCode || 'LĐ'}</option>}
                   </select>
                   {!day.isOff && (
                     <p className="mt-1 truncate text-[10px] font-bold text-slate-500" title={`${formatShiftTime(day.startTime || '')}-${formatShiftTime(day.endTime || '')} · ${day.totalHours}h`}>
@@ -573,41 +518,11 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
               Ghi đè lịch cũ trong tháng
             </label>
 
-            <label className="mt-3 flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
-              <input
-                type="checkbox"
-                checked={allowFlexibleShifts}
-                onChange={event => setAllowFlexibleShifts(event.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-primary"
-              />
-              <span>
-                Cho phép ca linh động
-                <span className="mt-1 block text-[11px] font-semibold text-blue-700">
-                  Hệ thống dùng ca linh động để lấp khoảng hở. Ca tạm cần được tạo thành ca thật trước khi áp dụng.
-                </span>
+            <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
+              Sắp xếp linh động đang bật mặc định.
+              <span className="mt-1 block text-[11px] font-semibold text-blue-700">
+                Hệ thống tự tạo khoảng thời gian ca trong preview để phủ kín 07h30-23h và lưu trực tiếp vào lịch, không cần chọn ca cố định.
               </span>
-            </label>
-
-            <div className="mt-4 space-y-2">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Ca được dùng</p>
-              <div className="grid max-h-48 grid-cols-2 gap-2 overflow-y-auto rounded-lg border border-outline-variant p-2">
-                {shifts.map(shift => (
-                  <label key={shift.id} className="flex items-center gap-2 rounded-md border border-outline-variant px-2 py-2 text-xs font-bold">
-                    <input
-                      type="checkbox"
-                      checked={selectedShiftIds.includes(shift.id)}
-                      onChange={() => setSelectedShiftIds(current => toggleNumber(current, shift.id))}
-                      className="h-4 w-4 accent-primary"
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate">{shift.code} - {shift.name}</span>
-                      <span className="block text-[10px] font-semibold text-slate-500">
-                        {formatShiftTime(shift.startTime)}-{formatShiftTime(shift.endTime)}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
             </div>
 
             <div className="mt-4 space-y-3">

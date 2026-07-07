@@ -71,6 +71,17 @@ export default function BoothsTab() {
     },
   });
 
+  const syncBoothsMutation = useMutation({
+    mutationFn: boothsService.syncBooths,
+    onSuccess: result => {
+      toast.success(`Đã sync booth: +${result.added}, cập nhật ${result.updated}, xóa ${result.deleted}.`);
+      fetchBooths();
+    },
+    onError: error => {
+      toast.error(error instanceof Error ? error.message : 'Không thể sync booth.');
+    },
+  });
+
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       fetchBooths();
@@ -203,8 +214,17 @@ export default function BoothsTab() {
           </span>
           <button
             type="button"
+            onClick={() => syncBoothsMutation.mutate()}
+            disabled={syncBoothsMutation.isPending || isLoading}
+            className="h-9 px-3 border border-emerald-200 rounded-lg bg-white text-emerald-700 hover:bg-emerald-50 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
+            Sync Booth
+          </button>
+          <button
+            type="button"
             onClick={() => fetchBooths()}
-            disabled={isLoading}
+            disabled={isLoading || syncBoothsMutation.isPending}
             className="h-9 px-3 border border-outline-variant rounded-lg hover:bg-[#f3f3fe] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />

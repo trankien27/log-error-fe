@@ -36,10 +36,10 @@ export default function QuickArrangeAdvancedOptions({ formState, onFieldChange }
                   onChange={value => onFieldChange('allowPartialArrange', value)}
                 />
                 <Typography.Text type="secondary" className="block text-xs mt-1">
-                  Nếu không thể xếp đủ toàn bộ ca, hệ thống vẫn lưu các ca hợp lệ.
+                  Nếu không thể xếp đủ toàn bộ khung giờ, hệ thống vẫn lưu các lịch hợp lệ.
                 </Typography.Text>
               </Form.Item>
-              <Form.Item label="Số ca tối đa mỗi ngày" className="!mb-0">
+              <Form.Item label="Số khung tối đa mỗi ngày" className="!mb-0">
                 <InputNumber
                   className="w-full"
                   min={1}

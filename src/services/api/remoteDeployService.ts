@@ -8,9 +8,13 @@ export type RemoteDeployTaskType =
 
 export interface RemoteMachine {
   machineCode: string;
+  boothId?: number | null;
+  boothName?: string;
+  storeId?: number | string | null;
   connectionId?: string;
   agentVersion?: string;
   connectedAt?: string;
+  lastSeenAt?: string;
   status?: string;
 }
 
@@ -121,6 +125,28 @@ export interface RemoteTaskStatusResponse {
   [key: string]: unknown;
 }
 
+export interface RemoteTaskHistoryItem {
+  id: string;
+  taskId?: string | null;
+  taskType: string;
+  machineCode: string;
+  boothId?: number | null;
+  boothName: string;
+  storeName?: string | null;
+  actorUserId?: string | null;
+  actorName: string;
+  actorEmail: string;
+  status: string;
+  payloadJson: string;
+  resultSummary?: string | null;
+  createdAt: string;
+  completedAt?: string | null;
+}
+
+interface RemoteTaskHistoryResponse {
+  items?: RemoteTaskHistoryItem[];
+}
+
 const deployPathByType: Record<RemoteDeployTaskType, string> = {
   'update-version': 'update-version',
   'fs-async-transaction': 'fs-async-transaction',
@@ -175,6 +201,8 @@ export const remoteDeployService = {
           connectionId: '',
           agentVersion: '',
           connectedAt: '',
+          lastSeenAt: '',
+          status: 'Online',
         }));
 
     return {
@@ -185,6 +213,15 @@ export const remoteDeployService = {
 
   getTaskStatus: (taskId: string) =>
     apiClient.get<RemoteTaskStatusResponse>(`/api/remote-deploy/tasks/${encodeURIComponent(taskId)}`),
+
+  getHistory: async (params: { machineCode?: string; pageSize?: number } = {}): Promise<RemoteTaskHistoryItem[]> => {
+    const searchParams = new URLSearchParams();
+    if (params.machineCode) searchParams.set('machineCode', params.machineCode);
+    if (params.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const query = searchParams.toString();
+    const response = await apiClient.get<RemoteTaskHistoryResponse>(`/api/remote-deploy/history${query ? `?${query}` : ''}`);
+    return response.items ?? [];
+  },
 
   getFileVersions: async (fileType?: number): Promise<RemoteFileVersion[]> => {
     const params = new URLSearchParams({

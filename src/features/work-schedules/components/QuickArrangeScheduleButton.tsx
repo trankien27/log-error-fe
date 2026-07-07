@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ThunderboltOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { User } from '../../../types';
-import AutoArrangeScheduleModal from './AutoArrangeScheduleModal';
+import QuickArrangeScheduleModal from './QuickArrangeScheduleModal';
 
 type Props = {
   users: User[];
@@ -20,9 +20,11 @@ export default function QuickArrangeScheduleButton({ users, disabled = false, on
         icon={<ThunderboltOutlined />}
         disabled={disabled}
         onClick={() => setOpen(true)}
-        aria-label="Tự xếp lịch"
-      />
-      <AutoArrangeScheduleModal
+        aria-label="Đề xuất nhanh"
+      >
+        Đề xuất nhanh
+      </Button>
+      <QuickArrangeScheduleModal
         open={open}
         users={users}
         onClose={() => setOpen(false)}

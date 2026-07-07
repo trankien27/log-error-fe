@@ -1,8 +1,9 @@
-import { QuickArrangeShiftOption } from '../types/quickArrange.types';
-
 type SuggestParams = {
   targetHours: number;
-  shifts: QuickArrangeShiftOption[];
+  shifts: Array<{
+    id: number;
+    paidWorkingHours: number;
+  }>;
   maximumShiftCount: number;
   allowOverTargetHours: boolean;
 };

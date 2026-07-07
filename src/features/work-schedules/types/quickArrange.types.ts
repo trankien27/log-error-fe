@@ -11,7 +11,7 @@ export type QuickArrangeShiftOption = {
 export type ExistingScheduleItem = {
   id: number;
   workDate: string;
-  shiftId: number;
+  shiftId?: number | null;
   shiftCode: string;
 };
 
@@ -30,8 +30,6 @@ export type QuickArrangeOptionsResponse = {
 
 export type ShiftAllocationFormItem = {
   shiftId: number;
-  code: string;
-  name: string;
   startTime: string;
   endTime: string;
   paidWorkingHours: number;
@@ -41,6 +39,7 @@ export type ShiftAllocationFormItem = {
 export type QuickArrangeFormState = {
   userId: string | null;
   selectedDate: string;
+  periodType: 'week' | 'month';
   targetHours: number | null;
   overwriteExisting: boolean;
   allowOverTargetHours: boolean;
@@ -55,6 +54,7 @@ export type QuickArrangeFormState = {
 export type QuickArrangeWorkScheduleRequest = {
   userId: string;
   weekStartDate: string;
+  periodType: 'week' | 'month';
   targetHours: number;
   overwriteExisting: boolean;
   allowOverTargetHours: boolean;
@@ -67,12 +67,19 @@ export type QuickArrangeWorkScheduleRequest = {
     shiftId: number;
     quantity: number;
   }>;
+  timeRanges: Array<{
+    startTime: string;
+    endTime: string;
+    endDayOffset: number;
+    paidWorkingHours: number;
+    quantity: number;
+  }>;
 };
 
 export type QuickArrangeCreatedItem = {
   id: number;
   workDate: string;
-  shiftId: number;
+  shiftId?: number | null;
   shiftCode: string;
   shiftName: string;
   startTime: string;

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { AlertCircle, CheckCircle2, ClipboardList, FileCode2, Images, Loader2, Play, Printer, RefreshCw, RadioTower, Search, SearchCheck, Terminal, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ClipboardList, FileCode2, History, Images, Loader2, Play, Printer, RefreshCw, RadioTower, Search, SearchCheck, Terminal, WifiOff, X } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   RemoteDeployRequest,
@@ -9,6 +9,7 @@ import {
   RemoteMachine,
   RemotePowerShellMode,
   RemotePowerShellRunAs,
+  RemoteTaskHistoryItem,
   RemoteTransactionListItem,
   remoteDeployService,
 } from '../../../services/api/remoteDeployService';
@@ -76,6 +77,19 @@ const endpointLabels: Record<RemoteDeployTaskType, string> = {
   'app-form': 'AppForm',
 };
 
+const taskTypeLabels: Record<string, string> = {
+  UPDATE_VERSION: 'Update Version',
+  DEPLOY_FS_ASYNC_TRANSACTION: 'Deploy FSAsyncTransaction',
+  DEPLOY_FS_UPDATE_SYNC: 'Deploy FSUpdateSync',
+  DEPLOY_APP_FORM: 'Deploy AppForm',
+  RUN_POWERSHELL_ADMIN: 'PowerShell Admin',
+  RUN_POWERSHELL_USER: 'PowerShell User',
+  RUN_POWERSHELL_FILE_ADMIN: 'PowerShell File Admin',
+  RUN_POWERSHELL_FILE_USER: 'PowerShell File User',
+  GET_TRANSACTIONS: 'Lấy giao dịch',
+  PRINT_IMAGE: 'Print Image',
+};
+
 const priorityTransactionColumns = [
   'RecordAt',
   'Id',
@@ -110,6 +124,35 @@ const formatDateTime = (value?: string) => {
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString('vi-VN');
 };
+
+const isMachineOnline = (machine: RemoteMachine) => (
+  String(machine.status || '').toLowerCase() === 'online'
+);
+
+const getMachineStatusLabel = (machine: RemoteMachine) => (
+  isMachineOnline(machine) ? 'Online' : 'Offline'
+);
+
+const getMachineStatusClass = (machine: RemoteMachine) => (
+  isMachineOnline(machine)
+    ? 'bg-emerald-50 text-emerald-700'
+    : 'bg-red-50 text-red-600'
+);
+
+const getMachineLastSeenLabel = (machine: RemoteMachine) => (
+  formatDateTime(machine.lastSeenAt || machine.connectedAt)
+);
+
+const getHistoryStatusClass = (status: string) => {
+  const normalized = status.toUpperCase();
+  if (normalized === 'SUCCESS' || normalized === 'COMPLETED') return 'bg-emerald-50 text-emerald-700';
+  if (normalized === 'FAILED' || normalized === 'TIMED_OUT') return 'bg-red-50 text-red-600';
+  return 'bg-blue-50 text-primary';
+};
+
+const getHistoryTaskLabel = (item: RemoteTaskHistoryItem) => (
+  taskTypeLabels[item.taskType] || item.taskType
+);
 
 const getTaskId = (response?: RemoteDeployResponse | null) => {
   if (!response) return '';
@@ -322,6 +365,7 @@ export default function RemoteBoothTab() {
   const [multiDeployResults, setMultiDeployResults] = useState<MultiDeployResult[]>([]);
   const [deployError, setDeployError] = useState('');
   const [isResolvingVersionUrl, setIsResolvingVersionUrl] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   const machinesQuery = useQuery({
     queryKey: ['remote-deploy', 'machines'],
@@ -339,6 +383,11 @@ export default function RemoteBoothTab() {
     enabled: panelMode === 'deploy' && taskType === 'update-version' && updateVersionMode === 'api',
   });
 
+  const historyQuery = useQuery({
+    queryKey: ['remote-deploy', 'history'],
+    queryFn: () => remoteDeployService.getHistory({ pageSize: 100 }),
+  });
+
   const boothsByCode = useMemo(() => {
     const map = new Map<string, string>();
     (boothsQuery.data ?? []).forEach(booth => {
@@ -348,6 +397,10 @@ export default function RemoteBoothTab() {
     });
     return map;
   }, [boothsQuery.data]);
+
+  const getMachineBoothName = (machine: RemoteMachine) => (
+    machine.boothName || boothsByCode.get(machine.machineCode.toLowerCase()) || ''
+  );
 
   const boothsByMachineCode = useMemo(() => {
     const map = new Map<string, NonNullable<typeof boothsQuery.data>[number]>();
@@ -373,7 +426,6 @@ export default function RemoteBoothTab() {
   }, [boothsQuery.data]);
 
   const machines = useMemo(() => machinesQuery.data?.machines ?? [], [machinesQuery.data]);
-  const getMachineBoothName = (machine: RemoteMachine) => boothsByCode.get(machine.machineCode.toLowerCase()) || '';
   const getMachineBooth = (machine: RemoteMachine) => boothsByMachineCode.get(machine.machineCode.toLowerCase());
   const filteredMachines = useMemo(() => {
     const keyword = machineSearch.trim().toLowerCase();
@@ -381,7 +433,7 @@ export default function RemoteBoothTab() {
     return machines.filter(machine => {
       const booth = getMachineBooth(machine);
       if (storeFilter) {
-        const boothStore = booth?.storeId ?? booth?.relatedStores ?? '';
+        const boothStore = machine.storeId ?? booth?.storeId ?? booth?.relatedStores ?? '';
         if (String(boothStore) !== storeFilter) {
           return false;
         }
@@ -403,11 +455,13 @@ export default function RemoteBoothTab() {
   }, [boothsByCode, boothsByMachineCode, machineSearch, machines, storeFilter]);
   const selectedMachineCodeSet = useMemo(() => new Set(selectedMachineCodes), [selectedMachineCodes]);
   const selectedMachines = useMemo(
-    () => machines.filter(machine => selectedMachineCodeSet.has(machine.machineCode)),
+    () => machines.filter(machine => selectedMachineCodeSet.has(machine.machineCode) && isMachineOnline(machine)),
     [machines, selectedMachineCodeSet],
   );
   const allFilteredSelected = filteredMachines.length > 0
-    && filteredMachines.every(machine => selectedMachineCodeSet.has(machine.machineCode));
+    && filteredMachines
+      .filter(isMachineOnline)
+      .every(machine => selectedMachineCodeSet.has(machine.machineCode));
   const activeMachines = multiDeployMachines.length > 0
     ? multiDeployMachines
     : selectedMachine
@@ -434,6 +488,7 @@ export default function RemoteBoothTab() {
     onSuccess: result => {
       setDeployResult(result);
       setDeployError('');
+      historyQuery.refetch();
       toast.success('Đã gửi task deploy.');
     },
     onError: error => {
@@ -479,6 +534,7 @@ export default function RemoteBoothTab() {
       setMultiDeployResults(results);
       setDeployResult(null);
       setDeployError('');
+      historyQuery.refetch();
       const okCount = results.filter(result => result.ok).length;
       toast.success(`Đã gửi deploy tới ${okCount}/${results.length} booth.`);
     },
@@ -521,6 +577,7 @@ export default function RemoteBoothTab() {
     onSuccess: result => {
       setDeployResult(result);
       setDeployError('');
+      historyQuery.refetch();
       toast.success('Đã gửi task PowerShell.');
     },
     onError: error => {
@@ -542,6 +599,7 @@ export default function RemoteBoothTab() {
         applyPrintDefaultsFromTransaction(parsedTransactions[0], setPrintLayoutId, setPrintNumberOfImage);
         setDeployResult(result);
         setDeployError('');
+        historyQuery.refetch();
         toast.success(`Đã tải ${parsedTransactions.length} giao dịch.`);
       } catch (error) {
         const message = getErrorMessage(error, 'Không thể parse danh sách giao dịch.');
@@ -580,6 +638,7 @@ export default function RemoteBoothTab() {
     onSuccess: result => {
       setDeployResult(result);
       setDeployError('');
+      historyQuery.refetch();
       toast.success('Đã gửi lệnh in ảnh.');
     },
     onError: error => {
@@ -598,18 +657,6 @@ export default function RemoteBoothTab() {
     },
     onError: error => {
       toast.error(getErrorMessage(error, 'Không thể kiểm tra trạng thái task.'));
-    },
-  });
-
-  const syncBoothsMutation = useMutation({
-    mutationFn: boothsService.syncBooths,
-    onSuccess: result => {
-      boothsQuery.refetch();
-      machinesQuery.refetch();
-      toast.success(`Đã sync booth: +${result.added}, cập nhật ${result.updated}, xóa ${result.deleted}.`);
-    },
-    onError: error => {
-      toast.error(getErrorMessage(error, 'Không thể sync booth.'));
     },
   });
 
@@ -679,6 +726,10 @@ export default function RemoteBoothTab() {
 
   const handleMachineAction = (machine: RemoteMachine, action: string) => {
     if (!action) return;
+    if (!isMachineOnline(machine)) {
+      toast.error('Booth đang offline, không thể gửi task.');
+      return;
+    }
 
     if (action === 'deploy') {
       openRemotePanel(machine, 'deploy');
@@ -723,6 +774,12 @@ export default function RemoteBoothTab() {
   };
 
   const toggleMachineSelection = (machineCode: string) => {
+    const machine = machines.find(item => item.machineCode === machineCode);
+    if (machine && !isMachineOnline(machine)) {
+      toast.error('Booth đang offline, không thể chọn deploy.');
+      return;
+    }
+
     setSelectedMachineCodes(current => (
       current.includes(machineCode)
         ? current.filter(code => code !== machineCode)
@@ -731,7 +788,7 @@ export default function RemoteBoothTab() {
   };
 
   const toggleAllFilteredMachines = () => {
-    const filteredCodes = filteredMachines.map(machine => machine.machineCode);
+    const filteredCodes = filteredMachines.filter(isMachineOnline).map(machine => machine.machineCode);
     if (allFilteredSelected) {
       setSelectedMachineCodes(current => current.filter(code => !filteredCodes.includes(code)));
       return;
@@ -965,12 +1022,14 @@ export default function RemoteBoothTab() {
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
             <button
               type="button"
-              onClick={() => syncBoothsMutation.mutate()}
-              disabled={syncBoothsMutation.isPending}
-              className="h-11 sm:h-10 bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              onClick={() => {
+                setIsHistoryModalOpen(true);
+                historyQuery.refetch();
+              }}
+              className="h-11 sm:h-10 bg-white border border-outline-variant text-gray-700 hover:bg-[#f3f3fe] px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
             >
-              <RefreshCw className={`w-4 h-4 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
-              Sync Booth
+              <History className="w-4 h-4" />
+              Lịch sử tác vụ
             </button>
             <button
               type="button"
@@ -1041,8 +1100,8 @@ export default function RemoteBoothTab() {
                 <tr>
                   <td colSpan={8} className="py-12 text-center">
                     <RadioTower className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-                    <p className="font-bold text-gray-700">Chưa có Booth Agent online.</p>
-                    <p className="text-xs text-gray-400 mt-1">Kiểm tra agent tại booth hoặc bấm Refresh để tải lại trạng thái kết nối.</p>
+                    <p className="font-bold text-gray-700">Chưa có booth nào.</p>
+                    <p className="text-xs text-gray-400 mt-1">Bấm Sync Booth hoặc kiểm tra cấu hình danh sách booth.</p>
                   </td>
                 </tr>
               ) : filteredMachines.length === 0 ? (
@@ -1061,7 +1120,8 @@ export default function RemoteBoothTab() {
                         type="checkbox"
                         checked={selectedMachineCodeSet.has(machine.machineCode)}
                         onChange={() => toggleMachineSelection(machine.machineCode)}
-                        className="h-4 w-4 accent-primary cursor-pointer"
+                        disabled={!isMachineOnline(machine)}
+                        className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Chọn booth ${machine.machineCode}`}
                       />
                     </td>
@@ -1070,14 +1130,14 @@ export default function RemoteBoothTab() {
                       {getMachineBoothName(machine) || <span className="text-gray-400 font-medium">N/A</span>}
                     </td>
                     <td className="py-4 px-5 font-mono text-gray-700">{machine.agentVersion || 'N/A'}</td>
-                    <td className="py-4 px-5 text-gray-600 font-medium">{formatDateTime(machine.connectedAt)}</td>
+                    <td className="py-4 px-5 text-gray-600 font-medium">{getMachineLastSeenLabel(machine)}</td>
                     <td className="py-4 px-5 font-mono text-[11px] text-gray-500 max-w-[280px] truncate" title={machine.connectionId}>
                       {machine.connectionId}
                     </td>
                     <td className="py-4 px-5">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        {machine.status || 'Online'}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold ${getMachineStatusClass(machine)}`}>
+                        {isMachineOnline(machine) ? <CheckCircle2 className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+                        {getMachineStatusLabel(machine)}
                       </span>
                     </td>
                     <td className="py-4 px-5">
@@ -1087,7 +1147,8 @@ export default function RemoteBoothTab() {
                           handleMachineAction(machine, event.target.value);
                           event.currentTarget.value = '';
                         }}
-                        className="h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer"
+                        disabled={!isMachineOnline(machine)}
+                        className="h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
                         aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                       >
                         <option value="">Chọn thao tác</option>
@@ -1133,8 +1194,8 @@ export default function RemoteBoothTab() {
           ) : machines.length === 0 ? (
             <div className="py-12 text-center px-4">
               <RadioTower className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-              <p className="font-bold text-gray-700">Chưa có Booth Agent online.</p>
-              <p className="text-xs text-gray-400 mt-1">Kiểm tra agent tại booth hoặc bấm Refresh để tải lại trạng thái kết nối.</p>
+              <p className="font-bold text-gray-700">Chưa có booth nào.</p>
+              <p className="text-xs text-gray-400 mt-1">Bấm Sync Booth hoặc kiểm tra cấu hình danh sách booth.</p>
             </div>
           ) : filteredMachines.length === 0 ? (
             <div className="py-12 text-center px-4">
@@ -1152,7 +1213,8 @@ export default function RemoteBoothTab() {
                         type="checkbox"
                         checked={selectedMachineCodeSet.has(machine.machineCode)}
                         onChange={() => toggleMachineSelection(machine.machineCode)}
-                        className="h-5 w-5 mt-0.5 accent-primary cursor-pointer shrink-0"
+                        disabled={!isMachineOnline(machine)}
+                        className="h-5 w-5 mt-0.5 accent-primary cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Chọn booth ${machine.machineCode}`}
                       />
                       <span className="min-w-0">
@@ -1162,9 +1224,9 @@ export default function RemoteBoothTab() {
                         </span>
                       </span>
                     </label>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs shrink-0">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      {machine.status || 'Online'}
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs shrink-0 ${getMachineStatusClass(machine)}`}>
+                      {isMachineOnline(machine) ? <CheckCircle2 className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+                      {getMachineStatusLabel(machine)}
                     </span>
                   </div>
 
@@ -1175,7 +1237,7 @@ export default function RemoteBoothTab() {
                     </div>
                     <div className="rounded-lg bg-gray-50 border border-outline-variant p-2 min-w-0">
                       <p className="text-gray-400 font-bold uppercase">Connected</p>
-                      <p className="font-semibold text-gray-700 truncate">{formatDateTime(machine.connectedAt)}</p>
+                      <p className="font-semibold text-gray-700 truncate">{getMachineLastSeenLabel(machine)}</p>
                     </div>
                   </div>
 
@@ -1185,7 +1247,8 @@ export default function RemoteBoothTab() {
                       handleMachineAction(machine, event.target.value);
                       event.currentTarget.value = '';
                     }}
-                    className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm font-bold text-gray-700 focus:outline-primary cursor-pointer"
+                    disabled={!isMachineOnline(machine)}
+                    className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm font-bold text-gray-700 focus:outline-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
                     aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                   >
                     <option value="">Chọn thao tác</option>
@@ -1200,6 +1263,119 @@ export default function RemoteBoothTab() {
           )}
         </div>
       </div>
+
+      {isHistoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#191b23]/55 backdrop-blur-sm p-2 sm:p-6">
+          <button
+            type="button"
+            aria-label="Đóng lịch sử tác vụ"
+            onClick={() => setIsHistoryModalOpen(false)}
+            className="absolute inset-0 cursor-default"
+          />
+
+          <section className="relative z-10 flex h-[92dvh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-white shadow-2xl">
+            <div className="flex flex-col gap-3 border-b border-outline-variant bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-sm font-black text-gray-900 inline-flex items-center gap-2">
+                  <History className="h-4 w-4 text-primary" />
+                  Lịch sử tác vụ
+                </h3>
+                <p className="mt-1 text-[11px] font-semibold text-gray-500">
+                  Lưu ai đã chạy tác vụ gì trên máy nào trong Remote Booth.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => historyQuery.refetch()}
+                  disabled={historyQuery.isFetching}
+                  className="h-9 rounded-lg border border-outline-variant bg-white px-3 text-xs font-bold text-gray-700 inline-flex items-center justify-center gap-1.5 hover:bg-[#f3f3fe] disabled:opacity-60"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${historyQuery.isFetching ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryModalOpen(false)}
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-gray-500 hover:bg-white"
+                  aria-label="Đóng"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              <table className="w-full min-w-[980px] text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-white border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 font-bold">
+                    <th className="py-3 px-4">Thời gian</th>
+                    <th className="py-3 px-4">Người thao tác</th>
+                    <th className="py-3 px-4">Tác vụ</th>
+                    <th className="py-3 px-4">Máy / Booth</th>
+                    <th className="py-3 px-4">Trạng thái</th>
+                    <th className="py-3 px-4">TaskId</th>
+                    <th className="py-3 px-4">Kết quả</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f1f5f9]">
+                  {historyQuery.isLoading ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center font-bold text-gray-400">
+                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
+                        Đang tải lịch sử tác vụ...
+                      </td>
+                    </tr>
+                  ) : historyQuery.isError ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center font-bold text-red-500">
+                        <AlertCircle className="w-5 h-5 mx-auto mb-2" />
+                        {getErrorMessage(historyQuery.error, 'Không thể tải lịch sử tác vụ.')}
+                      </td>
+                    </tr>
+                  ) : (historyQuery.data ?? []).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center font-bold text-gray-400">
+                        Chưa có lịch sử tác vụ.
+                      </td>
+                    </tr>
+                  ) : (
+                    (historyQuery.data ?? []).map(item => (
+                      <tr key={item.id} className="hover:bg-[#faf8ff]">
+                        <td className="py-3 px-4 whitespace-nowrap font-semibold text-gray-700">
+                          {formatDateTime(item.createdAt)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="block font-bold text-gray-900">{item.actorName || 'Unknown'}</span>
+                          {item.actorEmail && <span className="block text-[11px] text-gray-500">{item.actorEmail}</span>}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-gray-800">{getHistoryTaskLabel(item)}</td>
+                        <td className="py-3 px-4">
+                          <span className="block font-mono font-bold text-[#004ac6]">{item.machineCode}</span>
+                          <span className="block text-[11px] font-semibold text-gray-500">
+                            {item.boothName || 'N/A'}{item.storeName ? ` · ${item.storeName}` : ''}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-black ${getHistoryStatusClass(item.status)}`}>
+                            {item.status || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 max-w-[180px] truncate font-mono text-[11px] text-gray-600" title={item.taskId || ''}>
+                          {item.taskId || 'N/A'}
+                        </td>
+                        <td className="py-3 px-4 max-w-[280px] truncate text-[11px] font-medium text-gray-600" title={item.resultSummary || item.payloadJson}>
+                          {item.resultSummary || item.payloadJson}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
 
       {activeMachines.length > 0 && (
         <div

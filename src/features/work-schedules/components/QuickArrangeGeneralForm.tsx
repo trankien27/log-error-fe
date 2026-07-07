@@ -14,7 +14,7 @@ export default function QuickArrangeGeneralForm({ formState, users, onFieldChang
   return (
     <div className="space-y-3">
       <Typography.Title level={5} className="!mb-0">Thông tin chung</Typography.Title>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <Form.Item label="Nhân viên *" className="!mb-0">
           <Select
             showSearch
@@ -29,17 +29,31 @@ export default function QuickArrangeGeneralForm({ formState, users, onFieldChang
           />
         </Form.Item>
 
-        <Form.Item label="Tuần làm việc" className="!mb-0">
+        <Form.Item label="Kiểu đề xuất" className="!mb-0">
+          <Select
+            value={formState.periodType}
+            onChange={value => onFieldChange('periodType', value)}
+            options={[
+              { value: 'week', label: 'Theo tuần' },
+              { value: 'month', label: 'Theo tháng' },
+            ]}
+          />
+        </Form.Item>
+
+        <Form.Item label={formState.periodType === 'month' ? 'Tháng' : 'Tuần làm việc'} className="!mb-0">
           <DatePicker
             className="w-full"
+            picker={formState.periodType === 'month' ? 'month' : 'date'}
             value={dayjs(formState.selectedDate)}
-            format="DD/MM/YYYY"
+            format={formState.periodType === 'month' ? 'MM/YYYY' : 'DD/MM/YYYY'}
             onChange={value => {
               if (value) onFieldChange('selectedDate', toIsoDate(value));
             }}
           />
           <Typography.Text type="secondary" className="block mt-1 text-xs">
-            {formatWeekRange(formState.selectedDate)}
+            {formState.periodType === 'month'
+              ? `Tháng ${dayjs(formState.selectedDate).format('MM/YYYY')}`
+              : formatWeekRange(formState.selectedDate)}
           </Typography.Text>
         </Form.Item>
 

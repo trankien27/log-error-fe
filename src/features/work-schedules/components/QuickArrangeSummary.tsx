@@ -39,7 +39,7 @@ export default function QuickArrangeSummary({
         <Descriptions.Item label="Giờ mục tiêu">{targetHours ?? 0} giờ</Descriptions.Item>
         <Descriptions.Item label="Đã xếp theo input">{allocatedHours} giờ</Descriptions.Item>
         <Descriptions.Item label="Còn lại">{remainingHours} giờ</Descriptions.Item>
-        <Descriptions.Item label="Tổng số ca">{totalShiftCount} ca</Descriptions.Item>
+        <Descriptions.Item label="Tổng số khung giờ">{totalShiftCount} khung</Descriptions.Item>
         <Descriptions.Item label="Lịch hiện có">{options?.existingWorkingHours ?? 0} giờ</Descriptions.Item>
       </Descriptions>
       {statusMessage}

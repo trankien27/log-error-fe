@@ -11,6 +11,7 @@ import { getWeekStartDate } from '../utils/week.utils';
 export const initialQuickArrangeState: QuickArrangeFormState = {
   userId: null,
   selectedDate: dayjs().format('YYYY-MM-DD'),
+  periodType: 'week',
   targetHours: null,
   overwriteExisting: false,
   allowOverTargetHours: false,
@@ -76,15 +77,7 @@ export function useQuickArrangeSchedule() {
     setFormState(current => ({
       ...current,
       selectedDate: nextOptions.weekStartDate,
-      shifts: nextOptions.shifts.map(shift => ({
-        shiftId: shift.id,
-        code: shift.code,
-        name: shift.name,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        paidWorkingHours: shift.paidWorkingHours,
-        quantity: current.shifts.find(item => item.shiftId === shift.id)?.quantity ?? 0,
-      })),
+      shifts: current.shifts,
     }));
   };
 
@@ -151,6 +144,46 @@ export function useQuickArrangeSchedule() {
     });
   };
 
+  const updateTimeRange = <K extends keyof ShiftAllocationFormItem>(
+    shiftId: number,
+    field: K,
+    value: ShiftAllocationFormItem[K],
+  ) => {
+    setFormState(current => ({
+      ...current,
+      shifts: current.shifts.map(item => (
+        item.shiftId === shiftId ? { ...item, [field]: value } : item
+      )),
+    }));
+  };
+
+  const addTimeRange = () => {
+    setFormState(current => {
+      const nextId = Math.max(0, ...current.shifts.map(shift => shift.shiftId)) + 1;
+
+      return {
+        ...current,
+        shifts: [
+          ...current.shifts,
+          {
+            shiftId: nextId,
+            startTime: '09:00',
+            endTime: '18:00',
+            paidWorkingHours: 9,
+            quantity: 0,
+          },
+        ],
+      };
+    });
+  };
+
+  const removeTimeRange = (shiftId: number) => {
+    setFormState(current => ({
+      ...current,
+      shifts: current.shifts.filter(item => item.shiftId !== shiftId),
+    }));
+  };
+
   const setShiftAllocations = (allocations: Record<number, number>) => {
     setFormState(current => ({
       ...current,
@@ -178,9 +211,13 @@ export function useQuickArrangeSchedule() {
     if (!formState.userId) errors.push('Vui lòng chọn nhân viên.');
     if (!formState.selectedDate) errors.push('Vui lòng chọn tuần làm việc.');
     if (!formState.targetHours || formState.targetHours <= 0) errors.push('Vui lòng nhập số giờ mục tiêu.');
-    if (!formState.shifts.some(shift => shift.quantity > 0)) errors.push('Vui lòng nhập số lượng ít nhất một ca.');
+    formState.shifts.forEach(shift => {
+      if (!shift.startTime || !shift.endTime) errors.push(`Khung ${shift.shiftId} thiếu giờ bắt đầu/kết thúc.`);
+      if (shift.endTime <= shift.startTime) errors.push(`Khung ${shift.shiftId} phải có giờ kết thúc lớn hơn giờ bắt đầu.`);
+      if (shift.paidWorkingHours <= 0) errors.push(`Khung ${shift.shiftId} phải có số giờ tính công lớn hơn 0.`);
+    });
     if (isOverTarget && !formState.allowOverTargetHours) errors.push('Tổng số giờ đã vượt mục tiêu.');
-    if (totalShiftCount > availableCapacity) errors.push('Tổng số ca vượt khả năng sắp xếp trong tuần.');
+    if (totalShiftCount > availableCapacity) errors.push('Tổng số khung giờ vượt khả năng sắp xếp trong tuần.');
     return errors;
   };
 
@@ -193,6 +230,7 @@ export function useQuickArrangeSchedule() {
     return {
       userId: formState.userId,
       weekStartDate: getWeekStartDate(formState.selectedDate),
+      periodType: formState.periodType,
       targetHours: formState.targetHours,
       overwriteExisting: formState.overwriteExisting,
       allowOverTargetHours: formState.allowOverTargetHours,
@@ -201,10 +239,14 @@ export function useQuickArrangeSchedule() {
       maxConsecutiveWorkingDays: formState.maxConsecutiveWorkingDays,
       minimumRestHours: formState.minimumRestHours,
       note: formState.note.trim() || null,
-      shiftAllocations: formState.shifts
+      shiftAllocations: [],
+      timeRanges: formState.shifts
         .filter(shift => shift.quantity > 0)
         .map(shift => ({
-          shiftId: shift.shiftId,
+          startTime: shift.startTime.length === 5 ? `${shift.startTime}:00` : shift.startTime,
+          endTime: shift.endTime.length === 5 ? `${shift.endTime}:00` : shift.endTime,
+          endDayOffset: 0,
+          paidWorkingHours: shift.paidWorkingHours,
           quantity: shift.quantity,
         })),
     };
@@ -222,6 +264,9 @@ export function useQuickArrangeSchedule() {
     validationErrors: validate(),
     updateField,
     updateShiftQuantity,
+    updateTimeRange,
+    addTimeRange,
+    removeTimeRange,
     setShiftAllocations,
     clearAllocations,
     getMaxQuantityForShift,

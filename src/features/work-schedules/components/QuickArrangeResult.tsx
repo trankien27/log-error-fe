@@ -12,7 +12,7 @@ export default function QuickArrangeResult({ result }: Props) {
       <Alert
         type={result.warnings.length > 0 ? 'warning' : 'success'}
         showIcon
-        message={`Đã tạo ${result.createdShiftCount}/${result.requestedShiftCount} ca.`}
+        message={`Đã tạo ${result.createdShiftCount}/${result.requestedShiftCount} khung giờ.`}
         description={`Tổng giờ sau khi xếp: ${result.finalHours}/${result.targetHours} giờ.`}
       />
       {result.warnings.length > 0 && (

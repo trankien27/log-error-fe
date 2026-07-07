@@ -7,13 +7,10 @@ import { User } from '../../../types';
 import { getQuickArrangeOptions, quickArrangeWorkSchedule } from '../api/workScheduleApi';
 import { useQuickArrangeSchedule } from '../hooks/useQuickArrangeSchedule';
 import { QuickArrangeWorkScheduleResponse } from '../types/quickArrange.types';
-import { suggestShiftAllocation } from '../utils/suggestShiftAllocation';
 import { getWeekStartDate } from '../utils/week.utils';
 import QuickArrangeAdvancedOptions from './QuickArrangeAdvancedOptions';
 import QuickArrangeGeneralForm from './QuickArrangeGeneralForm';
 import QuickArrangeResult from './QuickArrangeResult';
-import QuickArrangeShiftTable from './QuickArrangeShiftTable';
-import QuickArrangeSummary from './QuickArrangeSummary';
 
 type Props = {
   open: boolean;
@@ -33,7 +30,7 @@ export function mapQuickArrangeApiError(error: unknown) {
         return [
           `Không thể xếp đủ lịch: ${error.message}`,
           'Nguyên nhân thường gặp: đã đạt số ca tối đa mỗi ngày, trùng giờ với lịch hiện có, không đủ thời gian nghỉ giữa các ca, hoặc vượt số ngày làm liên tiếp.',
-          'Bạn có thể bật "Cho phép lưu một phần", bật "Ghi đè lịch hiện có", tăng "Số ca tối đa mỗi ngày", tăng "Số ngày làm liên tiếp tối đa", hoặc giảm "Thời gian nghỉ tối thiểu".',
+          'Bạn có thể bật "Cho phép lưu một phần", bật "Ghi đè lịch hiện có", tăng "Số khung tối đa mỗi ngày", tăng "Số ngày làm liên tiếp tối đa", hoặc giảm "Thời gian nghỉ tối thiểu".',
         ].join('\n');
       default:
         return error.message;
@@ -52,18 +49,8 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
   const {
     formState,
     options,
-    allocatedHours,
-    remainingHours,
-    totalShiftCount,
-    availableCapacity,
-    isOverTarget,
-    isExactTarget,
     validationErrors,
     updateField,
-    updateShiftQuantity,
-    setShiftAllocations,
-    clearAllocations,
-    getMaxQuantityForShift,
     applyOptions,
     resetForm,
     buildRequest,
@@ -73,12 +60,11 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
   const hasDirtyData = Boolean(
     formState.userId ||
     formState.targetHours ||
-    formState.shifts.some(shift => shift.quantity > 0) ||
     formState.note.trim(),
   );
 
   const optionsQuery = useQuery({
-    queryKey: ['work-schedules', 'quick-arrange-options', formState.userId, weekStartDate],
+    queryKey: ['work-schedules', 'quick-arrange-options', formState.userId, weekStartDate, formState.periodType],
     queryFn: () => getQuickArrangeOptions({
       userId: formState.userId as string,
       weekStartDate,
@@ -96,14 +82,14 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
         setResult(response);
         notification.warning({
           message: 'Đã xếp lịch với cảnh báo',
-          description: `Đã tạo ${response.createdShiftCount}/${response.requestedShiftCount} ca.`,
+          description: `Đã tạo ${response.createdShiftCount}/${response.requestedShiftCount} khung giờ.`,
         });
         return;
       }
 
       notification.success({
         message: 'Sắp xếp lịch nhanh thành công',
-        description: `Đã xếp thành công ${response.createdShiftCount} ca cho ${response.userName}.`,
+        description: `Đã xếp thành công ${response.createdShiftCount} khung giờ cho ${response.userName}.`,
       });
       handleResetAndClose();
     },
@@ -131,8 +117,6 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
       setResult(null);
     }
   }, [open]);
-
-  const maximumShiftCount = availableCapacity;
 
   const canSubmit = useMemo(() => {
     return validationErrors.length === 0 && !optionsQuery.isFetching && !mutation.isPending;
@@ -186,44 +170,9 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
     run();
   };
 
-  const suggestAllocation = () => {
-    if (!formState.targetHours || !options) {
-      setApiError('Vui lòng chọn nhân viên và nhập số giờ mục tiêu trước khi đề xuất.');
-      return;
-    }
-
-    const smallestShiftHours = Math.min(
-      ...options.shifts
-        .map(shift => shift.paidWorkingHours)
-        .filter(hours => hours > 0),
-    );
-    const targetBasedMaximumShiftCount = Number.isFinite(smallestShiftHours)
-      ? Math.ceil(formState.targetHours / smallestShiftHours) + 1
-      : maximumShiftCount;
-
-    const allocations = suggestShiftAllocation({
-      targetHours: formState.targetHours,
-      shifts: options.shifts,
-      maximumShiftCount: Math.max(maximumShiftCount, targetBasedMaximumShiftCount),
-      allowOverTargetHours: formState.allowOverTargetHours,
-    });
-    setShiftAllocations(allocations);
-
-    const suggestedHours = options.shifts.reduce(
-      (total, shift) => total + (allocations[shift.id] || 0) * shift.paidWorkingHours,
-      0,
-    );
-    const suggestedCount = Object.values(allocations).reduce((total, quantity) => total + quantity, 0);
-
-    notification.info({
-      message: suggestedHours === formState.targetHours ? 'Đã đề xuất tổ hợp đạt mục tiêu' : 'Đã đề xuất phương án gần nhất',
-      description: `Tổ hợp ${suggestedCount} ca, tổng ${suggestedHours} giờ.`,
-    });
-  };
-
   return (
     <Modal
-      title="Sắp xếp lịch nhanh"
+      title="Đề xuất lịch nhanh theo khung giờ"
       open={open}
       onCancel={requestClose}
       width="min(860px, calc(100vw - 24px))"
@@ -235,10 +184,6 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
         },
       }}
       footer={[
-        <Button key="clear" onClick={clearAllocations}>Xóa phân bổ</Button>,
-        <Button key="suggest" onClick={suggestAllocation} disabled={!formState.targetHours || !options}>
-          Tự động đề xuất
-        </Button>,
         <Button key="cancel" onClick={requestClose}>Hủy</Button>,
         <Button
           key="submit"
@@ -280,29 +225,9 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
             <Alert
               type="info"
               showIcon
-              message={`Lịch hiện có: ${options.existingWorkingHours} giờ, ${options.existingSchedules.length} ca. Ngày khả dụng: ${options.availableDayCount}.`}
+              message={`Lịch hiện có trong tuần đang xem: ${options.existingWorkingHours} giờ, ${options.existingSchedules.length} lịch.`}
+              description="Hệ thống sẽ tự sinh các khung giờ phù hợp với tổng số tiếng khi bấm Xếp lịch."
             />
-            <QuickArrangeShiftTable
-              shifts={formState.shifts}
-              getMaxQuantityForShift={getMaxQuantityForShift}
-              updateShiftQuantity={updateShiftQuantity}
-              onAutoFill={suggestAllocation}
-              onClear={clearAllocations}
-              canAutoFill={Boolean(formState.targetHours && options)}
-            />
-            <QuickArrangeSummary
-              targetHours={formState.targetHours}
-              allocatedHours={allocatedHours}
-              remainingHours={remainingHours}
-              totalShiftCount={totalShiftCount}
-              options={options}
-              allowOverTargetHours={formState.allowOverTargetHours}
-              isExactTarget={isExactTarget}
-              isOverTarget={isOverTarget}
-            />
-            {totalShiftCount > availableCapacity && (
-              <Alert type="error" showIcon message="Tổng số ca vượt khả năng sắp xếp trong tuần." />
-            )}
             <QuickArrangeAdvancedOptions formState={formState} onFieldChange={updateField} />
           </Space>
         )}
@@ -311,7 +236,7 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
 
         {!formState.userId && (
           <Typography.Text type="secondary">
-            Chọn nhân viên để tải danh sách ca đang hoạt động.
+            Chọn nhân viên để tải dữ liệu lịch hiện có trong tuần.
           </Typography.Text>
         )}
       </div>
