@@ -251,6 +251,12 @@ export const remoteDeployService = {
   deployAppForm: (machineCode: string, body: RemoteDeployRequest) =>
     deploy(machineCode, 'app-form', body),
 
+  deployUpdateAgentService: (machineCode: string, body: RemoteDeployRequest) =>
+    apiClient.post<RemoteDeployResponse>(
+      `/api/remote-deploy/machines/${encodeURIComponent(machineCode)}/update-agent-service`,
+      body,
+    ),
+
   runPowerShellInline,
 
   runPowerShellFile,

@@ -37,38 +37,9 @@ const taskOptions: TaskOption[] = [
   { value: 'app-form', label: 'Deploy AppForm' },
 ];
 
-const updateAgentServiceScript = `# Link GitHub Release
-$url = "https://github.com/trankien27/fun-agent/releases/download/Fun-agent/agent.zip"
-
-# Duong dan luu file tai ve
-$downloadPath = "D:\\FunStudio\\agent.zip"
-
-# Thu muc giai nen
-$extractPath = "D:\\FunStudio\\agent"
-
-# Ten service
-$serviceName = "FunStudioWindowsMaintenanceAgent"
-
-Write-Host "Dang tai agent.zip..."
-curl.exe -L $url -o $downloadPath
-
-Write-Host "Dang dung service $serviceName..."
-Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
-
-if (!(Test-Path $extractPath)) {
-    New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
-}
-
-Write-Host "Dang xoa file cu trong folder agent..."
-Get-ChildItem -Path $extractPath -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-
-Write-Host "Dang giai nen agent.zip..."
-Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
-
-Write-Host "Dang chay lai service $serviceName..."
-Start-Service -Name $serviceName
-
-Write-Host "Hoan tat update agent."`;
+// URL goi cai dat agent moi (GitHub Release). Task UPDATE_AGENT_SERVICE se tai ban nay,
+// stage ra thu muc tam roi mot tien trinh updater tach roi se stop -> swap -> start lai service agent.
+const DEFAULT_AGENT_RELEASE_URL = 'https://github.com/trankien27/fun-agent/releases/download/Fun-agent/agent.zip';
 
 const endpointLabels: Record<RemoteDeployTaskType, string> = {
   'update-version': 'Update Version',
@@ -88,6 +59,7 @@ const taskTypeLabels: Record<string, string> = {
   RUN_POWERSHELL_FILE_USER: 'PowerShell File User',
   GET_TRANSACTIONS: 'Lấy giao dịch',
   PRINT_IMAGE: 'Print Image',
+  UPDATE_AGENT_SERVICE: 'Update Agent Service',
 };
 
 const priorityTransactionColumns = [
@@ -499,6 +471,23 @@ export default function RemoteBoothTab() {
     },
   });
 
+  const updateAgentServiceMutation = useMutation({
+    mutationFn: ({ machineCode, body }: { machineCode: string; body: RemoteDeployRequest }) =>
+      remoteDeployService.deployUpdateAgentService(machineCode, body),
+    onSuccess: result => {
+      setDeployResult(result);
+      setDeployError('');
+      historyQuery.refetch();
+      toast.success('Đã gửi task cập nhật agent. Agent sẽ tự restart để áp dụng bản mới.');
+    },
+    onError: error => {
+      const message = getErrorMessage(error, 'Không thể gửi task cập nhật agent.');
+      setDeployError(message);
+      setDeployResult(null);
+      toast.error(message);
+    },
+  });
+
   const multiDeployMutation = useMutation({
     mutationFn: async ({
       targetMachines,
@@ -704,24 +693,31 @@ export default function RemoteBoothTab() {
     }
   };
 
-  const openUpdateAgentServiceTask = (machine: RemoteMachine) => {
+  const confirmUpdateAgentService = (machine: RemoteMachine) => {
+    if (updateAgentServiceMutation.isPending) return;
+
+    const boothLabel = getMachineBoothName(machine) || machine.machineCode;
+    const confirmed = window.confirm(
+      `Cập nhật agent trên "${boothLabel}"?\n\n` +
+        'Agent sẽ tải bản mới, tự dừng service, thay file rồi khởi động lại. ' +
+        'Quá trình restart diễn ra sau vài giây; xác nhận bản mới qua version agent trong danh sách booth.',
+    );
+    if (!confirmed) return;
+
     setSelectedMachine(machine);
     setMultiDeployMachines([]);
-    setPanelMode('powershell');
-    resetDeployForm();
-    resetPrintForm();
-    setPowerShellMode('inline');
-    setPowerShellRunAs('admin');
-    setPowerShellScript(updateAgentServiceScript);
-    setPowerShellScriptPath('');
-    setPowerShellArguments('');
-    setPowerShellWorkingDirectory('');
-    setPowerShellEnvironmentText('TASK_NAME=update agent service');
-    setPowerShellTimeoutSeconds(600);
-    setWaitForResult(true);
-    setWaitTimeoutSeconds(900);
     setDeployResult(null);
     setDeployError('');
+
+    updateAgentServiceMutation.mutate({
+      machineCode: machine.machineCode,
+      body: {
+        downloadUrl: DEFAULT_AGENT_RELEASE_URL,
+        // Bản mới restart giữa chừng nên agent trả kết quả "initiated" ngay, không chờ hoàn tất.
+        waitForResult: false,
+        timeoutSeconds: 600,
+      },
+    });
   };
 
   const handleMachineAction = (machine: RemoteMachine, action: string) => {
@@ -742,7 +738,7 @@ export default function RemoteBoothTab() {
     }
 
     if (action === 'update-agent') {
-      openUpdateAgentServiceTask(machine);
+      confirmUpdateAgentService(machine);
       return;
     }
 
@@ -1672,12 +1668,6 @@ export default function RemoteBoothTab() {
               </>
               ) : panelMode === 'powershell' ? (
               <>
-                {powerShellScript === updateAgentServiceScript && (
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-                    Task: <span className="font-black">update agent service</span> · chạy PowerShell quyền Admin để tải, giải nén và restart service agent.
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="block text-xs font-bold text-gray-600">
                     Kiểu chạy
