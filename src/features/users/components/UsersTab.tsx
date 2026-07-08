@@ -517,7 +517,7 @@ export default function UsersTab() {
                             >
                               {user.name}
                             </p>
-                            <p className="text-[10px] text-gray-500 font-mono">Mã: {user.id}</p>
+                            {/* <p className="text-[10px] text-gray-500 font-mono">Mã: {user.id}</p> */}
                           </div>
                         </div>
                       </td>
