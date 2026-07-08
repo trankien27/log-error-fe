@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   RadioTower,
-  Settings,
   Shield,
   Store,
   TimerReset,
@@ -47,9 +46,10 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const { tasks } = useTasksStore();
   const { notifications } = useNotificationStore();
   const { setSelectedUserProfileUser } = useUsersStore();
-  const { hasAnyRole } = useAuthStore();
+  const { hasAnyRole, getCurrentRoleNumber } = useAuthStore();
   const isAdmin = hasAnyRole([1, 'Admin']);
   const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager', 'IT Support']);
+  const canViewShifts = getCurrentRoleNumber() !== 2;
 
   const getActiveTab = (): TabType => {
     const path = location.pathname;
@@ -221,12 +221,14 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <span>Remote Booth</span>
               </button>
             </li>
-            <li>
-              <button onClick={() => navigateTo('shifts')} className={navButtonClass(activeTab === 'shifts')}>
-                <Clock3 className="w-4 h-4" />
-                <span>Ca làm việc</span>
-              </button>
-            </li>
+            {canViewShifts && (
+              <li>
+                <button onClick={() => navigateTo('shifts')} className={navButtonClass(activeTab === 'shifts')}>
+                  <Clock3 className="w-4 h-4" />
+                  <span>Ca làm việc</span>
+                </button>
+              </li>
+            )}
             <li>
               <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
                 <Bell className="w-4 h-4" />
@@ -252,12 +254,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 </button>
               </li>
             )}
-            <li>
-              <button onClick={() => navigateTo('settings')} className={navButtonClass(activeTab === 'settings')}>
-                <Settings className="w-4 h-4" />
-                <span>Cài đặt</span>
-              </button>
-            </li>
           </ul>
         </nav>
       </aside>

@@ -1,29 +1,69 @@
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { Lock, Eye, EyeOff, CheckCircle2, Save } from 'lucide-react';
+import React, { ChangeEvent, useRef, useState } from 'react';
+import { Camera, Eye, EyeOff, Loader2, Lock, Save, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { accountService } from '../../../services/api/accountService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
+const MAX_AVATAR_BYTES = 1024 * 1024;
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Không thể đọc file ảnh.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function SettingsTab() {
-  // Zustand State subscription
   const {
-    settingsStage,
+    currentUser,
     settingsPasswordCurrent,
     settingsPasswordNew,
     settingsPasswordConfirm,
-    setSettingsStage,
     setSettingsPasswordCurrent,
     setSettingsPasswordNew,
     setSettingsPasswordConfirm,
-    resetSecurityForm
+    resetSecurityForm,
+    updateCurrentUser,
   } = useAuthStore();
 
-  // Local UI visibility togglers
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handlePasswordSubmit = () => {
+  const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Vui lòng chọn file ảnh.');
+      return;
+    }
+
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error('Ảnh avatar phải nhỏ hơn 1MB.');
+      return;
+    }
+
+    try {
+      setIsUploadingAvatar(true);
+      const avatarDataUrl = await fileToDataUrl(file);
+      const user = await accountService.updateAvatar(avatarDataUrl);
+      updateCurrentUser({ avatar: user.avatar });
+      toast.success('Đã cập nhật avatar.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể cập nhật avatar.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
     if (!settingsPasswordCurrent) {
       toast.error('Vui lòng nhập mật khẩu hiện tại.');
       return;
@@ -36,194 +76,160 @@ export default function SettingsTab() {
       toast.error('Mật khẩu xác nhận không khớp nhau.');
       return;
     }
-    setSettingsStage('success');
-    toast.success('Mật khẩu đồng bộ bảo mật thành công.');
+
+    try {
+      setIsChangingPassword(true);
+      await accountService.changePassword(settingsPasswordCurrent, settingsPasswordNew);
+      resetSecurityForm();
+      toast.success('Đã đổi mật khẩu.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể đổi mật khẩu.');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   return (
-    <div className="space-y-6 text-[#191b23] text-left animate-fadeIn">
-      {/* Header section */}
+    <div className="space-y-6 text-left text-[#191b23] animate-fadeIn">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 font-sans">Thiết lập bảo mật & Cài đặt hệ thống</h2>
-        <p className="text-xs text-gray-500 mt-1">Quản lý mật khẩu quản trị và cấu hình bảo mật tài khoản.</p>
+        <h2 className="text-xl font-bold text-gray-900 font-sans">Thiết lập tài khoản</h2>
+        <p className="mt-1 text-xs text-gray-500">Đổi mật khẩu đăng nhập và cập nhật ảnh đại diện.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Left panel instructions bento */}
-        <div className="lg:col-span-4 bg-white border border-outline-variant rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
-          <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-[#ff6f00]">
-            <Lock className="w-5 h-5 animate-pulse" />
-          </div>
-          <div>
-            <h3 className="text-sm font-extrabold text-gray-900 uppercase tracking-wider font-sans">Nguyên tắc bảo vệ tài khoản</h3>
-            <p className="text-xs text-gray-500 leading-relaxed mt-2">
-              Mật khẩu điều hành cấp đặc quyền (Privileged Identity) cần đạt tiêu chuẩn bảo mật cao để giảm rủi ro truy cập trái phép vào hệ thống.
-            </p>
-          </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <section className="rounded-lg border border-outline-variant bg-white p-5 shadow-sm lg:col-span-4">
+          <div className="flex flex-col items-center text-center">
+            <div className="relative">
+              {currentUser?.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt="Avatar"
+                  className="h-28 w-28 rounded-full border border-outline-variant object-cover"
+                />
+              ) : (
+                <div className="flex h-28 w-28 items-center justify-center rounded-full border border-outline-variant bg-primary/10">
+                  <span className="text-3xl font-black text-primary">
+                    {(currentUser?.name || '?')[0].toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="absolute bottom-0 right-0 inline-flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant bg-white text-primary shadow-sm hover:bg-blue-50 disabled:opacity-60"
+                aria-label="Tải avatar"
+              >
+                {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              </button>
+            </div>
 
-          <div className="pt-4 border-t border-slate-100 space-y-3 font-sans">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span>Bao gồm ít nhất 8 ký tự</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span>Chứa ít nhất 1 chữ số (0-9)</span>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <span>Chứa ít nhất 1 ký tự đặc biệt</span>
-            </div>
-          </div>
-        </div>
+            <h3 className="mt-4 text-base font-black text-gray-950">{currentUser?.name || 'Tài khoản'}</h3>
+            <p className="mt-1 max-w-full truncate text-xs font-medium text-gray-500">{currentUser?.email}</p>
 
-        {/* Right panel interactive secure form stages */}
-        <div className="lg:col-span-8 bg-white border border-outline-variant rounded-2xl p-4 sm:p-6 shadow-sm min-h-[400px] flex flex-col justify-between">
-          
-          {/* STAGE 1: PASSWORD FORM */}
-          {settingsStage === 'password' && (
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              className="space-y-6"
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploadingAvatar}
+              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-outline-variant text-sm font-bold text-primary hover:bg-blue-50 disabled:opacity-60"
             >
-              <div className="space-y-1">
-                <h4 className="text-base font-bold text-slate-900 font-sans">Thay đổi mật khẩu đăng nhập</h4>
-                <p className="text-xs text-slate-400">Yêu cầu xác nhận mật khẩu hiện tại trước khi thiết lập chuỗi khóa bảo mật mới.</p>
-              </div>
+              {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              <span>Upload avatar</span>
+            </button>
+            <p className="mt-2 text-xs font-medium text-gray-500">Chỉ nhận ảnh dưới 1MB.</p>
+          </div>
+        </section>
 
-              <div className="space-y-4">
-                {/* Current password */}
-                <div className="space-y-1.5 relative cursor-text text-left">
-                  <label className="text-xs font-bold text-slate-700">Mật khẩu hiện tại</label>
-                  <div className="relative">
-                    <input 
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      value={settingsPasswordCurrent}
-                      onChange={e => setSettingsPasswordCurrent(e.target.value)}
-                      placeholder="Nhập mật khẩu hiện tại..."
-                      className="w-full text-xs pl-3.5 pr-10 py-2 border border-outline-variant rounded-lg bg-slate-50 hover:bg-white focus:bg-white focus:outline-primary transition-all font-medium text-slate-955 font-mono"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
+        <section className="rounded-lg border border-outline-variant bg-white p-5 shadow-sm lg:col-span-8">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-[#ff6f00]">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-gray-950">Đổi mật khẩu</h3>
+              <p className="mt-1 text-xs text-gray-500">Nhập mật khẩu hiện tại trước khi đặt mật khẩu mới.</p>
+            </div>
+          </div>
 
-                {/* New password */}
-                <div className="space-y-1.5 relative cursor-text text-left">
-                  <label className="text-xs font-bold text-slate-700">Mật khẩu mới</label>
-                  <div className="relative">
-                    <input 
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={settingsPasswordNew}
-                      onChange={e => setSettingsPasswordNew(e.target.value)}
-                      placeholder="Nhập mật khẩu mới..."
-                      className="w-full text-xs pl-3.5 pr-10 py-2 border border-outline-variant rounded-lg bg-slate-50 hover:bg-white focus:bg-white focus:outline-primary transition-all font-medium text-slate-955 font-mono"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  {/* Dynamic Password Strength Indicator */}
-                  {settingsPasswordNew.length > 0 && (
-                    <div className="space-y-1.5 pt-1 font-sans">
-                      <div className="flex items-center justify-between text-[10px] font-extrabold text-left">
-                        <span className={
-                          settingsPasswordNew.length < 6 ? 'text-red-650' :
-                          settingsPasswordNew.length < 10 ? 'text-amber-500' : 'text-emerald-500'
-                        }>
-                          Độ mạnh khóa bảo mật:{' '}
-                          {settingsPasswordNew.length < 6 ? 'Yếu (Dễ bẻ khóa)' :
-                           settingsPasswordNew.length < 10 ? 'Trung bình (Đủ bảo vệ)' : 'Mạnh (Tiêu chuẩn tối ưu)'}
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                        <span className={`h-full transition-all duration-500 ${
-                          settingsPasswordNew.length < 6 ? 'w-1/3 bg-red-500' :
-                          settingsPasswordNew.length < 10 ? 'w-2/3 bg-amber-500' : 'w-full bg-emerald-500'
-                        }`}></span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Confirm new password */}
-                <div className="space-y-1.5 relative cursor-text text-left">
-                  <label className="text-xs font-bold text-slate-700">Xác nhận mật khẩu mới</label>
-                  <div className="relative">
-                    <input 
-                      type={showConfirmNewPassword ? 'text' : 'password'}
-                      value={settingsPasswordConfirm}
-                      onChange={e => setSettingsPasswordConfirm(e.target.value)}
-                      placeholder="Nhập lại mật khẩu mới..."
-                      className="w-full text-xs pl-3.5 pr-10 py-2 border border-outline-variant rounded-lg bg-slate-50 hover:bg-white focus:bg-white focus:outline-primary transition-all font-medium text-slate-955 font-mono"
-                    />
-                    <button 
-                      type="button"
-                      onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex sm:justify-end pt-4 border-t border-slate-100">
-                <button 
-                  onClick={handlePasswordSubmit}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-[#004ac6] text-white hover:bg-primary-container rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+          <div className="space-y-4">
+            <label className="block text-xs font-bold text-slate-700">
+              Mật khẩu hiện tại
+              <div className="relative mt-1.5">
+                <input
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  value={settingsPasswordCurrent}
+                  onChange={event => setSettingsPasswordCurrent(event.target.value)}
+                  className="h-10 w-full rounded-md border border-outline-variant bg-slate-50 px-3 pr-10 text-sm font-medium focus:bg-white focus:outline-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(current => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Lưu mật khẩu</span>
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </motion.div>
-          )}
+            </label>
 
-          {/* STAGE 2: SUCCESS BLOCK */}
-          {settingsStage === 'success' && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              className="space-y-6 text-center max-w-sm mx-auto py-8"
-            >
-              <div className="flex justify-center">
-                <div className="w-16 h-16 bg-emerald-55 rounded-full flex items-center justify-center text-emerald-600 border border-emerald-250 border-double">
-                  <CheckCircle2 className="w-10 h-10 animate-bounce" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="text-xl font-black text-gray-950 font-sans">Mật khẩu đồng bộ thành công!</h4>
-                <p className="text-xs text-gray-500 leading-relaxed">
-                  Yêu cầu đổi khóa phân quyền quản trị đã hoàn thành. Hệ thống kỹ thuật vận hành ghi nhận trạng thái bảo mật mới.
-                </p>
-              </div>
-
-              <div className="pt-4">
-                <button 
-                  onClick={resetSecurityForm}
-                  className="px-5 py-2.5 bg-slate-900 text-white hover:bg-slate-850 text-xs font-bold rounded-lg transition-all shadow cursor-pointer active:scale-95"
+            <label className="block text-xs font-bold text-slate-700">
+              Mật khẩu mới
+              <div className="relative mt-1.5">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  value={settingsPasswordNew}
+                  onChange={event => setSettingsPasswordNew(event.target.value)}
+                  className="h-10 w-full rounded-md border border-outline-variant bg-slate-50 px-3 pr-10 text-sm font-medium focus:bg-white focus:outline-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(current => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                 >
-                  Cấu hình mật khẩu khác
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </motion.div>
-          )}
+            </label>
 
-        </div>
+            <label className="block text-xs font-bold text-slate-700">
+              Xác nhận mật khẩu mới
+              <div className="relative mt-1.5">
+                <input
+                  type={showConfirmNewPassword ? 'text' : 'password'}
+                  value={settingsPasswordConfirm}
+                  onChange={event => setSettingsPasswordConfirm(event.target.value)}
+                  className="h-10 w-full rounded-md border border-outline-variant bg-slate-50 px-3 pr-10 text-sm font-medium focus:bg-white focus:outline-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmNewPassword(current => !current)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                >
+                  {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </label>
+          </div>
+
+          <div className="mt-6 flex justify-end border-t border-slate-100 pt-4">
+            <button
+              type="button"
+              onClick={handlePasswordSubmit}
+              disabled={isChangingPassword}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-bold text-white hover:bg-primary-container disabled:opacity-60 sm:w-auto"
+            >
+              {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span>Lưu mật khẩu</span>
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

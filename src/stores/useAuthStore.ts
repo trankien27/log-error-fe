@@ -25,6 +25,7 @@ interface AuthState {
   getCurrentUserName: () => string;
   getCurrentRoleNumber: () => number | null;
   hasAnyRole: (roles: Array<number | string>) => boolean;
+  updateCurrentUser: (user: Partial<User>) => void;
   
   // Security settings actions
   setSettingsStage: (stage: 'password' | 'success') => void;
@@ -158,6 +159,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return roles
       .map(resolveRoleNumber)
       .some(role => role === currentRole);
+  },
+
+  updateCurrentUser: (user) => {
+    const currentUser = get().currentUser;
+    if (!currentUser) return;
+
+    const nextUser = { ...currentUser, ...user };
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(nextUser));
+    set({
+      currentUser: nextUser,
+      currentRoleNumber: resolveRoleNumber(nextUser.role) ?? getTokenRoleNumber(),
+    });
   },
 
   setSettingsStage: (settingsStage) => set({ settingsStage }),

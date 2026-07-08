@@ -35,6 +35,11 @@ function OvertimeApprovalRoute({ children }: { children: React.ReactNode }) {
   return hasAnyRole([1, 3, 'Admin', 'ITSupportManager', 'IT Support']) ? <>{children}</> : <Navigate to="/schedule" replace />;
 }
 
+function NotManagerRoute({ children }: { children: React.ReactNode }) {
+  const { getCurrentRoleNumber } = useAuthStore();
+  return getCurrentRoleNumber() !== 2 ? <>{children}</> : <Navigate to="/overview" replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -83,7 +88,14 @@ export default function App() {
         />
         <Route path="booths" element={<BoothsTab />} />
         <Route path="remote-booth" element={<RemoteBoothTab />} />
-        <Route path="shifts" element={<ShiftsTab />} />
+        <Route
+          path="shifts"
+          element={(
+            <NotManagerRoute>
+              <ShiftsTab />
+            </NotManagerRoute>
+          )}
+        />
         <Route path="notifications" element={<NotificationsTab />} />
         <Route path="schedule" element={<ScheduleTab />} />
         <Route

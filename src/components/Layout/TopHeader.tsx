@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Bell, Check, Menu, Search, Send } from 'lucide-react';
+import { AlertTriangle, Bell, Check, LogOut, Menu, Search, Send, UserCog } from 'lucide-react';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLogsStore } from '../../stores/useLogsStore';
@@ -46,7 +46,9 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
 
   // Local UI States for quick notifications panel
   const [isQuickNotifModalOpen, setIsQuickNotifModalOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const quickNotifRef = useRef<HTMLDivElement | null>(null);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   // Click outside to close notifications dropdown
   useEffect(() => {
@@ -54,20 +56,29 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
       if (quickNotifRef.current && !quickNotifRef.current.contains(event.target as Node)) {
         setIsQuickNotifModalOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     }
-    if (isQuickNotifModalOpen) {
+    if (isQuickNotifModalOpen || isUserMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isQuickNotifModalOpen]);
+  }, [isQuickNotifModalOpen, isUserMenuOpen]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const handleLogoutClick = () => {
+    setIsUserMenuOpen(false);
     logout();
     navigate('/auth');
+  };
+
+  const openAccountSettings = () => {
+    setIsUserMenuOpen(false);
+    navigate('/settings');
   };
 
   return (
@@ -253,30 +264,56 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
 
         <div className="h-6 w-px bg-outline-variant"></div>
 
-        {/* Logout Button */}
-        <button
-          type="button"
-          onClick={handleLogoutClick}
-          className="px-2 sm:px-3 py-1.5 text-xs font-bold rounded-lg border border-outline-variant hover:bg-slate-50 text-[#191b23] cursor-pointer"
-        >
-          Đăng xuất
-        </button>
-
-        <div className="flex items-center gap-2 pl-1">
-          {currentUser?.avatar ? (
-            <img
-              src={currentUser.avatar}
-              alt="Profile Avatar"
-              className="w-8 h-8 rounded-full border border-outline-variant object-cover hover:ring-2 hover:ring-primary transition-all cursor-pointer"
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full border border-outline-variant bg-primary/10 flex items-center justify-center hover:ring-2 hover:ring-primary transition-all cursor-pointer">
-              <span className="text-xs font-black text-primary select-none">
-                {(currentUser?.name || '?')[0].toUpperCase()}
+        <div className="relative pl-1" ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setIsUserMenuOpen(current => !current)}
+            className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-slate-50 transition-all cursor-pointer"
+            aria-label="Mở thiết lập tài khoản"
+          >
+            {currentUser?.avatar ? (
+              <img
+                src={currentUser.avatar}
+                alt="Profile Avatar"
+                className="w-8 h-8 rounded-full border border-outline-variant object-cover hover:ring-2 hover:ring-primary transition-all"
+              />
+            ) : (
+              <span className="w-8 h-8 rounded-full border border-outline-variant bg-primary/10 flex items-center justify-center hover:ring-2 hover:ring-primary transition-all">
+                <span className="text-xs font-black text-primary select-none">
+                  {(currentUser?.name || '?')[0].toUpperCase()}
+                </span>
               </span>
+            )}
+            <span className="text-xs font-semibold text-[#191b23] hidden md:inline">{currentUser?.name}</span>
+          </button>
+
+          {isUserMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 overflow-hidden rounded-xl border border-outline-variant bg-white shadow-xl z-50 animate-fadeIn">
+              <div className="border-b border-slate-100 px-4 py-3">
+                <p className="truncate text-sm font-black text-gray-950">{currentUser?.name || 'Tài khoản'}</p>
+                <p className="truncate text-xs font-medium text-gray-500">{currentUser?.email || 'Đang đăng nhập'}</p>
+              </div>
+
+              <div className="p-2">
+                <button
+                  type="button"
+                  onClick={openAccountSettings}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-gray-800 hover:bg-slate-50 cursor-pointer"
+                >
+                  <UserCog className="h-4 w-4 text-primary" />
+                  <span>Thiết lập tài khoản</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogoutClick}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 cursor-pointer"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Đăng xuất</span>
+                </button>
+              </div>
             </div>
           )}
-          <span className="text-xs font-semibold text-[#191b23] hidden md:inline">{currentUser?.name}</span>
         </div>
       </div>
     </header>
