@@ -259,18 +259,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               </button>
             </li>
           </ul>
-
-          <div className="p-4 border-t border-outline-variant mx-2">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#dbe1ff] text-[#00174b] flex items-center justify-center font-bold text-sm">
-                IT
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-xs text-[#191b23] truncate">IT Support</p>
-                <p className="text-[10px] text-[#434655] truncate">Reliable Support Team</p>
-              </div>
-            </div>
-          </div>
         </nav>
       </aside>
     </>
