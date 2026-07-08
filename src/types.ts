@@ -45,7 +45,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Manager' | 'IT Support' | 'ITSupportManager' | 'Staff' | 'User' | 1 | 2 | 3 | 4 | 5;
+  role: 'Admin' | 'ITSupport' | 'IT Support' | 'ITSupportManager' | 'Manager' | 1 | 2 | 3;
   status: 'Hoạt động' | 'Vô hiệu hóa';
   avatar?: string;
   phone?: string;

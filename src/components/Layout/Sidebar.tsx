@@ -48,7 +48,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const { setSelectedUserProfileUser } = useUsersStore();
   const { hasAnyRole, getCurrentRoleNumber } = useAuthStore();
   const isAdmin = hasAnyRole([1, 'Admin']);
-  const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager', 'IT Support']);
+  const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
   const canViewShifts = getCurrentRoleNumber() !== 2;
 
   const getActiveTab = (): TabType => {

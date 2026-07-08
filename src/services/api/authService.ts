@@ -45,9 +45,9 @@ function normalizeUser(user: BackendUser): User {
   const normalizedRole =
     Number.isFinite(numericRole) && numericRole > 0
       ? (numericRole as User['role'])
-      : roleClaim === 'Admin' || roleClaim === 'Manager' || roleClaim === 'IT Support' || roleClaim === 'Staff' || roleClaim === 'User'
+      : roleClaim === 'Admin' || roleClaim === 'ITSupport' || roleClaim === 'IT Support' || roleClaim === 'ITSupportManager' || roleClaim === 'Manager'
       ? roleClaim
-      : 'Staff';
+      : 'ITSupport';
 
   return {
     id:

@@ -36,10 +36,9 @@ function normalizeUser(user: any): User {
 function mapRoleForApi(role: User['role']) {
   const roleMap: Record<string, number> = {
     Admin: 1,
-    Manager: 2,
-    User: 2,
-    Staff: 2,
-    'IT Support': 3,
+    ITSupport: 2,
+    'IT Support': 2,
+    Manager: 3,
     ITSupportManager: 3,
   };
 

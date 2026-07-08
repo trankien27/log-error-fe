@@ -32,10 +32,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function OvertimeApprovalRoute({ children }: { children: React.ReactNode }) {
   const { hasAnyRole } = useAuthStore();
-  return hasAnyRole([1, 3, 'Admin', 'ITSupportManager', 'IT Support']) ? <>{children}</> : <Navigate to="/schedule" replace />;
+  return hasAnyRole([1, 3, 'Admin', 'ITSupportManager']) ? <>{children}</> : <Navigate to="/schedule" replace />;
 }
 
-function NotManagerRoute({ children }: { children: React.ReactNode }) {
+function NotITSupportRoute({ children }: { children: React.ReactNode }) {
   const { getCurrentRoleNumber } = useAuthStore();
   return getCurrentRoleNumber() !== 2 ? <>{children}</> : <Navigate to="/overview" replace />;
 }
@@ -91,9 +91,9 @@ export default function App() {
         <Route
           path="shifts"
           element={(
-            <NotManagerRoute>
+            <NotITSupportRoute>
               <ShiftsTab />
-            </NotManagerRoute>
+            </NotITSupportRoute>
           )}
         />
         <Route path="notifications" element={<NotificationsTab />} />

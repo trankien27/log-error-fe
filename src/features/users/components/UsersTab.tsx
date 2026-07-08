@@ -23,6 +23,26 @@ import { useUsersStore } from '../../../stores/useUsersStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { User } from '../../../types';
 
+const roleOptions: Array<{ value: User['role']; label: string }> = [
+  { value: 'Admin', label: 'Admin' },
+  { value: 'ITSupport', label: 'IT support' },
+  { value: 'ITSupportManager', label: 'Quản lý IT support' },
+];
+
+function getRoleNumber(role: User['role']) {
+  if (role === 1 || role === 'Admin') return 1;
+  if (role === 2 || role === 'ITSupport' || role === 'IT Support') return 2;
+  if (role === 3 || role === 'ITSupportManager' || role === 'Manager') return 3;
+  return 2;
+}
+
+function getRoleLabel(role: User['role']) {
+  const roleNumber = getRoleNumber(role);
+  if (roleNumber === 1) return 'Admin';
+  if (roleNumber === 3) return 'Quản lý IT support';
+  return 'IT support';
+}
+
 export default function UsersTab() {
   const canCreateUser = useAuthStore(state => state.hasAnyRole([1]));
   const {
@@ -47,13 +67,13 @@ export default function UsersTab() {
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userPassword, setUserPassword] = useState('');
-  const [userRole, setUserRole] = useState<User['role']>('Staff');
+  const [userRole, setUserRole] = useState<User['role']>('ITSupport');
   const [userStatus, setUserStatus] = useState<'Hoạt động' | 'Vô hiệu hóa'>('Hoạt động');
 
   // Detailed profile form states
   const [profileName, setProfileName] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
-  const [profileRole, setProfileRole] = useState<User['role']>('Staff');
+  const [profileRole, setProfileRole] = useState<User['role']>('ITSupport');
   const [profileDept, setProfileDept] = useState('');
 
   // Sync profile details if selected profile changes
@@ -86,7 +106,7 @@ export default function UsersTab() {
       setUserName('');
       setUserEmail('');
       setUserPassword('');
-      setUserRole('Staff');
+      setUserRole('ITSupport');
       setUserStatus('Hoạt động');
     }
     setIsUserModalOpen(true);
@@ -217,10 +237,9 @@ export default function UsersTab() {
               </span>
             </div>
             <p className="text-gray-500 text-xs font-semibold">
-              {selectedUserProfileUser.role === 'Admin' ? 'Hệ thống Quản trị viên cao cấp (SRE/Admin)' : 
-               selectedUserProfileUser.role === 'Manager' ? 'Quản lý vận hành khu vực (Supervisor)' :
-               selectedUserProfileUser.role === 'IT Support' ? 'Đội ngũ hỗ trợ kỹ thuật hiện trường (IT Support Specialist)' :
-               'Nhân sự phòng ban nghiệp vụ (End-user Staff)'}
+              {getRoleNumber(selectedUserProfileUser.role) === 1 ? 'Hệ thống Quản trị viên cao cấp (SRE/Admin)' :
+               getRoleNumber(selectedUserProfileUser.role) === 3 ? 'Quản lý đội ngũ IT support' :
+               'Đội ngũ hỗ trợ kỹ thuật hiện trường (IT support)'}
             </p>
 
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-slate-500 pt-1">
@@ -292,10 +311,9 @@ export default function UsersTab() {
                     onChange={e => setProfileRole(e.target.value as any)}
                     className="w-full text-xs px-3.5 py-2 border border-outline-variant rounded-lg bg-slate-50 hover:bg-white focus:bg-white cursor-pointer transition-all font-medium text-slate-900"
                   >
-                    <option value="Admin">Admin</option>
-                    <option value="Manager">Manager</option>
-                    <option value="IT Support">IT Support</option>
-                    <option value="Staff">Staff</option>
+                    {roleOptions.map(option => (
+                      <option key={String(option.value)} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -440,10 +458,9 @@ export default function UsersTab() {
               className="text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg select-none cursor-pointer"
             >
               <option value="">Tất cả vai trò</option>
-              <option value="Admin">Admin</option>
-              <option value="Manager">Manager</option>
-              <option value="IT Support">IT Support</option>
-              <option value="Staff">Staff</option>
+              {roleOptions.map(option => (
+                <option key={String(option.value)} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -454,23 +471,22 @@ export default function UsersTab() {
             <table className="w-full min-w-[760px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 font-bold select-none font-sans">
-                  <th className="py-4 px-5">Nhân sự</th>
-                  <th className="py-4 px-5">Quản trị Email</th>
-                  <th className="py-4 px-5">Gán Chức vụ</th>
-                  <th className="py-4 px-5">Vận hành hành chính</th>
-                  <th className="py-4 px-5 text-right font-bold w-24">Tùy biến</th>
+                  <th className="py-4 px-5">Họ và Tên</th>
+                  <th className="py-4 px-5">Email</th>
+                  <th className="py-4 px-5">Vai trò (Role)</th>
+                  <th className="py-4 px-5 text-right font-bold w-24">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f1f5f9]">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
+                    <td colSpan={4} className="py-10 text-center font-sans font-bold text-gray-400">
                       Đang tải dữ liệu người dùng...
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
+                    <td colSpan={4} className="py-10 text-center font-sans font-bold text-gray-400">
                       Không tìm thấy nhân viên nào khớp với điều kiện lọc.
                     </td>
                   </tr>
@@ -508,27 +524,13 @@ export default function UsersTab() {
                       <td className="py-4 px-5 font-medium text-gray-700">{user.email}</td>
                       <td className="py-4 px-5">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          user.role === 'Admin'
+                          getRoleNumber(user.role) === 1
                             ? 'bg-red-100 text-red-700'
-                            : user.role === 'Manager'
+                            : getRoleNumber(user.role) === 3
                             ? 'bg-[#ffebe6] text-[#7d2d00]'
-                            : user.role === 'IT Support'
-                            ? 'bg-[#dbe1ff] text-[#00174b]'
-                            : 'bg-gray-100 text-gray-600'
+                            : 'bg-[#dbe1ff] text-[#00174b]'
                         }`}>
-                          {user.role}
-                        </span>
-                      </td>
-                      <td className="py-4 px-5">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          user.status === 'Hoạt động'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            : 'bg-red-50 text-red-600 border border-red-100'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            user.status === 'Hoạt động' ? 'bg-emerald-500' : 'bg-red-500'
-                          }`}></span>
-                          {user.status}
+                          {getRoleLabel(user.role)}
                         </span>
                       </td>
                       <td className="py-4 px-5 text-right w-24">
@@ -620,10 +622,9 @@ export default function UsersTab() {
                       onChange={e => setUserRole(e.target.value as any)}
                       className="w-full px-3 py-2 border rounded-lg bg-white"
                     >
-                      <option value="Admin">Admin</option>
-                      <option value="Manager">Manager</option>
-                      <option value="IT Support">IT Support</option>
-                      <option value="Staff">Staff</option>
+                      {roleOptions.map(option => (
+                        <option key={String(option.value)} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>

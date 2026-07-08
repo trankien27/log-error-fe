@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { User, Role } from '../types';
 import { usersService } from '../services/api/usersService';
 
+function getRoleNumber(role: unknown) {
+  if (role === 1 || role === 'Admin') return 1;
+  if (role === 2 || role === 'ITSupport' || role === 'IT Support') return 2;
+  if (role === 3 || role === 'ITSupportManager' || role === 'Manager') return 3;
+  return null;
+}
+
 interface UsersState {
   users: User[];
   roles: Role[];
@@ -147,7 +154,7 @@ export const useUsersStore = create<UsersState>((set, get) => ({
         user.name.toLowerCase().includes(sQuery) || 
         user.email.toLowerCase().includes(sQuery) || 
         user.id.toLowerCase().includes(sQuery);
-      const roleMatch = userRoleFilter ? user.role === userRoleFilter : true;
+      const roleMatch = userRoleFilter ? getRoleNumber(user.role) === getRoleNumber(userRoleFilter) : true;
       return infoMatch && roleMatch;
     });
   }

@@ -78,7 +78,10 @@ export default function TasksTab() {
     }
     return toLocalDateTimeInputValue(date);
   };
-  const isTaskAssigneeRole = (role: unknown) => role === 2 || String(role).toLowerCase() === 'it support';
+  const isTaskAssigneeRole = (role: unknown) => {
+    const normalizedRole = String(role).toLowerCase();
+    return role === 2 || normalizedRole === 'itsupport' || normalizedRole === 'it support';
+  };
   const assigneeUsers = users.filter(user => isTaskAssigneeRole(user.role));
 
   const getDefaultAssignee = () => assigneeUsers[0] || null;

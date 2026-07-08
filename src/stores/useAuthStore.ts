@@ -60,11 +60,10 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
 function resolveRoleNumber(role: unknown) {
   const roleMap: Record<string, number> = {
     Admin: 1,
-    Manager: 2,
-    'IT Support': 3,
+    ITSupport: 2,
+    'IT Support': 2,
+    Manager: 3,
     ITSupportManager: 3,
-    Staff: 4,
-    User: 5,
   };
 
   if (typeof role === 'string' && roleMap[role] !== undefined) {
