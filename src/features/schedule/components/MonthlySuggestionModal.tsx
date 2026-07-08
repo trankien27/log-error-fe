@@ -521,7 +521,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
             <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
               Sắp xếp linh động đang bật mặc định.
               <span className="mt-1 block text-[11px] font-semibold text-blue-700">
-                Hệ thống tự tạo khoảng thời gian ca trong preview để phủ kín 07h30-23h và lưu trực tiếp vào lịch, không cần chọn ca cố định.
+                Hệ thống tự tạo khoảng thời gian ca trong preview và lưu trực tiếp vào lịch, không cần chọn ca cố định.
               </span>
             </div>
 

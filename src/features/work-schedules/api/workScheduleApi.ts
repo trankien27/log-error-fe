@@ -1,12 +1,16 @@
 import { apiClient } from '../../../services/api/apiClient';
 import {
   AutoArrangeConfirmRequest,
+  AutoArrangeConfirmResponse,
   AutoArrangeOptionsResponse,
   AutoArrangePreviewRequest,
   AutoArrangePreviewResponse,
   QuickArrangeOptionsResponse,
   QuickArrangeWorkScheduleRequest,
   QuickArrangeWorkScheduleResponse,
+  WeeklyCoverageConfirmRequest,
+  WeeklyCoveragePreviewRequest,
+  WeeklyCoveragePreviewResponse,
 } from '../types/workScheduleArrange.types';
 
 function buildQuery(params: Record<string, string | number | boolean | null | undefined>) {
@@ -61,9 +65,27 @@ export async function previewAutoArrangeWorkSchedule(
 
 export async function confirmAutoArrangeWorkSchedule(
   request: AutoArrangeConfirmRequest,
-): Promise<AutoArrangePreviewResponse> {
-  return apiClient.post<AutoArrangePreviewResponse>(
+): Promise<AutoArrangeConfirmResponse> {
+  return apiClient.post<AutoArrangeConfirmResponse>(
     '/api/work-schedules/auto-arrange/confirm',
+    request,
+  );
+}
+
+export async function previewWeeklyCoverageSuggestion(
+  request: WeeklyCoveragePreviewRequest,
+): Promise<WeeklyCoveragePreviewResponse> {
+  return apiClient.post<WeeklyCoveragePreviewResponse>(
+    '/api/work-schedules/weekly-coverage/preview',
+    request,
+  );
+}
+
+export async function confirmWeeklyCoverageSuggestion(
+  request: WeeklyCoverageConfirmRequest,
+): Promise<AutoArrangeConfirmResponse> {
+  return apiClient.post<AutoArrangeConfirmResponse>(
+    '/api/work-schedules/weekly-coverage/confirm',
     request,
   );
 }

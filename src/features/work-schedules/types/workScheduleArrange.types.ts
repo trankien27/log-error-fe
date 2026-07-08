@@ -56,6 +56,7 @@ export type AutoArrangeShiftDemand = {
 };
 
 export type AutoArrangePreviewItem = {
+  itemId?: string;
   clientId: string;
   userId: string;
   userName: string;
@@ -117,4 +118,65 @@ export type AutoArrangeFormState = {
   employees: AutoArrangeEmployeeRule[];
   shiftDemands: AutoArrangeShiftDemand[];
   previewItems: AutoArrangePreviewItem[];
+};
+
+export type CoverageGap = {
+  from: string;
+  to: string;
+};
+
+export type DailyCoverageStatus = {
+  workDate: string;
+  isFullyCovered: boolean;
+  gaps: CoverageGap[];
+};
+
+export type WeeklyCoveragePreviewRequest = {
+  weekStartDate: string;
+  coverageStart: string;
+  coverageEnd: string;
+  userIds: string[];
+};
+
+export type WeeklyCoveragePreviewResponse = AutoArrangePreviewResponse & {
+  planId: string;
+  coverageRate: number;
+  requiredSlotCount: number;
+  assignedSlotCount: number;
+  employeeSummaries: Array<{
+    userId: string;
+    userName: string;
+    targetHours: number;
+    plannedHours: number;
+    differenceHours: number;
+    workingDayCount: number;
+  }>;
+  unfilledDemands: Array<{
+    workDate: string;
+    shiftId: number;
+    shiftCode: string;
+    requiredEmployees: number;
+    assignedEmployees: number;
+    reason: string;
+  }>;
+  selectedShiftIds: number[];
+  gaps: CoverageGap[];
+  dailyCoverage: DailyCoverageStatus[];
+};
+
+export type WeeklyCoverageConfirmRequest = {
+  planId: string;
+  note?: string | null;
+  items: Array<{
+    itemId: string;
+    userId: string;
+    workDate: string;
+    shiftId: number;
+  }>;
+};
+
+export type AutoArrangeConfirmResponse = {
+  planId: string;
+  createdCount: number;
+  items: unknown[];
 };

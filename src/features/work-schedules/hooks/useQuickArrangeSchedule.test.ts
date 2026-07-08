@@ -48,10 +48,20 @@ function setupHook() {
 }
 
 describe('useQuickArrangeSchedule', () => {
-  it('calculates allocated and remaining hours', () => {
+  it('keeps options without seeding legacy shift allocations', () => {
+    const hook = setupHook();
+
+    expect(hook.result.current.options).toEqual(options);
+    expect(hook.result.current.formState.selectedDate).toBe('2026-06-15');
+    expect(hook.result.current.formState.shifts).toEqual([]);
+  });
+
+  it('calculates allocated and remaining hours from custom time ranges', () => {
     const hook = setupHook();
 
     act(() => {
+      hook.result.current.addTimeRange();
+      hook.result.current.updateTimeRange(1, 'paidWorkingHours', 6);
       hook.result.current.updateShiftQuantity(1, 2);
     });
 
@@ -59,10 +69,12 @@ describe('useQuickArrangeSchedule', () => {
     expect(hook.result.current.remainingHours).toBe(5);
   });
 
-  it('calculates max quantity without counting current shift quantity twice', () => {
+  it('calculates max quantity without counting current range quantity twice', () => {
     const hook = setupHook();
 
     act(() => {
+      hook.result.current.addTimeRange();
+      hook.result.current.updateTimeRange(1, 'paidWorkingHours', 6);
       hook.result.current.updateShiftQuantity(1, 2);
     });
 
@@ -74,33 +86,48 @@ describe('useQuickArrangeSchedule', () => {
     const hook = setupHook();
 
     act(() => {
+      hook.result.current.addTimeRange();
       hook.result.current.updateShiftQuantity(1, -2);
     });
 
     expect(hook.result.current.formState.shifts[0].quantity).toBe(0);
   });
 
-  it('does not send shifts with zero quantity', () => {
+  it('builds request with non-zero custom time ranges only', () => {
     const hook = setupHook();
 
     act(() => {
+      hook.result.current.addTimeRange();
+      hook.result.current.addTimeRange();
+      hook.result.current.updateTimeRange(1, 'paidWorkingHours', 6);
       hook.result.current.updateShiftQuantity(1, 2);
     });
 
     const request = hook.result.current.buildRequest();
-    expect(request.shiftAllocations).toEqual([{ shiftId: 1, quantity: 2 }]);
+    expect(request.shiftAllocations).toEqual([]);
+    expect(request.timeRanges).toEqual([
+      {
+        startTime: '09:00:00',
+        endTime: '18:00:00',
+        endDayOffset: 0,
+        paidWorkingHours: 6,
+        quantity: 2,
+      },
+    ]);
   });
 
-  it('disables submit validation when no shift quantity is set', () => {
+  it('allows target-only submit without custom time ranges', () => {
     const hook = setupHook();
 
-    expect(hook.result.current.validationErrors).toContain('Vui lòng nhập số lượng ít nhất một ca.');
+    expect(hook.result.current.validationErrors).toEqual([]);
+    expect(hook.result.current.buildRequest().timeRanges).toEqual([]);
   });
 
   it('blocks submit when target is exceeded and over target is disabled', () => {
     const hook = setupHook();
 
     act(() => {
+      hook.result.current.addTimeRange();
       hook.result.current.updateShiftQuantity(1, 1);
       hook.result.current.updateField('targetHours', 5);
     });
@@ -114,6 +141,7 @@ describe('useQuickArrangeSchedule', () => {
     act(() => {
       hook.result.current.updateField('targetHours', 5);
       hook.result.current.updateField('allowOverTargetHours', true);
+      hook.result.current.addTimeRange();
       hook.result.current.updateShiftQuantity(1, 1);
     });
 
@@ -124,6 +152,7 @@ describe('useQuickArrangeSchedule', () => {
     const hook = setupHook();
 
     act(() => {
+      hook.result.current.addTimeRange();
       hook.result.current.updateShiftQuantity(1, 2);
       hook.result.current.resetForm();
     });

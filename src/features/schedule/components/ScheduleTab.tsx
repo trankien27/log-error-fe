@@ -11,6 +11,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -31,6 +32,7 @@ import {
   WorkScheduleDto,
   WorkScheduleWeekUserDto,
 } from '../../../types';
+import WeeklyCoverageSuggestionModal from '../../work-schedules/components/WeeklyCoverageSuggestionModal';
 
 type DraftPanel = {
   mode: 'create' | 'edit';
@@ -243,6 +245,7 @@ export default function ScheduleTab() {
   const [isOvertimeExportModalOpen, setIsOvertimeExportModalOpen] = useState(false);
   const [isExportingOvertime, setIsExportingOvertime] = useState(false);
   const [scheduleInputMode, setScheduleInputMode] = useState<ScheduleInputMode>('shift');
+  const [isWeeklySuggestionOpen, setIsWeeklySuggestionOpen] = useState(false);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -902,7 +905,7 @@ export default function ScheduleTab() {
     const hasDraft = Boolean(cellDrafts[getCellKey(row.userId, date)]);
 
     return (
-      <div className={`w-full ${isCompact ? 'max-w-[128px]' : ''} space-y-1.5`}>
+      <div className={`w-full ${isCompact ? 'max-w-[128px]' : ''}`}>
         <select
           value={effectiveShiftId}
           disabled={isSaving}
@@ -922,17 +925,6 @@ export default function ScheduleTab() {
             </option>
           ))}
         </select>
-        <div className="min-h-[30px] text-center text-[10px] font-semibold leading-tight text-gray-500">
-          {selectedShift ? (
-            <>
-              <span className="block">{getShiftHours(selectedShift)}</span>
-              <span className="block">{formatNumber(selectedShift.paidWorkingHours || selectedShift.workingHours || 0)}h</span>
-            </>
-          ) : (
-            <span className="block italic">Nghỉ</span>
-          )}
-          {hasDraft && <span className="block font-black text-primary">Chưa lưu</span>}
-        </div>
       </div>
     );
   };
@@ -1094,7 +1086,7 @@ export default function ScheduleTab() {
             </span>
           )}
 
-          {effectiveShift || schedules.length > 0 ? null : isDeletedDraft ? (
+          {scheduleInputMode === 'shift' || effectiveShift || schedules.length > 0 ? null : isDeletedDraft ? (
             <button
               type="button"
               disabled={isSaving}
@@ -1280,6 +1272,15 @@ export default function ScheduleTab() {
                 <Trash2 className="w-4 h-4" />
                 Xóa tất cả lịch
               </button>
+              <button
+                type="button"
+                onClick={() => setIsWeeklySuggestionOpen(true)}
+                disabled={!canManageSchedule}
+                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Sparkles className="w-4 h-4" />
+                Đề xuất lịch tuần
+              </button>
             </div>
 
             <div className="inline-flex rounded-md border border-outline-variant overflow-hidden">
@@ -1338,7 +1339,9 @@ export default function ScheduleTab() {
                         <div key={day.date} className="flex gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
                           <button
                             type="button"
-                            onClick={() => openCreatePanel(day.date, row.userId)}
+                            onClick={() => {
+                              if (scheduleInputMode === 'hours') openCreatePanel(day.date, row.userId);
+                            }}
                             disabled={!canManageSchedule}
                             className="w-[74px] shrink-0 rounded-md bg-slate-50 px-2 py-2 text-left disabled:cursor-default"
                           >
@@ -1427,15 +1430,17 @@ export default function ScheduleTab() {
 
             <div className="px-4 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => openCreatePanel(weekStart)}
-                  disabled={!canManageSchedule}
-                  className="h-10 px-4 rounded-md border border-dashed border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-blue-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus className="w-4 h-4" />
-                  Thêm nhân viên
-                </button>
+                {scheduleInputMode === 'hours' && (
+                  <button
+                    type="button"
+                    onClick={() => openCreatePanel(weekStart)}
+                    disabled={!canManageSchedule}
+                    className="h-10 px-4 rounded-md border border-dashed border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-blue-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Thêm lịch
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => openOvertimeModal(selectedDate)}
@@ -1686,7 +1691,11 @@ export default function ScheduleTab() {
               <div className="h-full flex items-center justify-center text-center text-gray-400">
                 <div>
                   <CalendarDays className="w-9 h-9 mx-auto mb-3" />
-                  <p className="text-sm font-semibold">Chọn một ô lịch hoặc bấm Thêm lịch.</p>
+                  <p className="text-sm font-semibold">
+                    {scheduleInputMode === 'shift'
+                      ? 'Chọn ca trực tiếp trong từng ô lịch.'
+                      : 'Chọn một ô lịch hoặc bấm Thêm lịch.'}
+                  </p>
                 </div>
               </div>
             )}
@@ -1980,6 +1989,12 @@ export default function ScheduleTab() {
           </div>
         </div>
       )}
+      <WeeklyCoverageSuggestionModal
+        open={isWeeklySuggestionOpen}
+        users={scheduleUsers}
+        onClose={() => setIsWeeklySuggestionOpen(false)}
+        onSuccess={reload}
+      />
     </div>
   );
 }

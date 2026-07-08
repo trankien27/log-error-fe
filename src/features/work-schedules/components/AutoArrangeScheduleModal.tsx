@@ -3,7 +3,7 @@ import { ThunderboltOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Drawer, Modal, Steps, notification } from 'antd';
 import { ApiError } from '../../../services/api/apiClient';
-import { User } from '../../../types';
+import { ShiftDto, User } from '../../../types';
 import {
   confirmAutoArrangeWorkSchedule,
   getAutoArrangeOptions,
@@ -19,6 +19,7 @@ import AutoArrangeScopeStep from './auto-arrange/AutoArrangeScopeStep';
 type Props = {
   open: boolean;
   users: User[];
+  shifts?: ShiftDto[];
   onClose: () => void;
   onSuccess: () => Promise<void> | void;
 };
@@ -51,7 +52,7 @@ function normalizePreviewItems(response: AutoArrangePreviewResponse): AutoArrang
   }));
 }
 
-export default function AutoArrangeScheduleModal({ open, users, onClose, onSuccess }: Props) {
+export default function AutoArrangeScheduleModal({ open, users, shifts = [], onClose, onSuccess }: Props) {
   const queryClient = useQueryClient();
   const [currentStep, setCurrentStep] = useState(0);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -134,6 +135,20 @@ export default function AutoArrangeScheduleModal({ open, users, onClose, onSucce
     () => users.filter(user => formState.selectedUserIds.includes(user.id)),
     [formState.selectedUserIds, users],
   );
+
+  const arrangeShifts = useMemo(() => {
+    if (options?.shifts?.length) return options.shifts;
+
+    return shifts.map(shift => ({
+      id: shift.id,
+      code: shift.code,
+      name: shift.name,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      paidWorkingHours: shift.paidWorkingHours ?? shift.workingHours ?? 0,
+      isExtraShift: shift.isExtraShift,
+    }));
+  }, [options?.shifts, shifts]);
 
   const canGoNext = currentStep === 0
     ? formState.selectedUserIds.length > 0
@@ -248,7 +263,7 @@ export default function AutoArrangeScheduleModal({ open, users, onClose, onSucce
         {currentStep === 1 && (
           <AutoArrangeEmployeeRulesStep
             employees={formState.employees}
-            shifts={options?.shifts || []}
+            shifts={arrangeShifts}
             weekDates={weekDates}
             onChange={updateEmployeeRule}
           />
@@ -257,7 +272,7 @@ export default function AutoArrangeScheduleModal({ open, users, onClose, onSucce
         {currentStep === 2 && (
           <AutoArrangeDemandStep
             weekDates={weekDates}
-            shifts={options?.shifts || []}
+            shifts={arrangeShifts}
             demands={formState.shiftDemands}
             onDemandChange={updateDemand}
           />
@@ -266,7 +281,7 @@ export default function AutoArrangeScheduleModal({ open, users, onClose, onSucce
         {currentStep === 3 && (
           <AutoArrangePreviewStep
             employees={formState.employees}
-            shifts={options?.shifts || []}
+            shifts={arrangeShifts}
             weekDates={weekDates}
             previewItems={formState.previewItems}
             summary={previewResponse?.summary || null}
