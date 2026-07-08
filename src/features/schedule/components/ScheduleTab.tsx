@@ -9,7 +9,6 @@ import {
   Download,
   Edit2,
   Loader2,
-  Plus,
   Search,
   Sparkles,
   Trash2,
@@ -37,7 +36,6 @@ import WeeklyCoverageSuggestionModal from '../../work-schedules/components/Weekl
 type DraftPanel = {
   mode: 'create' | 'edit';
   workDate: string;
-  scheduleMode: ScheduleInputMode;
   shiftId: string;
   shiftCode: string;
   shiftName: string;
@@ -65,8 +63,6 @@ type OvertimeDraft = {
   endTime: string;
   reason: string;
 };
-
-type ScheduleInputMode = 'shift' | 'hours';
 
 const shiftStyles: Record<string, string> = {
   S: 'bg-[#e8f3ff] border-[#9ac7f7] text-[#0c315c]',
@@ -112,9 +108,16 @@ function getScheduleHours(schedule: WorkScheduleDto) {
   return `${formatTime(schedule.startTime)} - ${formatTime(schedule.endTime)}`;
 }
 
-function getScheduleDisplayHours(schedule: WorkScheduleDto) {
-  const hours = schedule.paidWorkingHours || schedule.workingHours || 0;
-  return `${getScheduleHours(schedule)} · ${hours.toFixed(1)}h`;
+function getShiftTitle(shift: Pick<ShiftDto, 'code' | 'name'>) {
+  return `${shift.code} - ${shift.name}`;
+}
+
+function getShiftOptionDisplay(shift: Pick<ShiftDto, 'code' | 'name' | 'startTime' | 'endTime'>) {
+  return `${getShiftTitle(shift)} | ${getShiftHours(shift)}`;
+}
+
+function getScheduleTitle(schedule: WorkScheduleDto) {
+  return `${schedule.shiftCode} - ${schedule.shiftName}`;
 }
 
 function getUserInitials(name: string) {
@@ -181,21 +184,6 @@ function toInputTime(value?: string | null) {
   return value?.slice(0, 5) || '';
 }
 
-function getTimeMinutes(value: string) {
-  const [hours, minutes] = value.split(':').map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-}
-
-function calculateWorkingHours(startTime: string, endTime: string, endDayOffset: number) {
-  if (!startTime || !endTime) return 0;
-
-  const startMinutes = getTimeMinutes(startTime);
-  const endMinutes = getTimeMinutes(endTime) + endDayOffset * 24 * 60;
-  const diffMinutes = endMinutes - startMinutes;
-
-  return diffMinutes > 0 ? Number((diffMinutes / 60).toFixed(2)) : 0;
-}
-
 function base64ToBlob(base64Content: string, mimeType: string) {
   const normalizedBase64 = (base64Content.includes(',') ? base64Content.split(',')[1] : base64Content).replace(/\s/g, '');
   const binary = atob(normalizedBase64);
@@ -244,8 +232,8 @@ export default function ScheduleTab() {
   const [reportUserId, setReportUserId] = useState('');
   const [isOvertimeExportModalOpen, setIsOvertimeExportModalOpen] = useState(false);
   const [isExportingOvertime, setIsExportingOvertime] = useState(false);
-  const [scheduleInputMode, setScheduleInputMode] = useState<ScheduleInputMode>('shift');
   const [isWeeklySuggestionOpen, setIsWeeklySuggestionOpen] = useState(false);
+  const [openShiftSelectKey, setOpenShiftSelectKey] = useState<string | null>(null);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -433,12 +421,6 @@ export default function ScheduleTab() {
   };
   const hasCellDrafts = Object.keys(cellDrafts).length > 0;
 
-  const changeScheduleInputMode = (nextMode: ScheduleInputMode) => {
-    setScheduleInputMode(nextMode);
-    setCellDrafts({});
-    setPanel(null);
-  };
-
   const applyShiftToPanel = (shift: ShiftDto) => {
     setPanel(current => current ? ({
       ...current,
@@ -455,22 +437,21 @@ export default function ScheduleTab() {
   const openCreatePanel = (workDate = weekStart, userId?: string) => {
     if (!canManageSchedule) return;
 
-    const defaultShift = scheduleInputMode === 'shift' ? firstActiveShift : undefined;
-    const startTime = defaultShift ? toInputTime(defaultShift.startTime) : '07:30';
-    const endTime = defaultShift ? toInputTime(defaultShift.endTime) : '16:30';
+    const defaultShift = firstActiveShift;
+    const startTime = defaultShift ? toInputTime(defaultShift.startTime) : '';
+    const endTime = defaultShift ? toInputTime(defaultShift.endTime) : '';
     const endDayOffset = (defaultShift?.endDayOffset ? 1 : 0) as 0 | 1;
 
     setPanel({
       mode: 'create',
       workDate,
-      scheduleMode: scheduleInputMode,
       shiftId: defaultShift ? String(defaultShift.id) : '',
       shiftCode: defaultShift?.code || 'LĐ',
       shiftName: defaultShift?.name || 'Ca linh động',
       startTime,
       endTime,
       endDayOffset,
-      paidWorkingHours: defaultShift?.paidWorkingHours || defaultShift?.workingHours || calculateWorkingHours(startTime, endTime, endDayOffset),
+      paidWorkingHours: defaultShift?.paidWorkingHours || defaultShift?.workingHours || 0,
       userIds: userId ? [userId] : [],
       note: '',
     });
@@ -482,7 +463,6 @@ export default function ScheduleTab() {
     setPanel({
       mode: 'edit',
       workDate: schedule.workDate,
-      scheduleMode: scheduleInputMode,
       shiftId: schedule.shiftId ? String(schedule.shiftId) : '',
       shiftCode: schedule.shiftCode || 'LĐ',
       shiftName: schedule.shiftName || 'Ca linh động',
@@ -568,6 +548,7 @@ export default function ScheduleTab() {
 
   const discardCellDrafts = () => {
     setCellDrafts({});
+    setOpenShiftSelectKey(null);
   };
 
   const submitCellDrafts = async () => {
@@ -605,6 +586,7 @@ export default function ScheduleTab() {
 
       toast.success(`Đã lưu ${drafts.length} thay đổi lịch.`);
       setCellDrafts({});
+      setOpenShiftSelectKey(null);
       await reload();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Không thể lưu thay đổi lịch.';
@@ -625,50 +607,23 @@ export default function ScheduleTab() {
       return;
     }
 
-    if (panel.scheduleMode === 'shift' && !panel.shiftId) {
+    if (!panel.shiftId) {
       toast.error('Vui lòng chọn ca làm việc.');
       return;
     }
 
-    if (panel.scheduleMode === 'hours' && (!panel.startTime || !panel.endTime)) {
-      toast.error('Vui lòng chọn giờ bắt đầu và giờ kết thúc.');
-      return;
-    }
-
-    if (panel.endDayOffset === 0 && panel.endTime <= panel.startTime) {
-      toast.error('Giờ kết thúc phải lớn hơn giờ bắt đầu, hoặc bật qua ngày hôm sau.');
-      return;
-    }
-
     const selectedShift = activeShifts.find(shift => String(shift.id) === panel.shiftId);
-    const workingHours = panel.scheduleMode === 'shift'
-      ? selectedShift?.paidWorkingHours || selectedShift?.workingHours || panel.paidWorkingHours
-      : panel.paidWorkingHours > 0
-        ? panel.paidWorkingHours
-        : calculateWorkingHours(panel.startTime, panel.endTime, panel.endDayOffset);
+    const workingHours = selectedShift?.paidWorkingHours || selectedShift?.workingHours || panel.paidWorkingHours;
     if (workingHours <= 0) {
       toast.error('Số giờ tính công phải lớn hơn 0.');
       return;
     }
 
-    const schedulePayload = panel.scheduleMode === 'shift'
-      ? {
-          workDate: panel.workDate,
-          shiftId: Number(panel.shiftId),
-          note: panel.note || null,
-        }
-      : {
-          workDate: panel.workDate,
-          shiftId: null,
-          shiftCode: panel.shiftCode.trim() || 'LĐ',
-          shiftName: panel.shiftName.trim() || 'Ca linh động',
-          startTime: toApiTime(panel.startTime),
-          endTime: toApiTime(panel.endTime),
-          endDayOffset: panel.endDayOffset,
-          paidWorkingHours: workingHours,
-          workingHours,
-          note: panel.note || null,
-        };
+    const schedulePayload = {
+      workDate: panel.workDate,
+      shiftId: Number(panel.shiftId),
+      note: panel.note || null,
+    };
 
     setIsSaving(true);
     try {
@@ -680,19 +635,12 @@ export default function ScheduleTab() {
         });
         toast.success('Đã cập nhật lịch.');
       } else {
-        if (panel.scheduleMode === 'hours') {
-          await Promise.all(panel.userIds.map(userId => scheduleService.createWorkSchedule({
+        await scheduleService.batchCreateWorkSchedules({
+          items: panel.userIds.map(userId => ({
             ...schedulePayload,
             userId,
-          })));
-        } else {
-          await scheduleService.batchCreateWorkSchedules({
-            items: panel.userIds.map(userId => ({
-              ...schedulePayload,
-              userId,
-            })),
-          });
-        }
+          })),
+        });
         toast.success('Đã thêm lịch.');
       }
 
@@ -880,6 +828,13 @@ export default function ScheduleTab() {
     );
   };
 
+  const renderShiftBadgeText = (title: string, hours: string, className = '') => (
+    <span className={`block leading-tight ${className}`}>
+      <span className="block truncate">{title}</span>
+      <span className="mt-0.5 block truncate text-[9px] font-bold">{hours}</span>
+    </span>
+  );
+
   const getRowTotalHours = (row: WorkScheduleWeekUserDto) => {
     return (weekSchedule?.days || []).reduce((total, day) => {
       const schedules = getSchedulesForDate(row, day.date);
@@ -899,32 +854,61 @@ export default function ScheduleTab() {
     date: string,
     schedule: WorkScheduleDto | undefined,
     effectiveShiftId: string,
-    isCompact = false,
+    _isCompact = false,
   ) => {
     const selectedShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
-    const hasDraft = Boolean(cellDrafts[getCellKey(row.userId, date)]);
+    const cellKey = getCellKey(row.userId, date);
+    const hasDraft = Boolean(cellDrafts[cellKey]);
+    const isOpen = openShiftSelectKey === cellKey;
+    const buttonClass = hasDraft
+      ? 'border-primary bg-blue-50 text-primary'
+      : selectedShift
+        ? getShiftClass(selectedShift.code)
+        : 'border-outline-variant bg-white text-gray-500';
 
     return (
-      <div className={`w-full ${isCompact ? 'max-w-[128px]' : ''}`}>
-        <select
-          value={effectiveShiftId}
+      <div className="relative w-full">
+        <button
+          type="button"
           disabled={isSaving}
-          onChange={event => stageCellShift(row, date, schedule, event.target.value)}
-          className={`h-9 w-full rounded border bg-white px-2 text-xs font-bold outline-none ${
-            hasDraft
-              ? 'border-primary text-primary'
-              : selectedShift
-                ? `${getShiftClass(selectedShift.code)}`
-                : 'border-outline-variant text-gray-500'
-          }`}
+          title={selectedShift ? getShiftOptionDisplay(selectedShift) : 'Nghỉ'}
+          onClick={() => setOpenShiftSelectKey(current => current === cellKey ? null : cellKey)}
+          className={`min-h-[56px] w-full rounded border px-2 py-1 text-center text-[11px] font-black outline-none disabled:opacity-60 ${buttonClass}`}
         >
-          <option value="">Nghỉ</option>
-          {activeShifts.map(shift => (
-            <option key={shift.id} value={shift.id}>
-              {shift.code} - {shift.name}
-            </option>
-          ))}
-        </select>
+          {selectedShift
+            ? renderShiftBadgeText(getShiftTitle(selectedShift), getShiftHours(selectedShift))
+            : <span>Nghỉ</span>}
+        </button>
+        {isOpen && (
+          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-64 overflow-y-auto rounded-md border border-outline-variant bg-white shadow-lg">
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => {
+                stageCellShift(row, date, schedule, '');
+                setOpenShiftSelectKey(null);
+              }}
+              className="w-full px-2 py-2 text-center text-xs font-bold text-gray-500 hover:bg-slate-50 disabled:opacity-60"
+            >
+              Nghỉ
+            </button>
+            {activeShifts.map(shift => (
+              <button
+                key={shift.id}
+                type="button"
+                disabled={isSaving}
+                title={getShiftOptionDisplay(shift)}
+                onClick={() => {
+                  stageCellShift(row, date, schedule, String(shift.id));
+                  setOpenShiftSelectKey(null);
+                }}
+                className={`w-full border-t px-2 py-2 text-center text-[11px] font-black hover:brightness-95 disabled:opacity-60 ${getShiftClass(shift.code)}`}
+              >
+                {renderShiftBadgeText(getShiftTitle(shift), getShiftHours(shift))}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -937,12 +921,11 @@ export default function ScheduleTab() {
     const effectiveShiftId = draft ? draft.shiftId : schedule?.shiftId ? String(schedule.shiftId) : '';
     const effectiveShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
     const hasDraft = Boolean(draft);
-    const isDeletedDraft = Boolean(schedule && draft && !draft.shiftId);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
 
     return (
       <div className={`flex min-w-0 flex-1 flex-col items-end gap-2 text-right ${hasDraft ? 'text-primary' : ''}`}>
-        {canManageSchedule && scheduleInputMode === 'shift' ? (
+        {canManageSchedule ? (
           renderShiftModeSelect(row, date, schedule, effectiveShiftId)
         ) : !draft && schedules.length > 0 ? (
           <div className="w-full space-y-2">
@@ -956,12 +939,7 @@ export default function ScheduleTab() {
                   canManageSchedule ? 'cursor-pointer' : 'cursor-default'
                 }`}
               >
-                <span className="block pr-7">
-                  {scheduleInputMode === 'shift' ? `Ca ${item.shiftCode} - ${item.shiftName}` : getScheduleDisplayHours(item)}
-                </span>
-                {scheduleInputMode === 'shift' && (
-                  <span className="mt-0.5 block text-[11px] font-bold">{getScheduleHours(item)}</span>
-                )}
+                {renderShiftBadgeText(getScheduleTitle(item), getScheduleHours(item), 'pr-7')}
                 {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
               </button>
             ))}
@@ -975,12 +953,7 @@ export default function ScheduleTab() {
               canManageSchedule ? 'cursor-pointer' : 'cursor-default'
             }`}
           >
-            <span className="block pr-7">
-              {scheduleInputMode === 'shift' ? `Ca ${effectiveShift.code} - ${effectiveShift.name}` : getShiftHours(effectiveShift)}
-            </span>
-            <span className="mt-0.5 block text-[11px] font-bold">
-              {schedule ? getScheduleHours(schedule) : getShiftHours(effectiveShift)}
-            </span>
+            {renderShiftBadgeText(getShiftTitle(effectiveShift), getShiftHours(effectiveShift), 'pr-7')}
             {hasDraft && <span className="mt-0.5 block text-[10px] font-black text-primary">Chưa lưu</span>}
             {canManageSchedule && schedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
           </button>
@@ -990,39 +963,6 @@ export default function ScheduleTab() {
               Nghỉ{hasDraft ? ' - chưa lưu' : ''}
             </span>
           </div>
-        )}
-
-        {canManageSchedule && scheduleInputMode !== 'shift' && effectiveShift && (
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={() => stageCellShift(row, date, schedule, '')}
-            className="h-8 rounded border border-red-200 bg-white px-3 text-xs font-bold text-red-600 disabled:opacity-60"
-          >
-            Xóa lịch
-          </button>
-        )}
-
-        {canManageSchedule && scheduleInputMode !== 'shift' && !effectiveShift && schedules.length === 0 && (isDeletedDraft ? (
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={() => schedule && stageCellShift(row, date, schedule, String(schedule.shiftId ?? `schedule-${schedule.id}`))}
-            className="h-8 rounded border border-outline-variant bg-white px-3 text-xs font-bold text-primary disabled:opacity-60"
-          >
-            Hủy xóa
-          </button>
-        )
-         : (
-          <button
-            type="button"
-            disabled={isSaving}
-            onClick={() => openCreatePanel(date, row.userId)}
-            className="h-8 rounded border border-outline-variant bg-white px-3 text-xs font-bold text-primary disabled:opacity-60"
-          >
-            Thêm lịch
-          </button>
-        )
         )}
 
         {renderOvertimeBadges(cellOvertimeRequests)}
@@ -1036,75 +976,14 @@ export default function ScheduleTab() {
     const cellKey = getCellKey(row.userId, date);
     const draft = cellDrafts[cellKey];
     const effectiveShiftId = draft ? draft.shiftId : schedule?.shiftId ? String(schedule.shiftId) : '';
-    const effectiveShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
     const hasDraft = Boolean(draft);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
 
     if (canManageSchedule) {
-      const isDeletedDraft = Boolean(schedule && draft && !draft.shiftId);
-
       return (
         <div key={date} className={`min-h-[112px] w-full p-2 flex flex-col items-center justify-center gap-2 ${hasDraft ? 'bg-blue-50/70' : ''}`}>
-          {scheduleInputMode === 'shift' ? (
-            renderShiftModeSelect(row, date, schedule, effectiveShiftId, true)
-          ) : !draft && schedules.length > 0 ? (
-            <div className="w-full max-w-[118px] space-y-1.5">
-              {schedules.map(item => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={isSaving}
-                  onClick={() => openEditPanel(item, row)}
-                  className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
-                >
-                  <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-500" />
-                  {getScheduleHours(item)}
-                  <span className="block text-[9px] font-bold">
-                    {(item.paidWorkingHours || item.workingHours || 0).toFixed(1)}h
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : effectiveShift ? (
-            <span className={`relative block w-full max-w-[118px] rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(effectiveShift.code)}`}>
-              <button
-                type="button"
-                disabled={isSaving}
-                onClick={() => stageCellShift(row, date, schedule, '')}
-                className="absolute -right-1.5 -top-1.5 z-[1] h-5 w-5 rounded-full border border-red-200 bg-white text-red-600 shadow-sm flex items-center justify-center hover:bg-red-50 disabled:opacity-60"
-                title="Xóa lịch"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-              {getShiftHours(effectiveShift)}
-              <span className="block text-[9px] font-bold">{getShiftHours(effectiveShift)}</span>
-              {hasDraft && <span className="block text-[9px] font-bold text-primary">Chưa lưu</span>}
-            </span>
-          ) : (
-            <span className={`text-xs italic font-semibold ${hasDraft ? 'text-primary' : 'text-gray-500'}`}>
-              Nghỉ{hasDraft ? ' - chưa lưu' : ''}
-            </span>
-          )}
-
-          {scheduleInputMode === 'shift' || effectiveShift || schedules.length > 0 ? null : isDeletedDraft ? (
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => schedule && stageCellShift(row, date, schedule, String(schedule.shiftId ?? `schedule-${schedule.id}`))}
-              className="rounded border border-outline-variant bg-white px-2 py-1 text-[11px] font-bold text-primary hover:bg-blue-50 disabled:opacity-60"
-            >
-              Hủy xóa
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={isSaving}
-              onClick={() => openCreatePanel(date, row.userId)}
-              className="rounded border border-outline-variant bg-white px-2 py-1 text-[11px] font-bold text-primary hover:bg-blue-50 disabled:opacity-60"
-            >
-              Thêm lịch
-            </button>
-          )}
+          {renderShiftModeSelect(row, date, schedule, effectiveShiftId, true)}
+          {hasDraft && <span className="text-[9px] font-bold text-primary">Chưa lưu</span>}
           {renderOvertimeBadges(cellOvertimeRequests)}
         </div>
       );
@@ -1139,12 +1018,7 @@ export default function ScheduleTab() {
               className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
             >
               {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-400" />}
-              {scheduleInputMode === 'shift' ? `Ca ${item.shiftCode}` : getScheduleHours(item)}
-              <span className="block text-[9px] font-bold">
-                {scheduleInputMode === 'shift'
-                  ? getScheduleHours(item)
-                  : `${(item.paidWorkingHours || item.workingHours || 0).toFixed(1)}h`}
-              </span>
+              {renderShiftBadgeText(getScheduleTitle(item), getScheduleHours(item))}
             </button>
           ))}
         </div>
@@ -1212,32 +1086,6 @@ export default function ScheduleTab() {
                 />
               </div>
 
-              <div className="inline-flex h-11 rounded-md border border-outline-variant bg-white p-1">
-                <button
-                  type="button"
-                  onClick={() => changeScheduleInputMode('shift')}
-                  disabled={scheduleInputMode === 'shift'}
-                  className={`px-3 rounded text-sm font-bold transition-colors ${
-                    scheduleInputMode === 'shift'
-                      ? 'bg-blue-50 text-primary'
-                      : 'text-gray-600 hover:bg-slate-50'
-                  } disabled:cursor-default`}
-                >
-                  Theo ca
-                </button>
-                <button
-                  type="button"
-                  onClick={() => changeScheduleInputMode('hours')}
-                  disabled={scheduleInputMode === 'hours'}
-                  className={`px-3 rounded text-sm font-bold transition-colors ${
-                    scheduleInputMode === 'hours'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'text-gray-600 hover:bg-slate-50'
-                  } disabled:cursor-default`}
-                >
-                  Theo tiếng
-                </button>
-              </div>
             </div>
 
             <button
@@ -1299,7 +1147,7 @@ export default function ScheduleTab() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[1fr_320px]">
+        <div className={`flex-1 min-h-0 grid grid-cols-1 ${panel ? 'xl:grid-cols-[1fr_320px]' : ''}`}>
           <div className="min-w-0 overflow-auto">
             <div className="lg:hidden divide-y divide-slate-100">
               {isLoading ? (
@@ -1339,9 +1187,7 @@ export default function ScheduleTab() {
                         <div key={day.date} className="flex gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (scheduleInputMode === 'hours') openCreatePanel(day.date, row.userId);
-                            }}
+                            onClick={() => openCreatePanel(day.date, row.userId)}
                             disabled={!canManageSchedule}
                             className="w-[74px] shrink-0 rounded-md bg-slate-50 px-2 py-2 text-left disabled:cursor-default"
                           >
@@ -1357,14 +1203,14 @@ export default function ScheduleTab() {
               )}
             </div>
 
-            <table className="hidden lg:table w-full min-w-[1040px] border-collapse text-sm">
+            <table className="hidden lg:table w-max min-w-[1340px] border-collapse text-sm">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr>
-                  <th className="w-[170px] border border-outline-variant px-4 py-5 text-center text-sm font-semibold">
+                  <th className="w-[190px] border border-outline-variant px-4 py-5 text-center text-sm font-semibold">
                     Nhân viên
                   </th>
                   {(weekSchedule?.days || []).map(day => (
-                    <th key={day.date} className="w-[118px] border border-outline-variant px-3 py-4 text-center font-semibold">
+                    <th key={day.date} className="w-[150px] border border-outline-variant px-2 py-4 text-center font-semibold">
                       <span className="block text-base">{day.dayName.replace('Thứ ', 'T')}</span>
                       <span className="block text-sm font-normal mt-1">{formatShortDate(day.date)}</span>
                     </th>
@@ -1430,17 +1276,6 @@ export default function ScheduleTab() {
 
             <div className="px-4 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:flex-wrap">
-                {scheduleInputMode === 'hours' && (
-                  <button
-                    type="button"
-                    onClick={() => openCreatePanel(weekStart)}
-                    disabled={!canManageSchedule}
-                    className="h-10 px-4 rounded-md border border-dashed border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-blue-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Thêm lịch
-                  </button>
-                )}
                 <button
                   type="button"
                   onClick={() => openOvertimeModal(selectedDate)}
@@ -1480,7 +1315,7 @@ export default function ScheduleTab() {
                   Tổng giờ của tuần:
                   <span className="ml-3">{visibleTotalWorkingHours.toFixed(1)}h</span>
                 </p>
-                <p className="text-xs text-gray-500 mt-1">(Tính theo thời gian thực tế)</p>
+                <p className="text-xs text-gray-500 mt-1">(Tính theo giờ làm việc của shift)</p>
               </div>
             </div>
 
@@ -1491,8 +1326,8 @@ export default function ScheduleTab() {
             </p>
           </div>
 
-          <aside className="border-t xl:border-t-0 xl:border-l border-outline-variant bg-white p-4 lg:p-5 overflow-y-auto">
-            {panel ? (
+          {panel && (
+            <aside className="border-t xl:border-t-0 xl:border-l border-outline-variant bg-white p-4 lg:p-5 overflow-y-auto">
               <div className="space-y-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold">{panel.mode === 'edit' ? 'Sửa lịch' : 'Thêm lịch'}</h3>
@@ -1511,100 +1346,25 @@ export default function ScheduleTab() {
                   />
                 </label>
 
-                {panel.scheduleMode === 'shift' ? (
-                  <label className="block text-sm font-medium">
-                    Ca làm việc
-                    <select
-                      value={panel.shiftId}
-                      onChange={event => {
-                        const nextShift = activeShifts.find(shift => String(shift.id) === event.target.value);
-                        if (nextShift) applyShiftToPanel(nextShift);
-                      }}
-                      className="mt-2 h-10 w-full rounded-md border border-outline-variant bg-white px-3 text-sm"
-                    >
-                      <option value="">Chọn ca</option>
-                      {activeShifts.map(shift => (
-                        <option key={shift.id} value={shift.id}>
-                          {shift.code} - {shift.name} ({getShiftHours(shift)} · {formatNumber(shift.paidWorkingHours || shift.workingHours || 0)}h)
-                        </option>
-                      ))}
-                    </select>
-                    {panel.shiftId && (
-                      <span className="mt-2 block rounded-md bg-blue-50 px-3 py-2 text-xs font-semibold text-primary">
-                        {panel.shiftCode} · {getShiftHours(panel)} · {formatNumber(panel.paidWorkingHours)}h
-                      </span>
-                    )}
-                  </label>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="block text-sm font-medium">
-                        Bắt đầu
-                        <input
-                          type="time"
-                          value={panel.startTime}
-                          onChange={event => setPanel(current => {
-                            if (!current) return current;
-                            const nextStartTime = event.target.value;
-                            return {
-                              ...current,
-                              startTime: nextStartTime,
-                              paidWorkingHours: calculateWorkingHours(nextStartTime, current.endTime, current.endDayOffset),
-                            };
-                          })}
-                          className="mt-2 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
-                        />
-                      </label>
-                      <label className="block text-sm font-medium">
-                        Kết thúc
-                        <input
-                          type="time"
-                          value={panel.endTime}
-                          onChange={event => setPanel(current => {
-                            if (!current) return current;
-                            const nextEndTime = event.target.value;
-                            return {
-                              ...current,
-                              endTime: nextEndTime,
-                              paidWorkingHours: calculateWorkingHours(current.startTime, nextEndTime, current.endDayOffset),
-                            };
-                          })}
-                          className="mt-2 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
-                        />
-                      </label>
-                    </div>
-
-                    <label className="flex items-center gap-2 text-sm font-medium">
-                      <input
-                        type="checkbox"
-                        checked={panel.endDayOffset === 1}
-                        onChange={event => setPanel(current => {
-                          if (!current) return current;
-                          const nextOffset = event.target.checked ? 1 : 0;
-                          return {
-                            ...current,
-                            endDayOffset: nextOffset,
-                            paidWorkingHours: calculateWorkingHours(current.startTime, current.endTime, nextOffset),
-                          };
-                        })}
-                        className="h-4 w-4 accent-primary"
-                      />
-                      Kết thúc vào ngày hôm sau
-                    </label>
-
-                    <label className="block text-sm font-medium">
-                      Số giờ tính công
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.25}
-                        value={panel.paidWorkingHours}
-                        onChange={event => setPanel(current => current ? { ...current, paidWorkingHours: Number(event.target.value) } : current)}
-                        className="mt-2 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
-                      />
-                    </label>
-                  </>
-                )}
+                <label className="block text-sm font-medium">
+                  Ca làm việc
+                  <select
+                    value={panel.shiftId}
+                    title={panel.shiftId ? `${getShiftTitle({ code: panel.shiftCode, name: panel.shiftName })} | ${getShiftHours({ startTime: panel.startTime, endTime: panel.endTime })}` : 'Chọn ca'}
+                    onChange={event => {
+                      const nextShift = activeShifts.find(shift => String(shift.id) === event.target.value);
+                      if (nextShift) applyShiftToPanel(nextShift);
+                    }}
+                    className="mt-2 h-10 w-full rounded-md border border-outline-variant bg-white px-3 text-sm"
+                  >
+                    <option value="">Chọn ca</option>
+                    {activeShifts.map(shift => (
+                      <option key={shift.id} value={shift.id}>
+                        {getShiftOptionDisplay(shift)} - {formatNumber(shift.paidWorkingHours || shift.workingHours || 0)}h
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
                 <div>
                   <label className="block text-sm font-medium">Nhân viên</label>
@@ -1687,19 +1447,8 @@ export default function ScheduleTab() {
                   </button>
                 )}
               </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-center text-gray-400">
-                <div>
-                  <CalendarDays className="w-9 h-9 mx-auto mb-3" />
-                  <p className="text-sm font-semibold">
-                    {scheduleInputMode === 'shift'
-                      ? 'Chọn ca trực tiếp trong từng ô lịch.'
-                      : 'Chọn một ô lịch hoặc bấm Thêm lịch.'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </aside>
+            </aside>
+          )}
         </div>
       </div>
 

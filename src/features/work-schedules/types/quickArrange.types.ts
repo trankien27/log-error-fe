@@ -4,6 +4,7 @@ export type QuickArrangeShiftOption = {
   name: string;
   startTime: string;
   endTime: string;
+  endDayOffset: number;
   paidWorkingHours: number;
   isExtraShift: boolean;
 };
@@ -30,8 +31,11 @@ export type QuickArrangeOptionsResponse = {
 
 export type ShiftAllocationFormItem = {
   shiftId: number;
+  code: string;
+  name: string;
   startTime: string;
   endTime: string;
+  endDayOffset: number;
   paidWorkingHours: number;
   quantity: number;
 };
@@ -40,9 +44,7 @@ export type QuickArrangeFormState = {
   userId: string | null;
   selectedDate: string;
   periodType: 'week' | 'month';
-  targetHours: number | null;
   overwriteExisting: boolean;
-  allowOverTargetHours: boolean;
   allowPartialArrange: boolean;
   maxShiftsPerDay: number;
   maxConsecutiveWorkingDays: number;
@@ -55,9 +57,7 @@ export type QuickArrangeWorkScheduleRequest = {
   userId: string;
   weekStartDate: string;
   periodType: 'week' | 'month';
-  targetHours: number;
   overwriteExisting: boolean;
-  allowOverTargetHours: boolean;
   allowPartialArrange: boolean;
   maxShiftsPerDay: number;
   maxConsecutiveWorkingDays: number;
@@ -65,13 +65,6 @@ export type QuickArrangeWorkScheduleRequest = {
   note: string | null;
   shiftAllocations: Array<{
     shiftId: number;
-    quantity: number;
-  }>;
-  timeRanges: Array<{
-    startTime: string;
-    endTime: string;
-    endDayOffset: number;
-    paidWorkingHours: number;
     quantity: number;
   }>;
 };

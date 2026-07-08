@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Modal, Skeleton, Space, Typography, notification } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
@@ -11,6 +11,7 @@ import { getWeekStartDate } from '../utils/week.utils';
 import QuickArrangeAdvancedOptions from './QuickArrangeAdvancedOptions';
 import QuickArrangeGeneralForm from './QuickArrangeGeneralForm';
 import QuickArrangeResult from './QuickArrangeResult';
+import QuickArrangeShiftSelection from './QuickArrangeShiftSelection';
 
 type Props = {
   open: boolean;
@@ -43,14 +44,19 @@ export function mapQuickArrangeApiError(error: unknown) {
 
 export default function QuickArrangeScheduleModal({ open, users, onClose, onSuccess }: Props) {
   const queryClient = useQueryClient();
-  const targetInputRef = useRef<HTMLInputElement | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [result, setResult] = useState<QuickArrangeWorkScheduleResponse | null>(null);
   const {
     formState,
     options,
+    allocatedHours,
+    totalShiftCount,
+    availableCapacity,
     validationErrors,
     updateField,
+    updateShiftQuantity,
+    clearAllocations,
+    getMaxQuantityForShift,
     applyOptions,
     resetForm,
     buildRequest,
@@ -59,7 +65,7 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
   const weekStartDate = getWeekStartDate(formState.selectedDate);
   const hasDirtyData = Boolean(
     formState.userId ||
-    formState.targetHours ||
+    totalShiftCount > 0 ||
     formState.note.trim(),
   );
 
@@ -103,12 +109,6 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
       applyOptions(optionsQuery.data);
     }
   }, [optionsQuery.data]);
-
-  useEffect(() => {
-    if (formState.userId) {
-      window.setTimeout(() => targetInputRef.current?.focus(), 100);
-    }
-  }, [formState.userId]);
 
   useEffect(() => {
     if (!open) {
@@ -226,7 +226,16 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
               type="info"
               showIcon
               message={`Lịch hiện có trong tuần đang xem: ${options.existingWorkingHours} giờ, ${options.existingSchedules.length} lịch.`}
-              description="Hệ thống sẽ tự sinh các khung giờ phù hợp với tổng số tiếng khi bấm Xếp lịch."
+              description="Hệ thống chỉ xếp theo các ca đã chọn; giờ làm và thời gian làm việc được lấy từ cấu hình shift."
+            />
+            <QuickArrangeShiftSelection
+              formState={formState}
+              allocatedHours={allocatedHours}
+              totalShiftCount={totalShiftCount}
+              availableCapacity={availableCapacity}
+              getMaxQuantityForShift={getMaxQuantityForShift}
+              onQuantityChange={updateShiftQuantity}
+              onClear={clearAllocations}
             />
             <QuickArrangeAdvancedOptions formState={formState} onFieldChange={updateField} />
           </Space>

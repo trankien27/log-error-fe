@@ -24,12 +24,6 @@ export default function QuickArrangeAdvancedOptions({ formState, onFieldChange }
                   Cho phép thay thế các lịch chưa hoàn thành trong tuần.
                 </Typography.Text>
               </Form.Item>
-              <Form.Item label="Cho phép vượt số giờ mục tiêu" className="!mb-0">
-                <Switch
-                  checked={formState.allowOverTargetHours}
-                  onChange={value => onFieldChange('allowOverTargetHours', value)}
-                />
-              </Form.Item>
               <Form.Item label="Cho phép lưu một phần" className="!mb-0">
                 <Switch
                   checked={formState.allowPartialArrange}

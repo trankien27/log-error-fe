@@ -20,6 +20,7 @@ const options: QuickArrangeOptionsResponse = {
       name: 'Ca sáng',
       startTime: '07:30:00',
       endTime: '13:30:00',
+      endDayOffset: 0,
       paidWorkingHours: 6,
       isExtraShift: false,
     },
@@ -29,6 +30,7 @@ const options: QuickArrangeOptionsResponse = {
       name: 'Ca tối',
       startTime: '18:00:00',
       endTime: '23:00:00',
+      endDayOffset: 0,
       paidWorkingHours: 5,
       isExtraShift: false,
     },
@@ -40,7 +42,6 @@ function setupHook() {
 
   act(() => {
     hook.result.current.updateField('userId', 'user-1');
-    hook.result.current.updateField('targetHours', 17);
     hook.result.current.applyOptions(options);
   });
 
@@ -48,111 +49,96 @@ function setupHook() {
 }
 
 describe('useQuickArrangeSchedule', () => {
-  it('keeps options without seeding legacy shift allocations', () => {
+  it('seeds shift allocations from options', () => {
     const hook = setupHook();
 
     expect(hook.result.current.options).toEqual(options);
     expect(hook.result.current.formState.selectedDate).toBe('2026-06-15');
-    expect(hook.result.current.formState.shifts).toEqual([]);
+    expect(hook.result.current.formState.shifts).toEqual([
+      {
+        shiftId: 1,
+        code: 'S',
+        name: 'Ca sáng',
+        startTime: '07:30:00',
+        endTime: '13:30:00',
+        endDayOffset: 0,
+        paidWorkingHours: 6,
+        quantity: 0,
+      },
+      {
+        shiftId: 2,
+        code: 'T',
+        name: 'Ca tối',
+        startTime: '18:00:00',
+        endTime: '23:00:00',
+        endDayOffset: 0,
+        paidWorkingHours: 5,
+        quantity: 0,
+      },
+    ]);
   });
 
-  it('calculates allocated and remaining hours from custom time ranges', () => {
+  it('calculates allocated hours from selected shifts', () => {
     const hook = setupHook();
 
     act(() => {
-      hook.result.current.addTimeRange();
-      hook.result.current.updateTimeRange(1, 'paidWorkingHours', 6);
       hook.result.current.updateShiftQuantity(1, 2);
+      hook.result.current.updateShiftQuantity(2, 1);
     });
 
-    expect(hook.result.current.allocatedHours).toBe(12);
-    expect(hook.result.current.remainingHours).toBe(5);
+    expect(hook.result.current.allocatedHours).toBe(17);
+    expect(hook.result.current.totalShiftCount).toBe(3);
   });
 
-  it('calculates max quantity without counting current range quantity twice', () => {
+  it('calculates max quantity without counting current shift quantity twice', () => {
     const hook = setupHook();
 
     act(() => {
-      hook.result.current.addTimeRange();
-      hook.result.current.updateTimeRange(1, 'paidWorkingHours', 6);
       hook.result.current.updateShiftQuantity(1, 2);
     });
 
     const currentShift = hook.result.current.formState.shifts[0];
-    expect(hook.result.current.getMaxQuantityForShift(currentShift)).toBe(2);
+    expect(hook.result.current.getMaxQuantityForShift(currentShift)).toBe(5);
   });
 
   it('does not allow negative quantity', () => {
     const hook = setupHook();
 
     act(() => {
-      hook.result.current.addTimeRange();
       hook.result.current.updateShiftQuantity(1, -2);
     });
 
     expect(hook.result.current.formState.shifts[0].quantity).toBe(0);
   });
 
-  it('builds request with non-zero custom time ranges only', () => {
+  it('builds request with non-zero shift allocations only', () => {
     const hook = setupHook();
 
     act(() => {
-      hook.result.current.addTimeRange();
-      hook.result.current.addTimeRange();
-      hook.result.current.updateTimeRange(1, 'paidWorkingHours', 6);
       hook.result.current.updateShiftQuantity(1, 2);
     });
 
     const request = hook.result.current.buildRequest();
-    expect(request.shiftAllocations).toEqual([]);
-    expect(request.timeRanges).toEqual([
+    expect(request.shiftAllocations).toEqual([
       {
-        startTime: '09:00:00',
-        endTime: '18:00:00',
-        endDayOffset: 0,
-        paidWorkingHours: 6,
+        shiftId: 1,
         quantity: 2,
       },
     ]);
+    expect('timeRanges' in request).toBe(false);
   });
 
-  it('allows target-only submit without custom time ranges', () => {
+  it('blocks submit without selected shifts', () => {
     const hook = setupHook();
 
-    expect(hook.result.current.validationErrors).toEqual([]);
-    expect(hook.result.current.buildRequest().timeRanges).toEqual([]);
-  });
-
-  it('blocks submit when target is exceeded and over target is disabled', () => {
-    const hook = setupHook();
-
-    act(() => {
-      hook.result.current.addTimeRange();
-      hook.result.current.updateShiftQuantity(1, 1);
-      hook.result.current.updateField('targetHours', 5);
-    });
-
-    expect(hook.result.current.validationErrors).toContain('Tổng số giờ đã vượt mục tiêu.');
-  });
-
-  it('allows submit when over target is enabled', () => {
-    const hook = setupHook();
-
-    act(() => {
-      hook.result.current.updateField('targetHours', 5);
-      hook.result.current.updateField('allowOverTargetHours', true);
-      hook.result.current.addTimeRange();
-      hook.result.current.updateShiftQuantity(1, 1);
-    });
-
-    expect(hook.result.current.validationErrors).not.toContain('Tổng số giờ đã vượt mục tiêu.');
+    expect(hook.result.current.validationErrors).toContain('Vui lòng chọn ít nhất một ca.');
+    expect(() => hook.result.current.buildRequest()).toThrow('Vui lòng chọn ít nhất một ca.');
   });
 
   it('resets modal state', () => {
     const hook = setupHook();
 
     act(() => {
-      hook.result.current.addTimeRange();
       hook.result.current.updateShiftQuantity(1, 2);
       hook.result.current.resetForm();
     });

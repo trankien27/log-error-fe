@@ -13,7 +13,7 @@ export default function QuickArrangeResult({ result }: Props) {
         type={result.warnings.length > 0 ? 'warning' : 'success'}
         showIcon
         message={`Đã tạo ${result.createdShiftCount}/${result.requestedShiftCount} khung giờ.`}
-        description={`Tổng giờ sau khi xếp: ${result.finalHours}/${result.targetHours} giờ.`}
+        description={`Tổng giờ sau khi xếp: ${result.finalHours}/${result.requestedHours} giờ theo ca đã chọn.`}
       />
       {result.warnings.length > 0 && (
         <Alert
