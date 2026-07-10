@@ -455,8 +455,14 @@ export default function TasksTab() {
       {/* Panel Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 font-sans">Bảng Kanban điều phối nhiệm vụ IT</h2>
-          <p className="text-xs text-gray-500 mt-1">Hệ thống hỗ trợ IT phân bổ công việc bằng cách kéo thả hoặc click thao tác nhanh.</p>
+          <h2 className="text-xl font-bold text-gray-900 font-sans">
+            {activeTaskView === 'kanban' ? 'Bảng Kanban điều phối nhiệm vụ IT' : 'Lịch công việc IT'}
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">
+            {activeTaskView === 'kanban'
+              ? 'Phân bổ công việc bằng cách kéo thả hoặc thao tác nhanh.'
+              : 'Theo dõi và sắp xếp thời hạn công việc theo tuần.'}
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="inline-flex rounded-lg border border-outline-variant bg-white p-1">
@@ -492,7 +498,7 @@ export default function TasksTab() {
 
       {/* Kanban columns grid wrapper */}
       {activeTaskView === 'kanban' ? (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start text-left">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch text-left">
         
         {/* Column 1: CHỜ XỬ LÝ (pending) */}
         <div className="bg-white rounded-xl border border-outline-variant flex flex-col">

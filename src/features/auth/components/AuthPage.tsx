@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
@@ -10,12 +11,17 @@ export default function AuthPage() {
 
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState('');
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError('');
 
     if (!authEmail.trim() || !authPassword.trim()) {
-      toast.error('Vui lòng nhập email và mật khẩu.');
+      const message = 'Vui lòng nhập email và mật khẩu.';
+      setAuthError(message);
+      toast.error(message);
       return;
     }
 
@@ -26,37 +32,78 @@ export default function AuthPage() {
       setAuthEmail('');
       setAuthPassword('');
     } catch (err: any) {
-      toast.error(err.message || 'Xác thực không thành công.');
+      const message = err.message || 'Xác thực không thành công.';
+      setAuthError(message);
+      toast.error(message);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f7ff] flex items-center justify-center p-4 animate-fadeIn">
-      <div className="w-full max-w-md bg-white border border-outline-variant rounded-2xl shadow-sm p-6 space-y-5">
+    <div className="min-h-screen bg-surface-container-low flex items-center justify-center p-4 animate-fadeIn">
+      <div className="w-full max-w-md bg-white border border-outline-variant rounded-2xl shadow-lg p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-bold text-[#191b23]">IT Admin System</h1>
-          <p className="text-xs text-[#434655]">Đăng nhập để vào hệ thống nội bộ</p>
+          <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-md">
+            <ShieldCheck className="h-6 w-6" />
+          </span>
+          <h1 className="text-xl font-bold text-on-surface">IT Admin System</h1>
+          <p className="text-sm text-on-surface-variant">Đăng nhập để quản trị hệ thống nội bộ</p>
         </div>
 
-        <form onSubmit={handleAuthSubmit} className="space-y-3 text-left">
-          <input
-            type="email"
-            placeholder="Email"
-            value={authEmail}
-            onChange={e => setAuthEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:outline-[#004ac6]"
-          />
-          <input
-            type="password"
-            placeholder="Mật khẩu"
-            value={authPassword}
-            onChange={e => setAuthPassword(e.target.value)}
-            className="w-full px-3 py-2 border border-outline-variant rounded-lg text-sm focus:outline-[#004ac6]"
-          />
+        <form onSubmit={handleAuthSubmit} className="space-y-4 text-left">
+          <label className="block text-sm font-semibold text-on-surface">
+            Email
+            <input
+              type="email"
+              autoFocus
+              autoComplete="email"
+              placeholder="name@company.com"
+              value={authEmail}
+              onChange={e => {
+                setAuthEmail(e.target.value);
+                setAuthError('');
+              }}
+              aria-invalid={Boolean(authError)}
+              className={`mt-1.5 w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition ${
+                authError ? 'border-red-500 focus:ring-2 focus:ring-red-100' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
+              }`}
+            />
+          </label>
+          <label className="block text-sm font-semibold text-on-surface">
+            Mật khẩu
+            <span className="relative mt-1.5 block">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="Nhập mật khẩu"
+                value={authPassword}
+                onChange={e => {
+                  setAuthPassword(e.target.value);
+                  setAuthError('');
+                }}
+                aria-invalid={Boolean(authError)}
+                className={`w-full px-3 py-2.5 pr-11 border rounded-lg text-sm outline-none transition ${
+                  authError ? 'border-red-500 focus:ring-2 focus:ring-red-100' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(current => !current)}
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-primary"
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </span>
+          </label>
+          {authError && (
+            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+              {authError}
+            </p>
+          )}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 bg-[#004ac6] text-white rounded-lg text-sm font-bold hover:bg-primary-container cursor-pointer transition-all active:scale-95 shadow disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:brightness-90 cursor-pointer transition-all active:scale-[0.98] shadow disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>

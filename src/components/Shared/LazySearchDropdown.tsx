@@ -5,6 +5,7 @@ import { LookupItem, PagedResult } from '../../types';
 type LazySearchDropdownProps = {
   value: string;
   placeholder: string;
+  ariaLabel?: string;
   emptyText?: string;
   onSelect: (item: LookupItem) => void;
   loadOptions: (query: { search: string; pageIndex: number; pageSize: number }) => Promise<PagedResult<LookupItem>>;
@@ -19,6 +20,7 @@ function getLabel(item: LookupItem) {
 export default function LazySearchDropdown({
   value,
   placeholder,
+  ariaLabel,
   emptyText = 'Không tìm thấy dữ liệu.',
   onSelect,
   loadOptions,
@@ -91,14 +93,17 @@ export default function LazySearchDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className="w-full px-3 py-2 border rounded-lg bg-white text-left text-sm flex items-center justify-between gap-2 hover:bg-slate-50 focus:outline-[#004ac6]"
+        className="w-full px-3 py-2 border rounded-lg bg-white text-left text-sm flex items-center justify-between gap-2 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        aria-label={ariaLabel || placeholder}
+        aria-expanded={isOpen}
       >
-        <span className={value ? 'text-gray-900 truncate' : 'text-gray-400 truncate'}>{value || placeholder}</span>
+        <span className={value ? 'text-gray-900 truncate' : 'text-gray-600 truncate'}>{value || placeholder}</span>
         <span className="flex items-center gap-1 shrink-0">
           {value && onClear && (
             <span
               role="button"
               tabIndex={0}
+              aria-label={`Xóa ${ariaLabel || placeholder}`}
               onClick={(event) => {
                 event.stopPropagation();
                 onClear();
@@ -125,18 +130,19 @@ export default function LazySearchDropdown({
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
               <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Tìm kiếm..."
-                className="w-full pl-8 pr-3 py-2 text-xs border border-outline-variant rounded-lg bg-white focus:outline-[#004ac6]"
-              />
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Tìm kiếm..."
+              className="w-full pl-8 pr-3 py-2 text-xs border border-outline-variant rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-gray-600"
+              aria-label={`Tìm trong ${ariaLabel || placeholder}`}
+            />
             </div>
           </div>
 
           <div className="max-h-56 overflow-y-auto p-1" onScroll={handleListScroll}>
             {items.length === 0 && !isLoading ? (
-              <div className="px-3 py-6 text-center text-xs font-semibold text-gray-400">{emptyText}</div>
+              <div className="px-3 py-6 text-center text-xs font-semibold text-gray-500">{emptyText}</div>
             ) : (
               items.map(item => (
                 <button
@@ -150,7 +156,7 @@ export default function LazySearchDropdown({
                 >
                   <span className="block text-xs font-bold text-gray-900 truncate">{getLabel(item)}</span>
                   {item.lastSyncedAt && (
-                    <span className="block text-[10px] text-gray-400 mt-0.5">Đồng bộ: {item.lastSyncedAt}</span>
+                    <span className="block text-[10px] text-gray-600 mt-0.5">Đồng bộ: {item.lastSyncedAt}</span>
                   )}
                 </button>
               ))
@@ -158,7 +164,7 @@ export default function LazySearchDropdown({
           </div>
 
           <div className="border-t p-2 flex items-center justify-between bg-slate-50">
-            <span className="text-[10px] text-gray-400">
+            <span className="text-[10px] text-gray-600">
               Trang {totalPages === 0 ? 0 : pageIndex + 1}/{totalPages}
             </span>
             {isLoading ? (

@@ -40,6 +40,7 @@ const taskOptions: TaskOption[] = [
 // URL goi cai dat agent moi (GitHub Release). Task UPDATE_AGENT_SERVICE se tai ban nay,
 // stage ra thu muc tam roi mot tien trinh updater tach roi se stop -> swap -> start lai service agent.
 const DEFAULT_AGENT_RELEASE_URL = 'https://github.com/trankien27/fun-agent/releases/download/Fun-agent/agent.zip';
+const MACHINE_PAGE_SIZE = 30;
 
 const endpointLabels: Record<RemoteDeployTaskType, string> = {
   'update-version': 'Update Version',
@@ -338,6 +339,7 @@ export default function RemoteBoothTab() {
   const [deployError, setDeployError] = useState('');
   const [isResolvingVersionUrl, setIsResolvingVersionUrl] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [machinePageIndex, setMachinePageIndex] = useState(1);
 
   const machinesQuery = useQuery({
     queryKey: ['remote-deploy', 'machines'],
@@ -358,6 +360,8 @@ export default function RemoteBoothTab() {
   const historyQuery = useQuery({
     queryKey: ['remote-deploy', 'history'],
     queryFn: () => remoteDeployService.getHistory({ pageSize: 100 }),
+    // Tu refresh de theo doi ket qua cuoi cua cac task chay bat dong bo (vd. update agent).
+    refetchInterval: 10000,
   });
 
   const boothsByCode = useMemo(() => {
@@ -425,15 +429,22 @@ export default function RemoteBoothTab() {
         .some(value => String(value).toLowerCase().includes(keyword));
     });
   }, [boothsByCode, boothsByMachineCode, machineSearch, machines, storeFilter]);
+  const onlineFilteredMachines = useMemo(() => filteredMachines.filter(isMachineOnline), [filteredMachines]);
+  const machineTotalPages = Math.max(1, Math.ceil(filteredMachines.length / MACHINE_PAGE_SIZE));
+  const safeMachinePageIndex = Math.min(machinePageIndex, machineTotalPages);
+  const pagedMachines = useMemo(() => {
+    const startIndex = (safeMachinePageIndex - 1) * MACHINE_PAGE_SIZE;
+    return filteredMachines.slice(startIndex, startIndex + MACHINE_PAGE_SIZE);
+  }, [filteredMachines, safeMachinePageIndex]);
+  const machinePageStart = filteredMachines.length === 0 ? 0 : (safeMachinePageIndex - 1) * MACHINE_PAGE_SIZE + 1;
+  const machinePageEnd = Math.min(safeMachinePageIndex * MACHINE_PAGE_SIZE, filteredMachines.length);
   const selectedMachineCodeSet = useMemo(() => new Set(selectedMachineCodes), [selectedMachineCodes]);
   const selectedMachines = useMemo(
     () => machines.filter(machine => selectedMachineCodeSet.has(machine.machineCode) && isMachineOnline(machine)),
     [machines, selectedMachineCodeSet],
   );
-  const allFilteredSelected = filteredMachines.length > 0
-    && filteredMachines
-      .filter(isMachineOnline)
-      .every(machine => selectedMachineCodeSet.has(machine.machineCode));
+  const allFilteredSelected = onlineFilteredMachines.length > 0
+    && onlineFilteredMachines.every(machine => selectedMachineCodeSet.has(machine.machineCode));
   const activeMachines = multiDeployMachines.length > 0
     ? multiDeployMachines
     : selectedMachine
@@ -478,7 +489,7 @@ export default function RemoteBoothTab() {
       setDeployResult(result);
       setDeployError('');
       historyQuery.refetch();
-      toast.success('Đã gửi task cập nhật agent. Agent sẽ tự restart để áp dụng bản mới.');
+      toast.success('Đã gửi task cập nhật agent. Theo dõi kết quả SUCCESS/FAILED ở bảng Lịch sử.');
     },
     onError: error => {
       const message = getErrorMessage(error, 'Không thể gửi task cập nhật agent.');
@@ -713,8 +724,10 @@ export default function RemoteBoothTab() {
       machineCode: machine.machineCode,
       body: {
         downloadUrl: DEFAULT_AGENT_RELEASE_URL,
-        // Bản mới restart giữa chừng nên agent trả kết quả "initiated" ngay, không chờ hoàn tất.
-        waitForResult: false,
+        // Chờ agent xác nhận "đã khởi động update" (hoặc lỗi tiền xử lý). Kết quả SUCCESS/FAILED
+        // cuối cùng do updater báo về sau khi swap + restart -> theo dõi ở bảng Lịch sử.
+        waitForResult: true,
+        waitTimeoutSeconds: 90,
         timeoutSeconds: 600,
       },
     });
@@ -784,7 +797,7 @@ export default function RemoteBoothTab() {
   };
 
   const toggleAllFilteredMachines = () => {
-    const filteredCodes = filteredMachines.filter(isMachineOnline).map(machine => machine.machineCode);
+    const filteredCodes = onlineFilteredMachines.map(machine => machine.machineCode);
     if (allFilteredSelected) {
       setSelectedMachineCodes(current => current.filter(code => !filteredCodes.includes(code)));
       return;
@@ -984,18 +997,25 @@ export default function RemoteBoothTab() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(260px,420px)_minmax(180px,240px)]">
             <label className="relative block w-full">
+              <span className="sr-only">Tìm booth remote</span>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 value={machineSearch}
-                onChange={event => setMachineSearch(event.target.value)}
+                onChange={event => {
+                  setMachineSearch(event.target.value);
+                  setMachinePageIndex(1);
+                }}
                 placeholder="Tìm tên booth hoặc mã booth..."
-                className="w-full h-11 sm:h-10 pl-9 pr-9 border border-outline-variant rounded-lg focus:outline-[#004ac6] text-sm sm:text-xs font-medium"
+                className="w-full h-11 sm:h-10 pl-9 pr-9 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm sm:text-xs font-medium placeholder:text-gray-600"
               />
               {machineSearch && (
                 <button
                   type="button"
-                  onClick={() => setMachineSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-6 sm:w-6 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 inline-flex items-center justify-center"
+                  onClick={() => {
+                    setMachineSearch('');
+                    setMachinePageIndex(1);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary/30"
                   aria-label="Xóa tìm kiếm"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -1004,8 +1024,12 @@ export default function RemoteBoothTab() {
             </label>
             <select
               value={storeFilter}
-              onChange={event => setStoreFilter(event.target.value)}
-              className="h-11 sm:h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm sm:text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer"
+              onChange={event => {
+                setStoreFilter(event.target.value);
+                setMachinePageIndex(1);
+              }}
+              className="h-11 sm:h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm sm:text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+              aria-label="Lọc booth theo store"
             >
               <option value="">Tất cả store</option>
               {storeOptions.map(store => (
@@ -1022,7 +1046,7 @@ export default function RemoteBoothTab() {
                 setIsHistoryModalOpen(true);
                 historyQuery.refetch();
               }}
-              className="h-11 sm:h-10 bg-white border border-outline-variant text-gray-700 hover:bg-[#f3f3fe] px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+              className="h-11 sm:h-10 bg-white border border-outline-variant text-gray-700 hover:bg-[#f3f3fe] px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               <History className="w-4 h-4" />
               Lịch sử tác vụ
@@ -1031,7 +1055,7 @@ export default function RemoteBoothTab() {
               type="button"
               onClick={openMultiDeployPanel}
               disabled={selectedMachines.length === 0}
-              className="h-11 sm:h-10 bg-primary text-white hover:bg-primary-container px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-11 sm:h-10 bg-primary text-white hover:brightness-90 px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               <ClipboardList className="w-4 h-4" />
               Deploy ({selectedMachines.length})
@@ -1063,8 +1087,8 @@ export default function RemoteBoothTab() {
                     type="checkbox"
                     checked={allFilteredSelected}
                     onChange={toggleAllFilteredMachines}
-                    disabled={filteredMachines.length === 0}
-                    className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
+                    disabled={onlineFilteredMachines.length === 0}
+                    className="h-6 w-6 accent-primary cursor-pointer disabled:cursor-not-allowed"
                     aria-label="Chọn tất cả booth đang lọc"
                   />
                 </th>
@@ -1109,7 +1133,7 @@ export default function RemoteBoothTab() {
                   </td>
                 </tr>
               ) : (
-                filteredMachines.map(machine => (
+                pagedMachines.map(machine => (
                   <tr key={machine.connectionId || machine.machineCode} className="hover:bg-[#faf8ff] transition-colors group">
                     <td className="py-4 px-5">
                       <input
@@ -1117,7 +1141,7 @@ export default function RemoteBoothTab() {
                         checked={selectedMachineCodeSet.has(machine.machineCode)}
                         onChange={() => toggleMachineSelection(machine.machineCode)}
                         disabled={!isMachineOnline(machine)}
-                        className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                        className="h-6 w-6 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Chọn booth ${machine.machineCode}`}
                       />
                     </td>
@@ -1144,10 +1168,10 @@ export default function RemoteBoothTab() {
                           event.currentTarget.value = '';
                         }}
                         disabled={!isMachineOnline(machine)}
-                        className="h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-bold text-gray-700 focus:outline-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+                        className="h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
                         aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                       >
-                        <option value="">Chọn thao tác</option>
+                        <option value="">{isMachineOnline(machine) ? 'Chọn thao tác' : 'Booth offline'}</option>
                         <option value="deploy">Deploy</option>
                         <option value="powershell">PowerShell</option>
                         <option value="update-agent">Update Agent Service</option>
@@ -1168,8 +1192,8 @@ export default function RemoteBoothTab() {
                 type="checkbox"
                 checked={allFilteredSelected}
                 onChange={toggleAllFilteredMachines}
-                disabled={filteredMachines.length === 0}
-                className="h-5 w-5 accent-primary cursor-pointer disabled:cursor-not-allowed"
+                disabled={onlineFilteredMachines.length === 0}
+                className="h-6 w-6 accent-primary cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Chọn tất cả booth đang lọc"
               />
               Chọn tất cả
@@ -1201,7 +1225,7 @@ export default function RemoteBoothTab() {
             </div>
           ) : (
             <div className="divide-y divide-[#f1f5f9]">
-              {filteredMachines.map(machine => (
+              {pagedMachines.map(machine => (
                 <article key={machine.connectionId || machine.machineCode} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <label className="flex items-start gap-3 min-w-0">
@@ -1210,7 +1234,7 @@ export default function RemoteBoothTab() {
                         checked={selectedMachineCodeSet.has(machine.machineCode)}
                         onChange={() => toggleMachineSelection(machine.machineCode)}
                         disabled={!isMachineOnline(machine)}
-                        className="h-5 w-5 mt-0.5 accent-primary cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="h-6 w-6 mt-0.5 accent-primary cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Chọn booth ${machine.machineCode}`}
                       />
                       <span className="min-w-0">
@@ -1244,10 +1268,10 @@ export default function RemoteBoothTab() {
                       event.currentTarget.value = '';
                     }}
                     disabled={!isMachineOnline(machine)}
-                    className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm font-bold text-gray-700 focus:outline-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+                    className="h-11 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500"
                     aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                   >
-                    <option value="">Chọn thao tác</option>
+                    <option value="">{isMachineOnline(machine) ? 'Chọn thao tác' : 'Booth offline'}</option>
                     <option value="deploy">Deploy</option>
                     <option value="powershell">PowerShell</option>
                     <option value="update-agent">Update Agent Service</option>
@@ -1258,6 +1282,40 @@ export default function RemoteBoothTab() {
             </div>
           )}
         </div>
+
+        {!machinesQuery.isLoading && !machinesQuery.isError && filteredMachines.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-outline-variant bg-gray-50 px-4 py-3 text-xs font-semibold text-gray-700 sm:flex-row sm:items-center sm:justify-between">
+            <span>
+              Hiển thị {machinePageStart}-{machinePageEnd} của {filteredMachines.length} booth
+              {onlineFilteredMachines.length !== filteredMachines.length
+                ? ` · ${onlineFilteredMachines.length} online có thể thao tác`
+                : ''}
+            </span>
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setMachinePageIndex(page => Math.max(1, page - 1))}
+                disabled={safeMachinePageIndex <= 1}
+                className="h-9 rounded-lg border border-outline-variant bg-white px-3 font-bold text-gray-700 hover:bg-[#f3f3fe] disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                aria-label="Trang booth trước"
+              >
+                Trước
+              </button>
+              <span className="min-w-20 text-center text-gray-700">
+                Trang {safeMachinePageIndex}/{machineTotalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setMachinePageIndex(page => Math.min(machineTotalPages, page + 1))}
+                disabled={safeMachinePageIndex >= machineTotalPages}
+                className="h-9 rounded-lg border border-outline-variant bg-white px-3 font-bold text-gray-700 hover:bg-[#f3f3fe] disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                aria-label="Trang booth sau"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isHistoryModalOpen && (
