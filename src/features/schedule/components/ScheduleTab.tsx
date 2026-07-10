@@ -30,6 +30,7 @@ import {
   User,
   WorkScheduleDto,
   WorkScheduleWeekUserDto,
+  WorkScheduleWeekResponse,
 } from '../../../types';
 import WeeklyCoverageSuggestionModal from '../../work-schedules/components/WeeklyCoverageSuggestionModal';
 
@@ -69,6 +70,26 @@ type OvertimeDraft = {
   startTime: string;
   endTime: string;
   reason: string;
+};
+
+type ScheduleNotePreview = {
+  title: string;
+  note: string;
+};
+
+type ScheduleViewPreview = {
+  title: string;
+  userName: string;
+  date: string;
+  hours: string;
+  note?: string | null;
+};
+
+type ScheduleContextMenuState = {
+  x: number;
+  y: number;
+  schedule: WorkScheduleDto;
+  user: WorkScheduleWeekUserDto;
 };
 
 const shiftStyles: Record<string, string> = {
@@ -228,6 +249,7 @@ export default function ScheduleTab() {
     weekEnd,
     isLoading,
     fetchWeekSchedule,
+    setWeekSchedule,
   } = useScheduleStore();
   const { hasAnyRole, currentUser, getCurrentRoleNumber } = useAuthStore();
 
@@ -259,6 +281,9 @@ export default function ScheduleTab() {
   const [openShiftSelectKey, setOpenShiftSelectKey] = useState<string | null>(null);
   const [draggedSchedule, setDraggedSchedule] = useState<DraggedSchedule | null>(null);
   const [dragOverScheduleCell, setDragOverScheduleCell] = useState<string | null>(null);
+  const [scheduleNotePreview, setScheduleNotePreview] = useState<ScheduleNotePreview | null>(null);
+  const [scheduleViewPreview, setScheduleViewPreview] = useState<ScheduleViewPreview | null>(null);
+  const [scheduleContextMenu, setScheduleContextMenu] = useState<ScheduleContextMenuState | null>(null);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -432,6 +457,90 @@ export default function ScheduleTab() {
     ));
   }, [weekSchedule?.users]);
 
+  const cloneWeekSchedule = (schedule: WorkScheduleWeekResponse | null) => (
+    schedule
+      ? {
+        ...schedule,
+        days: schedule.days.map(day => ({ ...day })),
+        users: schedule.users.map(user => ({
+          ...user,
+          schedules: user.schedules.map(item => ({ ...item })),
+        })),
+      }
+      : null
+  );
+
+  const upsertScheduleInWeek = (base: WorkScheduleWeekResponse | null, nextSchedule: WorkScheduleDto) => {
+    const next = cloneWeekSchedule(base);
+    if (!next) return next;
+
+    const userIndex = next.users.findIndex(user => user.userId === nextSchedule.userId);
+    if (userIndex < 0) return next;
+
+    const user = next.users[userIndex];
+    const withoutSameSchedule = user.schedules.filter(item => item.id !== nextSchedule.id);
+    next.users[userIndex] = {
+      ...user,
+      schedules: [...withoutSameSchedule, nextSchedule].sort((first, second) => (
+        first.workDate.localeCompare(second.workDate) || first.startTime.localeCompare(second.startTime)
+      )),
+    };
+
+    return next;
+  };
+
+  const replaceTemporaryScheduleInWeek = (
+    base: WorkScheduleWeekResponse | null,
+    temporaryId: number,
+    savedSchedule: WorkScheduleDto,
+  ) => {
+    const next = cloneWeekSchedule(base);
+    if (!next) return next;
+
+    next.users = next.users.map(user => ({
+      ...user,
+      schedules: user.schedules
+        .map(item => (item.id === temporaryId ? savedSchedule : item))
+        .sort((first, second) => (
+          first.workDate.localeCompare(second.workDate) || first.startTime.localeCompare(second.startTime)
+        )),
+    }));
+
+    return next;
+  };
+
+  const buildOptimisticSchedule = (
+    userId: string,
+    payload: {
+      workDate: string;
+      shiftId: number;
+      note: string | null;
+    },
+    id: number,
+    previous?: WorkScheduleDto,
+  ): WorkScheduleDto => {
+    const selectedShift = activeShifts.find(shift => shift.id === payload.shiftId);
+
+    return {
+      ...(previous || {}),
+      id,
+      workDate: payload.workDate,
+      userId,
+      userName: scheduleRows.find(user => user.userId === userId)?.userName || previous?.userName,
+      shiftId: payload.shiftId,
+      shiftCode: selectedShift?.code || previous?.shiftCode || panel?.shiftCode || '',
+      shiftName: selectedShift?.name || previous?.shiftName || panel?.shiftName || '',
+      startTime: selectedShift?.startTime || previous?.startTime || toApiTime(panel?.startTime || ''),
+      endTime: selectedShift?.endTime || previous?.endTime || toApiTime(panel?.endTime || ''),
+      endDayOffset: selectedShift?.endDayOffset || previous?.endDayOffset || panel?.endDayOffset || 0,
+      paidWorkingHours: selectedShift?.paidWorkingHours || previous?.paidWorkingHours || panel?.paidWorkingHours || 0,
+      workingHours: selectedShift?.paidWorkingHours || selectedShift?.workingHours || previous?.workingHours || previous?.paidWorkingHours || panel?.paidWorkingHours || 0,
+      status: previous?.status || 1,
+      statusName: previous?.statusName || 'Scheduled',
+      note: payload.note,
+    };
+  };
+
   const overtimeByCell = useMemo(() => {
     const result = new Map<string, OvertimeRequestDto[]>();
 
@@ -530,6 +639,21 @@ export default function ScheduleTab() {
         toast.error(err.message || 'Không thể tải danh sách nhân viên lịch làm việc.');
       });
   }, []);
+
+  useEffect(() => {
+    if (!scheduleContextMenu) return;
+
+    const closeMenu = () => setScheduleContextMenu(null);
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('scroll', closeMenu, true);
+    window.addEventListener('resize', closeMenu);
+
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('scroll', closeMenu, true);
+      window.removeEventListener('resize', closeMenu);
+    };
+  }, [scheduleContextMenu]);
 
   const reload = async () => {
     if (scheduleViewMode === 'month') {
@@ -810,28 +934,78 @@ export default function ScheduleTab() {
       note: panel.note || null,
     };
 
+    const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
+    const previousMonthlySchedules = monthlySchedules.map(item => ({ ...item }));
+    const previousPanel = panel;
+
     setIsSaving(true);
+
     try {
       if (panel.mode === 'edit' && panel.schedule) {
-        await scheduleService.updateWorkSchedule(panel.schedule.id, {
+        const optimisticSchedule = buildOptimisticSchedule(
+          panel.userIds[0],
+          schedulePayload,
+          panel.schedule.id,
+          panel.schedule,
+        );
+
+        setWeekSchedule(upsertScheduleInWeek(weekSchedule, optimisticSchedule));
+        setMonthlySchedules(current => current.map(item => (
+          item.id === optimisticSchedule.id ? optimisticSchedule : item
+        )));
+        setPanel(null);
+
+        const savedSchedule = await scheduleService.updateWorkSchedule(panel.schedule.id, {
           ...schedulePayload,
           userId: panel.userIds[0],
           status: panel.schedule.status,
         });
+        setWeekSchedule(upsertScheduleInWeek(useScheduleStore.getState().weekSchedule, savedSchedule));
+        setMonthlySchedules(current => current.map(item => (
+          item.id === savedSchedule.id ? savedSchedule : item
+        )));
         toast.success('Đã cập nhật lịch.');
       } else {
-        await scheduleService.batchCreateWorkSchedules({
+        const temporaryBaseId = -Date.now();
+        const optimisticSchedules = panel.userIds.map((userId, index) => (
+          buildOptimisticSchedule(userId, schedulePayload, temporaryBaseId - index)
+        ));
+
+        let nextWeekSchedule = weekSchedule;
+        optimisticSchedules.forEach(schedule => {
+          nextWeekSchedule = upsertScheduleInWeek(nextWeekSchedule, schedule);
+        });
+        setWeekSchedule(nextWeekSchedule);
+        setMonthlySchedules(current => [...current, ...optimisticSchedules]);
+        setPanel(null);
+
+        const result = await scheduleService.batchCreateWorkSchedules({
           items: panel.userIds.map(userId => ({
             ...schedulePayload,
             userId,
           })),
         });
+
+        let savedWeekSchedule = useScheduleStore.getState().weekSchedule;
+        result.items.forEach((savedSchedule, index) => {
+          savedWeekSchedule = replaceTemporaryScheduleInWeek(savedWeekSchedule, optimisticSchedules[index].id, savedSchedule);
+        });
+        setWeekSchedule(savedWeekSchedule);
+        setMonthlySchedules(current => {
+          const temporaryIds = new Set(optimisticSchedules.map(item => item.id));
+          return [
+            ...current.filter(item => !temporaryIds.has(item.id)),
+            ...result.items,
+          ];
+        });
         toast.success('Đã thêm lịch.');
       }
 
-      setPanel(null);
       await reload();
     } catch (err: any) {
+      setWeekSchedule(previousWeekSchedule);
+      setMonthlySchedules(previousMonthlySchedules);
+      setPanel(previousPanel);
       toast.error(err.message || 'Không thể lưu lịch.');
     } finally {
       setIsSaving(false);
@@ -841,13 +1015,32 @@ export default function ScheduleTab() {
   const deleteSchedule = async () => {
     if (!panel?.schedule) return;
 
+    const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
+    const previousMonthlySchedules = monthlySchedules.map(item => ({ ...item }));
+    const previousPanel = panel;
+    const deletingScheduleId = panel.schedule.id;
+
     setIsSaving(true);
+
     try {
+      const optimisticWeekSchedule = cloneWeekSchedule(weekSchedule);
+      if (optimisticWeekSchedule) {
+        optimisticWeekSchedule.users = optimisticWeekSchedule.users.map(user => ({
+          ...user,
+          schedules: user.schedules.filter(schedule => schedule.id !== deletingScheduleId),
+        }));
+      }
+      setWeekSchedule(optimisticWeekSchedule);
+      setMonthlySchedules(current => current.filter(schedule => schedule.id !== deletingScheduleId));
+      setPanel(null);
+
       await scheduleService.deleteWorkSchedule(panel.schedule.id);
       toast.success('Đã xóa lịch.');
-      setPanel(null);
       await reload();
     } catch (err: any) {
+      setWeekSchedule(previousWeekSchedule);
+      setMonthlySchedules(previousMonthlySchedules);
+      setPanel(previousPanel);
       toast.error(err.message || 'Không thể xóa lịch.');
     } finally {
       setIsSaving(false);
@@ -1024,6 +1217,105 @@ export default function ScheduleTab() {
     );
   };
 
+  const openScheduleNotePreview = (schedule: WorkScheduleDto) => {
+    const note = schedule.note?.trim();
+    if (!note) return;
+
+    setScheduleNotePreview({
+      title: `${getScheduleTitle(schedule)} · ${formatDate(schedule.workDate)}`,
+      note,
+    });
+  };
+
+  const getScheduleUserName = (schedule: WorkScheduleDto) => {
+    return schedule.userName || scheduleUsers.find(user => user.id === schedule.userId)?.name || 'Chưa rõ';
+  };
+
+  const getScheduleRowForSchedule = (schedule: WorkScheduleDto): WorkScheduleWeekUserDto => {
+    const existingRow = scheduleRows.find(row => row.userId === schedule.userId);
+
+    if (existingRow) return existingRow;
+
+    return {
+      userId: schedule.userId,
+      userName: getScheduleUserName(schedule),
+      departmentName: null,
+      avatarUrl: null,
+      totalWorkingHours: 0,
+      schedules: [schedule],
+    };
+  };
+
+  const openScheduleContextMenu = (
+    event: React.MouseEvent,
+    schedule: WorkScheduleDto | undefined,
+    user: WorkScheduleWeekUserDto,
+  ) => {
+    if (!schedule) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const viewportPadding = 12;
+    const menuWidth = 176;
+    const menuHeight = canManageSchedule ? 96 : 52;
+    const nextX = Math.min(event.clientX, window.innerWidth - menuWidth - viewportPadding);
+    const nextY = Math.min(event.clientY, window.innerHeight - menuHeight - viewportPadding);
+
+    setOpenShiftSelectKey(null);
+    setScheduleContextMenu({
+      x: Math.max(viewportPadding, nextX),
+      y: Math.max(viewportPadding, nextY),
+      schedule,
+      user,
+    });
+  };
+
+  const viewScheduleFromContextMenu = () => {
+    if (!scheduleContextMenu) return;
+    const schedule = scheduleContextMenu.schedule;
+    setScheduleViewPreview({
+      title: getScheduleTitle(schedule),
+      userName: scheduleContextMenu.user.userName || getScheduleUserName(schedule),
+      date: formatDate(schedule.workDate),
+      hours: getScheduleHours(schedule),
+      note: schedule.note,
+    });
+    setScheduleContextMenu(null);
+  };
+
+  const editScheduleFromContextMenu = () => {
+    if (!scheduleContextMenu) return;
+    openEditPanel(scheduleContextMenu.schedule, scheduleContextMenu.user);
+    setScheduleContextMenu(null);
+  };
+
+  const renderScheduleNote = (schedule?: WorkScheduleDto, className = '') => {
+    const note = schedule?.note?.trim();
+    if (!schedule || !note) return null;
+
+    return (
+      <span
+        role="button"
+        tabIndex={0}
+        title={note}
+        onClick={event => {
+          event.stopPropagation();
+          openScheduleNotePreview(schedule);
+        }}
+        onKeyDown={event => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          openScheduleNotePreview(schedule);
+        }}
+        className={`mt-1 block w-full max-w-full truncate rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-left text-[9px] font-bold leading-tight text-amber-800 shadow-sm cursor-pointer ${className}`}
+      >
+        Ghi chú: {note}
+      </span>
+    );
+  };
+
   const getRowTotalHours = (row: WorkScheduleWeekUserDto) => {
     return (weekSchedule?.days || []).reduce((total, day) => {
       const schedules = getSchedulesForDate(row, day.date);
@@ -1062,6 +1354,7 @@ export default function ScheduleTab() {
           disabled={isSaving}
           draggable={canManageSchedule && Boolean(selectedShift) && !isSaving}
           title={selectedShift ? getShiftOptionDisplay(selectedShift) : 'Nghỉ'}
+          onContextMenu={event => openScheduleContextMenu(event, schedule, row)}
           onClick={() => setOpenShiftSelectKey(current => current === cellKey ? null : cellKey)}
           onDragStart={event => {
             if (!selectedShift || isSaving) return;
@@ -1082,9 +1375,14 @@ export default function ScheduleTab() {
             selectedShift && canManageSchedule ? 'cursor-grab active:cursor-grabbing' : ''
           } ${buttonClass}`}
         >
-          {selectedShift
-            ? renderShiftBadgeText(selectedShift.code, getShiftTitle(selectedShift), getShiftHours(selectedShift))
-            : <span>Nghỉ</span>}
+          {selectedShift ? (
+            <>
+              {renderShiftBadgeText(selectedShift.code, getShiftTitle(selectedShift), getShiftHours(selectedShift))}
+              {renderScheduleNote(schedule)}
+            </>
+          ) : (
+            <span>Nghỉ</span>
+          )}
         </button>
         {isOpen && (
           <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-64 overflow-y-auto rounded-md border border-outline-variant bg-white shadow-lg">
@@ -1156,13 +1454,15 @@ export default function ScheduleTab() {
               <button
                 key={item.id}
                 type="button"
-                disabled={!canManageSchedule || isSaving}
-                onClick={() => openEditPanel(item, row)}
+                disabled={isSaving}
+                onClick={() => canManageSchedule ? openEditPanel(item, row) : undefined}
+                onContextMenu={event => openScheduleContextMenu(event, item, row)}
                 className={`relative w-full rounded border px-3 py-2 text-left text-xs font-black leading-tight ${getShiftClass(item.shiftCode)} ${
                   canManageSchedule ? 'cursor-pointer' : 'cursor-default'
                 }`}
               >
                 {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item), 'pr-7')}
+                {renderScheduleNote(item, 'pr-7')}
                 {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
               </button>
             ))}
@@ -1170,13 +1470,15 @@ export default function ScheduleTab() {
         ) : effectiveShift ? (
           <button
             type="button"
-            disabled={!canManageSchedule || isSaving}
-            onClick={() => schedule ? openEditPanel(schedule, row) : undefined}
+            disabled={isSaving}
+            onClick={() => canManageSchedule && schedule ? openEditPanel(schedule, row) : undefined}
+            onContextMenu={event => openScheduleContextMenu(event, schedule, row)}
             className={`relative w-full rounded border px-3 py-2 text-left text-xs font-black leading-tight ${getShiftClass(effectiveShift.code)} ${
               canManageSchedule ? 'cursor-pointer' : 'cursor-default'
             }`}
           >
             {renderShiftBadgeText(effectiveShift.code, getShiftTitle(effectiveShift), getShiftHours(effectiveShift), 'pr-7')}
+            {renderScheduleNote(schedule, 'pr-7')}
             {hasDraft && <span className="mt-0.5 block text-[10px] font-black text-primary">Chưa lưu</span>}
             {canManageSchedule && schedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
           </button>
@@ -1256,12 +1558,13 @@ export default function ScheduleTab() {
             <button
               key={item.id}
               type="button"
-              onClick={() => openEditPanel(item, row)}
-              disabled={!canManageSchedule}
+              onClick={() => canManageSchedule ? openEditPanel(item, row) : undefined}
+              onContextMenu={event => openScheduleContextMenu(event, item, row)}
               className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
             >
               {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-400" />}
               {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item))}
+              {renderScheduleNote(item)}
             </button>
           ))}
         </div>
@@ -1454,20 +1757,50 @@ export default function ScheduleTab() {
                           {day.shiftGroups.length > 0 && (
                             <div className="space-y-1">
                               {day.shiftGroups.map(group => (
-                                <p
+                                <div
                                   key={`${day.dateKey}-${group.shiftId ?? group.shiftCode}`}
-                                  className={`truncate rounded border px-1.5 py-1 text-[10px] leading-3 ${getShiftClass(group.shiftCode)}`}
+                                  className={`rounded border px-1.5 py-1 text-[10px] leading-3 ${getShiftClass(group.shiftCode)}`}
                                   title={`${group.shiftName || group.shiftCode}: ${group.schedules.map(schedule =>
                                     schedule.userName || scheduleUsers.find(user => user.id === schedule.userId)?.name || 'Chưa rõ',
                                   ).join(', ')}`}
                                 >
-                                  <span className="font-black">{group.shiftName || group.shiftCode}:</span>{' '}
-                                  <span className="font-semibold">
-                                    {group.schedules.map(schedule =>
-                                      schedule.userName || scheduleUsers.find(user => user.id === schedule.userId)?.name || 'Chưa rõ',
-                                    ).join(', ')}
-                                  </span>
-                                </p>
+                                  <p className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
+                                    <span className="font-black">{group.shiftName || group.shiftCode}:</span>
+                                    {group.schedules.map(schedule => (
+                                      <button
+                                        key={schedule.id}
+                                        type="button"
+                                        onContextMenu={event => openScheduleContextMenu(event, schedule, getScheduleRowForSchedule(schedule))}
+                                        onClick={() => canManageSchedule ? openEditPanel(schedule, getScheduleRowForSchedule(schedule)) : undefined}
+                                        className="min-w-0 max-w-full truncate rounded px-0.5 text-left font-semibold hover:bg-white/50"
+                                        title={getScheduleUserName(schedule)}
+                                      >
+                                        {getScheduleUserName(schedule)}
+                                      </button>
+                                    ))}
+                                  </p>
+                                  {group.schedules.some(schedule => schedule.note?.trim()) && (
+                                    <div className="mt-1 space-y-0.5">
+                                      {group.schedules
+                                        .filter(schedule => schedule.note?.trim())
+                                        .map(schedule => {
+                                          const userName = schedule.userName || scheduleUsers.find(user => user.id === schedule.userId)?.name || 'Chưa rõ';
+
+                                          return (
+                                            <button
+                                              key={`${schedule.id}-note`}
+                                              type="button"
+                                              onClick={() => openScheduleNotePreview(schedule)}
+                                              title={schedule.note || ''}
+                                              className="block w-full truncate rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-left text-[9px] font-bold text-amber-800 hover:bg-amber-100"
+                                            >
+                                              {userName}: {schedule.note}
+                                            </button>
+                                          );
+                                        })}
+                                    </div>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           )}
@@ -1768,11 +2101,11 @@ export default function ScheduleTab() {
                 </div>
 
                 <label className="block text-sm font-medium">
-                  Ghi chú
+                  Ghi chú ca trực
                   <textarea
                     value={panel.note}
                     onChange={event => setPanel(current => current ? { ...current, note: event.target.value } : current)}
-                    placeholder="Nhập ghi chú (nếu có)..."
+                    placeholder="Nhập ghi chú riêng cho ca trực này..."
                     rows={4}
                     className="mt-2 w-full resize-none rounded-md border border-outline-variant px-3 py-2 text-sm"
                   />
@@ -2099,6 +2432,120 @@ export default function ScheduleTab() {
           </div>
         </div>
       )}
+
+      {scheduleContextMenu && (
+        <div
+          className="fixed z-[60] w-44 overflow-hidden rounded-lg border border-outline-variant bg-white py-1 text-sm shadow-xl"
+          style={{ left: scheduleContextMenu.x, top: scheduleContextMenu.y }}
+          onClick={event => event.stopPropagation()}
+          onContextMenu={event => event.preventDefault()}
+        >
+          <button
+            type="button"
+            onClick={viewScheduleFromContextMenu}
+            className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-gray-700 hover:bg-slate-50"
+          >
+            <Clock3 className="h-4 w-4 text-gray-500" />
+            Xem
+          </button>
+          {canManageSchedule && (
+            <button
+              type="button"
+              onClick={editScheduleFromContextMenu}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-gray-700 hover:bg-slate-50"
+            >
+              <Edit2 className="h-4 w-4 text-gray-500" />
+              Chỉnh sửa
+            </button>
+          )}
+        </div>
+      )}
+
+      {scheduleViewPreview && (
+        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-gray-950">Thông tin ca trực</h3>
+                <p className="mt-1 truncate text-xs text-gray-500">{scheduleViewPreview.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleViewPreview(null)}
+                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="space-y-3 p-5 text-sm">
+              <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Nhân viên</p>
+                <p className="mt-1 font-bold text-gray-950">{scheduleViewPreview.userName}</p>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Ngày</p>
+                  <p className="mt-1 font-bold text-gray-950">{scheduleViewPreview.date}</p>
+                </div>
+                <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Giờ</p>
+                  <p className="mt-1 font-bold text-gray-950">{scheduleViewPreview.hours}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Ghi chú</p>
+                <p className="mt-2 max-h-[38dvh] overflow-y-auto whitespace-pre-wrap break-words leading-6 text-gray-700">
+                  {scheduleViewPreview.note?.trim() || 'Chưa có ghi chú.'}
+                </p>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setScheduleViewPreview(null)}
+                  className="h-10 rounded-lg bg-primary px-5 text-sm font-bold text-white hover:bg-primary-container cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {scheduleNotePreview && (
+        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-gray-950">Ghi chú ca trực</h3>
+                <p className="mt-1 truncate text-xs text-gray-500">{scheduleNotePreview.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setScheduleNotePreview(null)}
+                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5">
+              <p className="max-h-[55dvh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-outline-variant bg-slate-50 px-3 py-3 text-sm leading-6 text-gray-700">
+                {scheduleNotePreview.note}
+              </p>
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setScheduleNotePreview(null)}
+                  className="h-10 rounded-lg bg-primary px-5 text-sm font-bold text-white hover:bg-primary-container cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <WeeklyCoverageSuggestionModal
         open={isWeeklySuggestionOpen}
         users={scheduleUsers}

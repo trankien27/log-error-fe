@@ -26,6 +26,7 @@ interface ScheduleState {
   setScheduleShiftFilter: (shiftId: string) => void;
   setScheduleStatusFilter: (status: string) => void;
   setIsCreateShiftModalOpen: (isOpen: boolean) => void;
+  setWeekSchedule: (weekSchedule: WorkScheduleWeekResponse | null) => void;
 
   fetchShifts: () => Promise<void>;
   fetchCalendar: (fromDate: string, toDate: string) => Promise<void>;
@@ -83,6 +84,10 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   setScheduleShiftFilter: (scheduleShiftFilter) => set({ scheduleShiftFilter }),
   setScheduleStatusFilter: (scheduleStatusFilter) => set({ scheduleStatusFilter }),
   setIsCreateShiftModalOpen: (isCreateShiftModalOpen) => set({ isCreateShiftModalOpen }),
+  setWeekSchedule: (weekSchedule) => set({
+    weekSchedule,
+    shifts: weekSchedule?.users.flatMap((user) => user.schedules) || [],
+  }),
 
   fetchShifts: async () => {
     const { weekStart, weekEnd } = getCurrentWeekRange();
