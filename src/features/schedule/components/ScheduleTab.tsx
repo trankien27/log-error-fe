@@ -1930,7 +1930,7 @@ export default function ScheduleTab() {
           <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-950">Xuất báo cáo OT</h3>
+                <h3 className="text-lg font-bold text-gray-950">Xuất báo cáo tháng</h3>
                 <p className="text-xs text-gray-500 mt-1">Chọn tháng, năm và nhân viên để xuất file Excel.</p>
               </div>
               <button
@@ -1966,7 +1966,7 @@ export default function ScheduleTab() {
                   className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm"
                 />
               </label>
-              {!isEmployee && <label className="block text-sm font-semibold">
+              <label className="block text-sm font-semibold">
                 Nhân viên
                 <select
                   value={reportUserId}
@@ -1978,7 +1978,7 @@ export default function ScheduleTab() {
                     <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
-              </label>}
+              </label>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                 <button
@@ -2022,7 +2022,7 @@ export default function ScheduleTab() {
             </div>
 
             <div className="p-5 space-y-4">
-              <label className="block text-sm font-semibold">
+              {!isEmployee && <label className="block text-sm font-semibold">
                 Nhân viên
                 <select
                   value={overtimeDraft.userId}
@@ -2034,7 +2034,7 @@ export default function ScheduleTab() {
                     <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
-              </label>
+              </label>}
 
               <label className="block text-sm font-semibold">
                 Ngày OT
