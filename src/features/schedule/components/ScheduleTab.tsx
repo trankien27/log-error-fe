@@ -72,12 +72,25 @@ type OvertimeDraft = {
 };
 
 const shiftStyles: Record<string, string> = {
-  S: 'bg-[#e8f3ff] border-[#9ac7f7] text-[#0c315c]',
-  C: 'bg-[#eff9e8] border-[#a9d79a] text-[#173d18]',
-  T: 'bg-[#f0e7ff] border-[#b99deb] text-[#291044]',
+  S: 'bg-[#e8f3ff] border-[#5b9be8] text-[#0c315c]',
+  C: 'bg-[#eff9e8] border-[#6bbf5a] text-[#173d18]',
+  T: 'bg-[#f0e7ff] border-[#9b6fe0] text-[#291044]',
   'S+': 'bg-[#fff4d8] border-[#f2b33d] text-[#4f3100]',
-  'C+': 'bg-[#ffeaf0] border-[#ea8fa2] text-[#4b1020]',
+  'C+': 'bg-[#ffeaf0] border-[#e06985] text-[#4b1020]',
 };
+
+// Ky hieu ca de phan biet khong chi bang mau (ho tro nguoi mu mau)
+const shiftGlyphs: Record<string, string> = {
+  S: '☀',
+  C: '🌙',
+  T: '🌘',
+  'S+': '☀+',
+  'C+': '🌙+',
+};
+
+function getShiftGlyph(code: string) {
+  return shiftGlyphs[code] || '';
+}
 
 function toDateInput(date: Date) {
   const year = date.getFullYear();
@@ -250,6 +263,7 @@ export default function ScheduleTab() {
   );
   const canManageSchedule = hasAnyRole([1, 3]);
   const firstActiveShift = activeShifts[0];
+  const today = toDateInput(new Date());
 
   const departments = useMemo(() => {
     const values = new Set<string>();
@@ -886,12 +900,15 @@ export default function ScheduleTab() {
     );
   };
 
-  const renderShiftBadgeText = (title: string, hours: string, className = '') => (
-    <span className={`block leading-tight ${className}`}>
-      <span className="block truncate">{title}</span>
-      <span className="mt-0.5 block truncate text-[9px] font-bold">{hours}</span>
-    </span>
-  );
+  const renderShiftBadgeText = (code: string, title: string, hours: string, className = '') => {
+    const glyph = getShiftGlyph(code);
+    return (
+      <span className={`block leading-tight ${className}`}>
+        <span className="block truncate">{glyph ? `${glyph} ` : ''}{title}</span>
+        <span className="mt-0.5 block truncate text-[9px] font-bold">{hours}</span>
+      </span>
+    );
+  };
 
   const getRowTotalHours = (row: WorkScheduleWeekUserDto) => {
     return (weekSchedule?.days || []).reduce((total, day) => {
@@ -952,7 +969,7 @@ export default function ScheduleTab() {
           } ${buttonClass}`}
         >
           {selectedShift
-            ? renderShiftBadgeText(getShiftTitle(selectedShift), getShiftHours(selectedShift))
+            ? renderShiftBadgeText(selectedShift.code, getShiftTitle(selectedShift), getShiftHours(selectedShift))
             : <span>Nghỉ</span>}
         </button>
         {isOpen && (
@@ -980,7 +997,7 @@ export default function ScheduleTab() {
                 }}
                 className={`w-full border-t px-2 py-2 text-center text-[11px] font-black hover:brightness-95 disabled:opacity-60 ${getShiftClass(shift.code)}`}
               >
-                {renderShiftBadgeText(getShiftTitle(shift), getShiftHours(shift))}
+                {renderShiftBadgeText(shift.code, getShiftTitle(shift), getShiftHours(shift))}
               </button>
             ))}
           </div>
@@ -1031,7 +1048,7 @@ export default function ScheduleTab() {
                   canManageSchedule ? 'cursor-pointer' : 'cursor-default'
                 }`}
               >
-                {renderShiftBadgeText(getScheduleTitle(item), getScheduleHours(item), 'pr-7')}
+                {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item), 'pr-7')}
                 {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
               </button>
             ))}
@@ -1045,7 +1062,7 @@ export default function ScheduleTab() {
               canManageSchedule ? 'cursor-pointer' : 'cursor-default'
             }`}
           >
-            {renderShiftBadgeText(getShiftTitle(effectiveShift), getShiftHours(effectiveShift), 'pr-7')}
+            {renderShiftBadgeText(effectiveShift.code, getShiftTitle(effectiveShift), getShiftHours(effectiveShift), 'pr-7')}
             {hasDraft && <span className="mt-0.5 block text-[10px] font-black text-primary">Chưa lưu</span>}
             {canManageSchedule && schedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
           </button>
@@ -1130,7 +1147,7 @@ export default function ScheduleTab() {
               className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
             >
               {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-400" />}
-              {renderShiftBadgeText(getScheduleTitle(item), getScheduleHours(item))}
+              {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item))}
             </button>
           ))}
         </div>
@@ -1288,10 +1305,17 @@ export default function ScheduleTab() {
                           <p className="truncate text-xs font-semibold text-gray-500">{row.departmentName || 'Chưa có phòng ban'}</p>
                         </div>
                       </div>
-                      <div className="shrink-0 rounded-md bg-blue-50 px-3 py-2 text-right">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-primary">Tổng</p>
-                        <p className="text-sm font-black text-primary">{getRowTotalHours(row).toFixed(1)}h</p>
-                      </div>
+                      {(() => {
+                        const rowHours = getRowTotalHours(row);
+                        const overLimit = rowHours > 48;
+                        return (
+                          <div className={`shrink-0 rounded-md px-3 py-2 text-right ${overLimit ? 'bg-red-50' : 'bg-blue-50'}`}>
+                            <p className={`text-[10px] font-black uppercase tracking-wider ${overLimit ? 'text-red-600' : 'text-primary'}`}>Tổng</p>
+                            <p className={`text-sm font-black ${overLimit ? 'text-red-600' : 'text-primary'}`}>{rowHours.toFixed(1)}h</p>
+                            {overLimit && <p className="text-[9px] font-bold text-red-600">⚠ vượt 48h</p>}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-outline-variant">
@@ -1301,9 +1325,14 @@ export default function ScheduleTab() {
                             type="button"
                             onClick={() => openCreatePanel(day.date, row.userId)}
                             disabled={!canManageSchedule}
-                            className="w-[74px] shrink-0 rounded-md bg-slate-50 px-2 py-2 text-left disabled:cursor-default"
+                            className={`w-[74px] shrink-0 rounded-md px-2 py-2 text-left disabled:cursor-default ${
+                              day.date === today ? 'bg-blue-100 ring-1 ring-primary' : 'bg-slate-50'
+                            }`}
                           >
-                            <span className="block text-xs font-black text-gray-950">{day.dayName.replace('Thứ ', 'T')}</span>
+                            <span className="block text-xs font-black text-gray-950">
+                              {day.dayName.replace('Thứ ', 'T')}
+                              {day.date === today && <span className="ml-1 text-[9px] font-bold text-primary">• Hôm nay</span>}
+                            </span>
                             <span className="block text-[11px] font-semibold text-gray-500">{formatShortDate(day.date)}</span>
                           </button>
                           {renderMobileScheduleCell(row, day.date)}
@@ -1322,8 +1351,16 @@ export default function ScheduleTab() {
                     Nhân viên
                   </th>
                   {(weekSchedule?.days || []).map(day => (
-                    <th key={day.date} className="w-[150px] border border-outline-variant px-2 py-4 text-center font-semibold">
-                      <span className="block text-base">{day.dayName.replace('Thứ ', 'T')}</span>
+                    <th
+                      key={day.date}
+                      className={`w-[150px] border border-outline-variant px-2 py-4 text-center font-semibold ${
+                        day.date === today ? 'bg-blue-50 text-primary' : ''
+                      }`}
+                    >
+                      <span className="block text-base">
+                        {day.dayName.replace('Thứ ', 'T')}
+                        {day.date === today && <span className="ml-1 align-middle text-[10px] font-bold">• Hôm nay</span>}
+                      </span>
                       <span className="block text-sm font-normal mt-1">{formatShortDate(day.date)}</span>
                     </th>
                   ))}
@@ -1365,21 +1402,30 @@ export default function ScheduleTab() {
                         </div>
                       </td>
                       {(weekSchedule?.days || []).map(day => (
-                        <td key={day.date} className="border border-outline-variant p-0 align-middle">
+                        <td
+                          key={day.date}
+                          className={`border border-outline-variant p-0 align-middle ${
+                            day.date === today ? 'bg-blue-50/40' : ''
+                          }`}
+                        >
                           {renderScheduleCell(row, day.date)}
                         </td>
                       ))}
-                      <td className="border border-outline-variant text-center text-base font-semibold">
-                        {(weekSchedule?.days || []).reduce((total, day) => {
-                          const schedules = getSchedulesForDate(row, day.date);
-                          const draft = cellDrafts[getCellKey(row.userId, day.date)];
-                          if (draft) {
-                            const draftShift = activeShifts.find(shift => String(shift.id) === draft.shiftId);
-                            return total + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
-                          }
-                          return total + getSchedulesTotalHours(schedules);
-                        }, 0).toFixed(1)}h
-                      </td>
+                      {(() => {
+                        const rowHours = getRowTotalHours(row);
+                        const overLimit = rowHours > 48;
+                        return (
+                          <td
+                            className={`border border-outline-variant text-center text-base font-semibold ${
+                              overLimit ? 'text-red-600' : ''
+                            }`}
+                            title={overLimit ? 'Vượt 48h/tuần (giới hạn giờ làm việc)' : undefined}
+                          >
+                            {rowHours.toFixed(1)}h
+                            {overLimit && <span className="block text-[10px] font-bold">⚠ vượt mức</span>}
+                          </td>
+                        );
+                      })()}
                     </tr>
                   ))
                 )}
