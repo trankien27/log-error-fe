@@ -56,6 +56,13 @@ type CellDraft = {
   shiftId: string;
 };
 
+type DraggedSchedule = {
+  sourceUserId: string;
+  sourceWorkDate: string;
+  sourceSchedule?: WorkScheduleDto;
+  shiftId: string;
+};
+
 type OvertimeDraft = {
   userId: string;
   workDate: string;
@@ -234,6 +241,8 @@ export default function ScheduleTab() {
   const [isExportingOvertime, setIsExportingOvertime] = useState(false);
   const [isWeeklySuggestionOpen, setIsWeeklySuggestionOpen] = useState(false);
   const [openShiftSelectKey, setOpenShiftSelectKey] = useState<string | null>(null);
+  const [draggedSchedule, setDraggedSchedule] = useState<DraggedSchedule | null>(null);
+  const [dragOverScheduleCell, setDragOverScheduleCell] = useState<string | null>(null);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -546,9 +555,58 @@ export default function ScheduleTab() {
     });
   };
 
+  const handleDropSchedule = (
+    targetRow: WorkScheduleWeekUserDto,
+    targetDate: string,
+    targetSchedule: WorkScheduleDto | undefined,
+  ) => {
+    if (!canManageSchedule || !draggedSchedule || !draggedSchedule.shiftId) return;
+
+    const sourceKey = getCellKey(draggedSchedule.sourceUserId, draggedSchedule.sourceWorkDate);
+    const targetKey = getCellKey(targetRow.userId, targetDate);
+
+    setCellDrafts(current => {
+      const nextDrafts = { ...current };
+      const originalTargetShiftId = targetSchedule ? String(targetSchedule.shiftId ?? `schedule-${targetSchedule.id}`) : '';
+      const targetEffectiveShiftId = current[targetKey]?.shiftId ?? originalTargetShiftId;
+
+      if (sourceKey !== targetKey) {
+        if (draggedSchedule.sourceSchedule) {
+          nextDrafts[sourceKey] = {
+            userId: draggedSchedule.sourceUserId,
+            workDate: draggedSchedule.sourceWorkDate,
+            originalSchedule: draggedSchedule.sourceSchedule,
+            shiftId: targetEffectiveShiftId,
+          };
+        } else {
+          delete nextDrafts[sourceKey];
+        }
+      }
+
+      if (draggedSchedule.shiftId === originalTargetShiftId && sourceKey === targetKey) {
+        delete nextDrafts[targetKey];
+      } else {
+        nextDrafts[targetKey] = {
+          userId: targetRow.userId,
+          workDate: targetDate,
+          originalSchedule: targetSchedule,
+          shiftId: draggedSchedule.shiftId,
+        };
+      }
+
+      return nextDrafts;
+    });
+
+    setOpenShiftSelectKey(null);
+    setDraggedSchedule(null);
+    setDragOverScheduleCell(null);
+  };
+
   const discardCellDrafts = () => {
     setCellDrafts({});
     setOpenShiftSelectKey(null);
+    setDraggedSchedule(null);
+    setDragOverScheduleCell(null);
   };
 
   const submitCellDrafts = async () => {
@@ -871,9 +929,27 @@ export default function ScheduleTab() {
         <button
           type="button"
           disabled={isSaving}
+          draggable={canManageSchedule && Boolean(selectedShift) && !isSaving}
           title={selectedShift ? getShiftOptionDisplay(selectedShift) : 'Nghỉ'}
           onClick={() => setOpenShiftSelectKey(current => current === cellKey ? null : cellKey)}
-          className={`min-h-[56px] w-full rounded border px-2 py-1 text-center text-[11px] font-black outline-none disabled:opacity-60 ${buttonClass}`}
+          onDragStart={event => {
+            if (!selectedShift || isSaving) return;
+            setDraggedSchedule({
+              sourceUserId: row.userId,
+              sourceWorkDate: date,
+              sourceSchedule: schedule,
+              shiftId: String(selectedShift.id),
+            });
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', `${row.userId}_${date}_${selectedShift.id}`);
+          }}
+          onDragEnd={() => {
+            setDraggedSchedule(null);
+            setDragOverScheduleCell(null);
+          }}
+          className={`min-h-[56px] w-full rounded border px-2 py-1 text-center text-[11px] font-black outline-none disabled:opacity-60 ${
+            selectedShift && canManageSchedule ? 'cursor-grab active:cursor-grabbing' : ''
+          } ${buttonClass}`}
         >
           {selectedShift
             ? renderShiftBadgeText(getShiftTitle(selectedShift), getShiftHours(selectedShift))
@@ -922,9 +998,25 @@ export default function ScheduleTab() {
     const effectiveShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
     const hasDraft = Boolean(draft);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
+    const isDragOver = dragOverScheduleCell === cellKey;
 
     return (
-      <div className={`flex min-w-0 flex-1 flex-col items-end gap-2 text-right ${hasDraft ? 'text-primary' : ''}`}>
+      <div
+        className={`flex min-w-0 flex-1 flex-col items-end gap-2 rounded-lg border border-dashed p-1 text-right transition-colors ${
+          hasDraft ? 'text-primary' : ''
+        } ${isDragOver ? 'border-primary bg-blue-50' : 'border-transparent'}`}
+        onDragOver={event => {
+          if (!canManageSchedule || !draggedSchedule) return;
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+          setDragOverScheduleCell(cellKey);
+        }}
+        onDragLeave={() => setDragOverScheduleCell(current => (current === cellKey ? null : current))}
+        onDrop={event => {
+          event.preventDefault();
+          handleDropSchedule(row, date, schedule);
+        }}
+      >
         {canManageSchedule ? (
           renderShiftModeSelect(row, date, schedule, effectiveShiftId)
         ) : !draft && schedules.length > 0 ? (
@@ -978,12 +1070,32 @@ export default function ScheduleTab() {
     const effectiveShiftId = draft ? draft.shiftId : schedule?.shiftId ? String(schedule.shiftId) : '';
     const hasDraft = Boolean(draft);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
+    const isDragOver = dragOverScheduleCell === cellKey;
 
     if (canManageSchedule) {
       return (
-        <div key={date} className={`min-h-[112px] w-full p-2 flex flex-col items-center justify-center gap-2 ${hasDraft ? 'bg-blue-50/70' : ''}`}>
+        <div
+          key={date}
+          className={`min-h-[112px] w-full border border-dashed p-2 flex flex-col items-center justify-center gap-2 transition-colors ${
+            hasDraft ? 'bg-blue-50/70' : ''
+          } ${isDragOver ? 'border-primary bg-blue-50' : 'border-transparent'}`}
+          onDragOver={event => {
+            if (!draggedSchedule) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            setDragOverScheduleCell(cellKey);
+          }}
+          onDragLeave={() => setDragOverScheduleCell(current => (current === cellKey ? null : current))}
+          onDrop={event => {
+            event.preventDefault();
+            handleDropSchedule(row, date, schedule);
+          }}
+        >
           {renderShiftModeSelect(row, date, schedule, effectiveShiftId, true)}
           {hasDraft && <span className="text-[9px] font-bold text-primary">Chưa lưu</span>}
+          {!effectiveShiftId && draggedSchedule && (
+            <span className="text-[9px] font-bold text-slate-400">Thả ca vào đây</span>
+          )}
           {renderOvertimeBadges(cellOvertimeRequests)}
         </div>
       );
@@ -1321,7 +1433,7 @@ export default function ScheduleTab() {
 
             <p className="px-4 pb-5 text-sm text-gray-500">
               {canManageSchedule
-                ? 'Click vào ô ca để chỉnh sửa. Click ô Nghỉ để thêm lịch cho nhân viên trong ngày đó.'
+                ? 'Click vào ô ca để chỉnh sửa, hoặc kéo-thả ca sang ô khác để đổi nhanh. Thả vào ô có ca sẽ hoán đổi ca; thả vào ô Nghỉ sẽ chuyển ca sang ô đó.'
                 : 'Bạn chỉ có quyền xem, tìm kiếm và lọc lịch làm việc.'}
             </p>
           </div>
