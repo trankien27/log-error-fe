@@ -232,6 +232,9 @@ export default function ScheduleTab() {
   const { hasAnyRole } = useAuthStore();
 
   const [selectedDate, setSelectedDate] = useState(weekStart);
+  const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
+  const [monthlySchedules, setMonthlySchedules] = useState<WorkScheduleDto[]>([]);
+  const [isMonthLoading, setIsMonthLoading] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [keyword, setKeyword] = useState('');
   const [panel, setPanel] = useState<DraftPanel | null>(null);
@@ -303,6 +306,97 @@ export default function ScheduleTab() {
       return departmentMatch && keywordMatch;
     });
   }, [departmentFilter, keyword, scheduleRows]);
+
+  const monthView = useMemo(() => {
+    const anchor = new Date(`${selectedDate}T00:00:00`);
+    const firstDay = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const lastDay = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    const leadingBlankCount = (firstDay.getDay() + 6) % 7;
+    const userById = new Map(scheduleUsers.map(user => [user.id, user]));
+    const allowedUserIds = new Set(
+      scheduleUsers
+        .filter(user => !departmentFilter || user.department === departmentFilter)
+        .filter(user => {
+          const query = keyword.trim().toLowerCase();
+          return !query || user.name.toLowerCase().includes(query) || user.department?.toLowerCase().includes(query);
+        })
+        .map(user => user.id),
+    );
+    const shiftOrder = new Map(activeShifts.map((shift, index) => [shift.id, index]));
+    const schedulesByDate = new Map<string, Array<{
+      shiftId?: number | null;
+      shiftCode: string;
+      shiftName: string;
+      schedules: WorkScheduleDto[];
+    }>>();
+
+    monthlySchedules
+      .filter(schedule => allowedUserIds.has(schedule.userId))
+      .forEach(schedule => {
+        const workDate = schedule.workDate.slice(0, 10);
+        const dateGroups = schedulesByDate.get(workDate) || [];
+        const group = dateGroups.find(item =>
+          schedule.shiftId != null
+            ? item.shiftId === schedule.shiftId
+            : item.shiftCode === schedule.shiftCode,
+        );
+
+        if (group) {
+          group.schedules.push(schedule);
+        } else {
+          dateGroups.push({
+            shiftId: schedule.shiftId,
+            shiftCode: schedule.shiftCode,
+            shiftName: schedule.shiftName,
+            schedules: [schedule],
+          });
+        }
+        schedulesByDate.set(workDate, dateGroups);
+      });
+
+    schedulesByDate.forEach(groups => {
+      groups.sort((first, second) => {
+        const firstOrder = first.shiftId == null ? Number.MAX_SAFE_INTEGER : shiftOrder.get(first.shiftId) ?? Number.MAX_SAFE_INTEGER;
+        const secondOrder = second.shiftId == null ? Number.MAX_SAFE_INTEGER : shiftOrder.get(second.shiftId) ?? Number.MAX_SAFE_INTEGER;
+        return firstOrder - secondOrder || first.shiftName.localeCompare(second.shiftName, 'vi');
+      });
+      groups.forEach(group => {
+        group.schedules.sort((first, second) => {
+          const firstName = first.userName || userById.get(first.userId)?.name || '';
+          const secondName = second.userName || userById.get(second.userId)?.name || '';
+          return firstName.localeCompare(secondName, 'vi');
+        });
+      });
+    });
+
+    return {
+      firstDate: toDateInput(firstDay),
+      lastDate: toDateInput(lastDay),
+      leadingBlankCount,
+      rowCount: Math.ceil((leadingBlankCount + lastDay.getDate()) / 7),
+      days: Array.from({ length: lastDay.getDate() }, (_, index) => {
+        const date = new Date(firstDay);
+        date.setDate(index + 1);
+        const dateKey = toDateInput(date);
+        return { date, dateKey, shiftGroups: schedulesByDate.get(dateKey) || [] };
+      }),
+    };
+  }, [activeShifts, departmentFilter, keyword, monthlySchedules, scheduleUsers, selectedDate]);
+
+  const loadMonthSchedules = async () => {
+    setIsMonthLoading(true);
+    try {
+      const schedules = await scheduleService.getWorkSchedules({
+        fromDate: monthView.firstDate,
+        toDate: monthView.lastDate,
+      });
+      setMonthlySchedules(schedules);
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể tải lịch làm việc theo tháng.');
+    } finally {
+      setIsMonthLoading(false);
+    }
+  };
 
   const visibleTotalWorkingHours = useMemo(() => {
     return filteredRows.reduce((total, row) => {
@@ -412,6 +506,11 @@ export default function ScheduleTab() {
   }, [fetchWeekSchedule, selectedDate]);
 
   useEffect(() => {
+    if (scheduleViewMode !== 'month') return;
+    loadMonthSchedules();
+  }, [scheduleViewMode, monthView.firstDate, monthView.lastDate]);
+
+  useEffect(() => {
     overtimeService.getAll({
       fromDate: weekStart,
       toDate: weekEnd,
@@ -431,6 +530,11 @@ export default function ScheduleTab() {
   }, []);
 
   const reload = async () => {
+    if (scheduleViewMode === 'month') {
+      await loadMonthSchedules();
+      return;
+    }
+
     const [weeklyOvertime] = await Promise.all([
       overtimeService.getAll({
         fromDate: weekStart,
@@ -501,6 +605,13 @@ export default function ScheduleTab() {
   };
 
   const moveWeek = (days: number) => {
+    if (scheduleViewMode === 'month') {
+      const current = new Date(`${selectedDate}T00:00:00`);
+      current.setDate(1);
+      current.setMonth(current.getMonth() + (days < 0 ? -1 : 1));
+      setSelectedDate(toDateInput(current));
+      return;
+    }
     setSelectedDate(addDays(weekStart, days));
   };
 
@@ -1178,7 +1289,9 @@ export default function ScheduleTab() {
                   <ChevronRight className="w-4 h-4" />
                 </button>
                 <div className="px-3 sm:px-4 flex items-center gap-3 text-sm font-bold min-w-[220px] sm:min-w-[240px]">
-                  {formatDate(weekStart)} - {formatDate(weekEnd)}
+                  {scheduleViewMode === 'month'
+                    ? new Date(`${selectedDate}T00:00:00`).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })
+                    : `${formatDate(weekStart)} - ${formatDate(weekEnd)}`}
                   <CalendarDays className="w-4 h-4 ml-auto" />
                 </div>
               </div>
@@ -1230,7 +1343,7 @@ export default function ScheduleTab() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap gap-3">
+            {scheduleViewMode === 'week' && <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={copyCurrentWeek}
@@ -1258,17 +1371,25 @@ export default function ScheduleTab() {
                 <Sparkles className="w-4 h-4" />
                 Đề xuất lịch tuần
               </button>
-            </div>
+            </div>}
 
-            <div className="inline-flex rounded-md border border-outline-variant overflow-hidden">
-              <button className="h-11 px-5 text-sm font-bold text-primary bg-blue-50 border-r border-primary inline-flex items-center gap-2">
+            <div className="ml-auto inline-flex shrink-0 overflow-hidden rounded-md border border-outline-variant bg-white">
+              <button
+                type="button"
+                onClick={() => setScheduleViewMode('week')}
+                className={`h-11 px-5 text-sm inline-flex items-center gap-2 border-r ${
+                  scheduleViewMode === 'week' ? 'font-bold text-primary bg-blue-50 border-primary' : 'font-semibold bg-white hover:bg-slate-50 border-outline-variant'
+                }`}
+              >
                 <CalendarDays className="w-4 h-4" />
                 Theo tuần
               </button>
               <button
                 type="button"
-                onClick={() => toast.info('Chế độ tháng sẽ được bật khi API month cần dùng trong UI.')}
-                className="h-11 px-5 text-sm font-semibold bg-white hover:bg-slate-50 cursor-pointer"
+                onClick={() => setScheduleViewMode('month')}
+                className={`h-11 px-5 text-sm cursor-pointer ${
+                  scheduleViewMode === 'month' ? 'font-bold text-primary bg-blue-50' : 'font-semibold bg-white hover:bg-slate-50'
+                }`}
               >
                 Theo tháng
               </button>
@@ -1278,6 +1399,83 @@ export default function ScheduleTab() {
 
         <div className={`flex-1 min-h-0 grid grid-cols-1 ${panel ? 'xl:grid-cols-[1fr_320px]' : ''}`}>
           <div className="min-w-0 overflow-auto">
+            {scheduleViewMode === 'month' ? (
+              <div className="h-full min-h-[460px] w-full p-2 lg:p-3">
+                <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-outline-variant bg-white">
+                  <div className="grid grid-cols-7 border-b border-outline-variant bg-slate-50">
+                    {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(dayName => (
+                      <div key={dayName} className="border-r border-outline-variant px-1.5 py-2 text-center text-[11px] font-black uppercase tracking-wide text-gray-500 last:border-r-0">
+                        {dayName}
+                      </div>
+                    ))}
+                  </div>
+
+                  {isMonthLoading ? (
+                    <div className="py-20 text-center text-gray-400 font-semibold">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" />
+                      Đang tải lịch làm việc theo tháng...
+                    </div>
+                  ) : (
+                    <div
+                      className="grid flex-1 grid-cols-7"
+                      style={{ gridTemplateRows: `repeat(${monthView.rowCount}, minmax(0, 1fr))` }}
+                    >
+                      {Array.from({ length: monthView.leadingBlankCount }, (_, index) => (
+                        <div key={`blank-${index}`} className="border-r border-b border-outline-variant bg-slate-50/60" />
+                      ))}
+                      {monthView.days.map(day => (
+                        <div
+                          key={day.dateKey}
+                          className={`min-h-0 overflow-y-auto border-r border-b border-outline-variant p-1.5 ${
+                            day.dateKey === today ? 'bg-blue-50/70 ring-1 ring-inset ring-primary/30' : 'bg-white'
+                          }`}
+                        >
+                          <div className="mb-1 flex h-6 items-center justify-between gap-1">
+                            <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black ${
+                              day.dateKey === today ? 'bg-primary text-white' : 'text-gray-800'
+                            }`}>
+                              {day.date.getDate()}
+                            </span>
+                            {canManageSchedule && (
+                              <button
+                                type="button"
+                                onClick={() => openCreatePanel(day.dateKey)}
+                                className="inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold text-gray-400 hover:bg-blue-50 hover:text-primary"
+                                aria-label={`Thêm lịch ngày ${formatDate(day.dateKey)}`}
+                              >
+                                +
+                              </button>
+                            )}
+                          </div>
+
+                          {day.shiftGroups.length > 0 && (
+                            <div className="space-y-1">
+                              {day.shiftGroups.map(group => (
+                                <p
+                                  key={`${day.dateKey}-${group.shiftId ?? group.shiftCode}`}
+                                  className={`truncate rounded border px-1.5 py-1 text-[10px] leading-3 ${getShiftClass(group.shiftCode)}`}
+                                  title={`${group.shiftName || group.shiftCode}: ${group.schedules.map(schedule =>
+                                    schedule.userName || scheduleUsers.find(user => user.id === schedule.userId)?.name || 'Chưa rõ',
+                                  ).join(', ')}`}
+                                >
+                                  <span className="font-black">{group.shiftName || group.shiftCode}:</span>{' '}
+                                  <span className="font-semibold">
+                                    {group.schedules.map(schedule =>
+                                      schedule.userName || scheduleUsers.find(user => user.id === schedule.userId)?.name || 'Chưa rõ',
+                                    ).join(', ')}
+                                  </span>
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="lg:hidden divide-y divide-slate-100">
               {isLoading ? (
                 <div className="py-14 text-center text-gray-400 font-semibold">
@@ -1482,6 +1680,8 @@ export default function ScheduleTab() {
                 ? 'Click vào ô ca để chỉnh sửa, hoặc kéo-thả ca sang ô khác để đổi nhanh. Thả vào ô có ca sẽ hoán đổi ca; thả vào ô Nghỉ sẽ chuyển ca sang ô đó.'
                 : 'Bạn chỉ có quyền xem, tìm kiếm và lọc lịch làm việc.'}
             </p>
+            </>
+            )}
           </div>
 
           {panel && (
