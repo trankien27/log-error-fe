@@ -17,10 +17,13 @@ import {
   CheckCircle2,
   MessageSquare,
   UserCheck,
-  AlertCircle
+  AlertCircle,
+  KeyRound,
+  Loader2
 } from 'lucide-react';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { usersService } from '../../../services/api/usersService';
 import { User } from '../../../types';
 
 const roleOptions: Array<{ value: User['role']; label: string }> = [
@@ -69,6 +72,10 @@ export default function UsersTab() {
   const [userPassword, setUserPassword] = useState('');
   const [userRole, setUserRole] = useState<User['role']>('ITSupport');
   const [userStatus, setUserStatus] = useState<'Hoạt động' | 'Vô hiệu hóa'>('Hoạt động');
+  const [passwordTargetUser, setPasswordTargetUser] = useState<User | null>(null);
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [confirmUserPassword, setConfirmUserPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   // Detailed profile form states
   const [profileName, setProfileName] = useState('');
@@ -159,6 +166,42 @@ export default function UsersTab() {
         },
       },
     });
+  };
+
+  const handleOpenPasswordModal = (user: User) => {
+    if (!canCreateUser) {
+      toast.error('Chỉ Admin mới được đổi mật khẩu người dùng.');
+      return;
+    }
+    setPasswordTargetUser(user);
+    setNewUserPassword('');
+    setConfirmUserPassword('');
+  };
+
+  const handleResetUserPassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!passwordTargetUser) return;
+    if (newUserPassword.length < 6) {
+      toast.error('Mật khẩu mới phải có ít nhất 6 ký tự.');
+      return;
+    }
+    if (newUserPassword !== confirmUserPassword) {
+      toast.error('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      await usersService.resetPassword(passwordTargetUser.id, newUserPassword);
+      toast.success(`Đã đổi mật khẩu cho ${passwordTargetUser.name}.`);
+      setPasswordTargetUser(null);
+      setNewUserPassword('');
+      setConfirmUserPassword('');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể đổi mật khẩu người dùng.');
+    } finally {
+      setIsResettingPassword(false);
+    }
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -535,6 +578,16 @@ export default function UsersTab() {
                       </td>
                       <td className="py-4 px-5 text-right w-24">
                         <div className="flex justify-end gap-1.5">
+                          {canCreateUser && (
+                            <button
+                              onClick={() => handleOpenPasswordModal(user)}
+                              className="p-1 px-1.5 border rounded hover:bg-amber-50 hover:text-amber-700 transition-colors border-outline-variant cursor-pointer"
+                              title="Đổi mật khẩu"
+                              aria-label={`Đổi mật khẩu cho ${user.name}`}
+                            >
+                              <KeyRound className="w-3 h-3" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenUserModal(user)}
                             className="p-1 px-1.5 border rounded hover:bg-blue-50 hover:text-primary transition-colors border-outline-variant cursor-pointer"
@@ -653,6 +706,77 @@ export default function UsersTab() {
                     className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isLoading ? 'Đang lưu...' : 'Xác nhận'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {passwordTargetUser && (
+          <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4 sm:p-6 border border-outline-variant text-left">
+              <div className="flex items-start justify-between gap-4 mb-4 pb-3 border-b border-[#e2e8f0]">
+                <div>
+                  <h3 className="text-lg font-bold text-on-surface">Đổi mật khẩu người dùng</h3>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Đặt mật khẩu mới cho <span className="font-bold text-gray-700">{passwordTargetUser.name}</span>.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPasswordTargetUser(null)}
+                  disabled={isResettingPassword}
+                  className="text-gray-400 hover:text-gray-650 font-bold cursor-pointer disabled:opacity-50"
+                  aria-label="Đóng"
+                >
+                  &#x2715;
+                </button>
+              </div>
+
+              <form onSubmit={handleResetUserPassword} className="space-y-4 text-sm">
+                <div>
+                  <label className="block font-medium mb-1">Mật khẩu mới *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                    value={newUserPassword}
+                    onChange={event => setNewUserPassword(event.target.value)}
+                    placeholder="Tối thiểu 6 ký tự"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Xác nhận mật khẩu mới *</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                    value={confirmUserPassword}
+                    onChange={event => setConfirmUserPassword(event.target.value)}
+                    placeholder="Nhập lại mật khẩu mới"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  />
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordTargetUser(null)}
+                    disabled={isResettingPassword}
+                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isResettingPassword}
+                    className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                  >
+                    {isResettingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isResettingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
                   </button>
                 </div>
               </form>

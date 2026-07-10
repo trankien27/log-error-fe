@@ -229,7 +229,7 @@ export default function ScheduleTab() {
     isLoading,
     fetchWeekSchedule,
   } = useScheduleStore();
-  const { hasAnyRole } = useAuthStore();
+  const { hasAnyRole, currentUser, getCurrentRoleNumber } = useAuthStore();
 
   const [selectedDate, setSelectedDate] = useState(weekStart);
   const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
@@ -265,6 +265,8 @@ export default function ScheduleTab() {
     [shiftDefinitions],
   );
   const canManageSchedule = hasAnyRole([1, 3]);
+  const isEmployee = getCurrentRoleNumber() === 2;
+  const currentUserId = currentUser?.id || '';
   const firstActiveShift = activeShifts[0];
   const today = toDateInput(new Date());
 
@@ -630,7 +632,7 @@ export default function ScheduleTab() {
 
   const openOvertimeModal = (workDate = selectedDate, userId = '') => {
     setOvertimeDraft({
-      userId,
+      userId: isEmployee ? currentUserId : userId,
       workDate,
       startTime: '18:00',
       endTime: '20:00',
@@ -956,7 +958,8 @@ export default function ScheduleTab() {
 
   const saveOvertime = async () => {
     if (!overtimeDraft) return;
-    if (!overtimeDraft.userId) {
+    const overtimeUserId = isEmployee ? currentUserId : overtimeDraft.userId;
+    if (!overtimeUserId) {
       toast.error('Vui lòng chọn nhân viên OT.');
       return;
     }
@@ -976,7 +979,7 @@ export default function ScheduleTab() {
     setIsSaving(true);
     try {
       await overtimeService.create({
-        userId: overtimeDraft.userId,
+        userId: overtimeUserId,
         workDate: overtimeDraft.workDate,
         startTime: toApiTime(overtimeDraft.startTime),
         endTime: toApiTime(overtimeDraft.endTime),
@@ -1963,7 +1966,7 @@ export default function ScheduleTab() {
                   className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm"
                 />
               </label>
-              <label className="block text-sm font-semibold">
+              {!isEmployee && <label className="block text-sm font-semibold">
                 Nhân viên
                 <select
                   value={reportUserId}
@@ -1975,7 +1978,7 @@ export default function ScheduleTab() {
                     <option key={user.id} value={user.id}>{user.name}</option>
                   ))}
                 </select>
-              </label>
+              </label>}
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                 <button

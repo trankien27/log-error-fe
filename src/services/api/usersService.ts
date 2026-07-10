@@ -88,6 +88,10 @@ export const usersService = {
     return true;
   },
 
+  resetPassword: (id: string, newPassword: string): Promise<boolean> => {
+    return apiClient.post<boolean>(`/api/users/${encodeURIComponent(id)}/reset-password`, { newPassword });
+  },
+
   getRoles: async (): Promise<Role[]> => {
     return apiClient.get<Role[]>('/api/roles');
   },
