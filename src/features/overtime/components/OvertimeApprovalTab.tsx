@@ -32,10 +32,10 @@ function getStatusLabel(status: OvertimeStatus) {
 }
 
 function getStatusClass(status: OvertimeStatus) {
-  if (status === 1) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (status === 2) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (status === 3) return 'bg-red-50 text-red-600 border-red-200';
-  return 'bg-slate-100 text-slate-600 border-slate-200';
+  if (status === 1) return 'badge-warning';
+  if (status === 2) return 'badge-success';
+  if (status === 3) return 'badge-error';
+  return 'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-surface-2 text-on-surface-variant';
 }
 
 export default function OvertimeApprovalTab() {
@@ -118,23 +118,23 @@ export default function OvertimeApprovalTab() {
     <div className="space-y-6 text-left animate-fadeIn">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 font-sans">Duyệt OT</h2>
-          <p className="text-xs text-gray-500 mt-1">Chỉ OT đã duyệt mới được ghi nhận vào báo cáo tháng.</p>
+          <h2 className="text-xl font-bold text-on-surface font-sans">Duyệt OT</h2>
+          <p className="text-xs text-on-surface-variant mt-1">Chỉ OT đã duyệt mới được ghi nhận vào báo cáo tháng.</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-lg border border-outline-variant bg-white p-4">
-          <p className="text-xs font-semibold text-gray-500">Đang chờ duyệt</p>
-          <p className="mt-2 text-2xl font-black text-amber-600">{summary.pending}</p>
+        <div className="card-surface p-4">
+          <p className="text-xs font-semibold text-on-surface-variant">Đang chờ duyệt</p>
+          <p className="mt-2 text-2xl font-black text-warning">{summary.pending}</p>
         </div>
-        <div className="rounded-lg border border-outline-variant bg-white p-4">
-          <p className="text-xs font-semibold text-gray-500">Giờ OT đã duyệt trong bộ lọc</p>
-          <p className="mt-2 text-2xl font-black text-emerald-600">{formatNumber(summary.approvedHours)}h</p>
+        <div className="card-surface p-4">
+          <p className="text-xs font-semibold text-on-surface-variant">Giờ OT đã duyệt trong bộ lọc</p>
+          <p className="mt-2 text-2xl font-black text-success tabular-nums">{formatNumber(summary.approvedHours)}h</p>
         </div>
       </div>
 
-      <div className="rounded-lg border border-outline-variant bg-white p-4 shadow-sm">
+      <div className="card-surface p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <label className="block text-sm font-semibold">
             Từ ngày
@@ -146,7 +146,7 @@ export default function OvertimeApprovalTab() {
           </label>
           <label className="block text-sm font-semibold">
             Trạng thái
-            <select value={status} onChange={event => setStatus(event.target.value ? Number(event.target.value) as OvertimeStatus : '')} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm">
+            <select value={status} onChange={event => setStatus(event.target.value ? Number(event.target.value) as OvertimeStatus : '')} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm">
               <option value="">Tất cả</option>
               <option value={1}>Chờ duyệt</option>
               <option value={2}>Đã duyệt</option>
@@ -156,23 +156,23 @@ export default function OvertimeApprovalTab() {
           </label>
           <label className="block text-sm font-semibold">
             Nhân viên
-            <select value={userId} onChange={event => setUserId(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm">
+            <select value={userId} onChange={event => setUserId(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm">
               <option value="">Tất cả</option>
               {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
             </select>
           </label>
-          <button type="button" onClick={loadRequests} disabled={isLoading} className="mt-auto h-10 rounded-lg bg-primary text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-primary-container disabled:opacity-60 cursor-pointer">
+          <button type="button" onClick={loadRequests} disabled={isLoading} className="btn-primary h-10 mt-auto">
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
             Lọc
           </button>
         </div>
       </div>
 
-      <div className="bg-white border border-outline-variant rounded-lg overflow-hidden shadow-sm">
+      <div className="card-surface overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[940px] text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 font-bold">
+              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold">
                 <th className="py-4 px-5 text-left">Nhân viên</th>
                 <th className="py-4 px-5 text-left">Ngày OT</th>
                 <th className="py-4 px-5 text-left">Thời gian</th>
@@ -182,30 +182,30 @@ export default function OvertimeApprovalTab() {
                 <th className="py-4 px-5 text-right">Tác vụ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#f1f5f9]">
+            <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
-                <tr><td colSpan={7} className="py-12 text-center font-bold text-gray-400"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Đang tải OT...</td></tr>
+                <tr><td colSpan={7} className="py-12 text-center font-bold text-on-surface-variant"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Đang tải OT...</td></tr>
               ) : requests.length === 0 ? (
-                <tr><td colSpan={7} className="py-12 text-center font-bold text-gray-400">Không có yêu cầu OT phù hợp.</td></tr>
+                <tr><td colSpan={7} className="py-12"><div className="empty-state border-none bg-transparent"><p className="font-bold text-on-surface-variant">Không có yêu cầu OT phù hợp.</p></div></td></tr>
               ) : requests.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="py-4 px-5 font-bold text-gray-950">{item.userFullName}</td>
+                <tr key={item.id} className="hover:bg-surface-2">
+                  <td className="py-4 px-5 font-bold text-on-surface">{item.userFullName}</td>
                   <td className="py-4 px-5 font-semibold">{formatDate(item.workDate)}</td>
                   <td className="py-4 px-5 font-mono">{formatTime(item.startTime)} - {formatTime(item.endTime)}</td>
-                  <td className="py-4 px-5 text-right font-black text-primary">{formatNumber(item.totalHours)}h</td>
-                  <td className="py-4 px-5 max-w-[260px] whitespace-pre-wrap text-gray-600">{item.reason}</td>
+                  <td className="py-4 px-5 text-right font-black text-primary tabular-nums">{formatNumber(item.totalHours)}h</td>
+                  <td className="py-4 px-5 max-w-[260px] whitespace-pre-wrap text-on-surface-variant">{item.reason}</td>
                   <td className="py-4 px-5">
-                    <span className={`inline-flex rounded border px-2 py-1 text-[11px] font-bold ${getStatusClass(item.status)}`}>
+                    <span className={getStatusClass(item.status)}>
                       {getStatusLabel(item.status)}
                     </span>
-                    {item.rejectReason && <span className="block mt-1 text-[11px] text-red-500">{item.rejectReason}</span>}
+                    {item.rejectReason && <span className="block mt-1 text-[11px] text-error">{item.rejectReason}</span>}
                   </td>
                   <td className="py-4 px-5">
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={() => approve(item)} disabled={item.status !== 1} className="h-8 w-8 rounded border border-emerald-200 text-emerald-600 inline-flex items-center justify-center hover:bg-emerald-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="Duyệt OT">
+                      <button type="button" onClick={() => approve(item)} disabled={item.status !== 1} className="h-8 w-8 rounded-lg border border-success/30 text-success inline-flex items-center justify-center hover:bg-success-container/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="Duyệt OT">
                         <Check className="w-4 h-4" />
                       </button>
-                      <button type="button" onClick={() => setRejecting(item)} disabled={item.status !== 1} className="h-8 w-8 rounded border border-red-200 text-red-600 inline-flex items-center justify-center hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="Từ chối OT">
+                      <button type="button" onClick={() => setRejecting(item)} disabled={item.status !== 1} className="h-8 w-8 rounded-lg border border-error/30 text-error inline-flex items-center justify-center hover:bg-error-container/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="Từ chối OT">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
@@ -218,16 +218,16 @@ export default function OvertimeApprovalTab() {
       </div>
 
       {rejecting && (
-        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-white shadow-xl">
+        <div className="modal-overlay">
+          <div className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface shadow-elevated">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
-              <h3 className="text-lg font-bold text-gray-950">Từ chối OT</h3>
-              <button type="button" onClick={() => setRejecting(null)} className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer">
+              <h3 className="text-lg font-bold text-on-surface">Từ chối OT</h3>
+              <button type="button" onClick={() => setRejecting(null)} className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-on-surface-variant">
                 {rejecting.userFullName} - {formatDate(rejecting.workDate)} - {formatNumber(rejecting.totalHours)}h
               </p>
               <label className="block text-sm font-semibold">
@@ -235,8 +235,8 @@ export default function OvertimeApprovalTab() {
                 <textarea value={rejectReason} onChange={event => setRejectReason(event.target.value)} rows={4} className="mt-1 w-full resize-none rounded-lg border border-outline-variant px-3 py-2 text-sm" />
               </label>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <button type="button" onClick={() => setRejecting(null)} className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer">Hủy</button>
-                <button type="button" onClick={reject} className="h-10 px-5 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 cursor-pointer">Từ chối</button>
+                <button type="button" onClick={() => setRejecting(null)} className="btn-secondary h-10 px-4">Hủy</button>
+                <button type="button" onClick={reject} className="btn-danger h-10 px-5">Từ chối</button>
               </div>
             </div>
           </div>

@@ -171,26 +171,26 @@ export default function TransactionErrorQueueTab() {
     <div className="p-4 sm:p-6 space-y-4 max-w-[1600px] mx-auto">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <AlertTriangle className="w-6 h-6 text-amber-600" />
+          <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2">
+            <AlertTriangle className="w-6 h-6 text-warning" />
             Log Error Queue
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Giao dịch booth hôm nay có status khác 4, chờ IT kiểm tra và tạo log lỗi.</p>
+          <p className="text-sm text-on-surface-variant mt-1">Giao dịch booth hôm nay có status khác 4, chờ IT kiểm tra và tạo log lỗi.</p>
         </div>
         <button
           type="button"
           onClick={fetchItems}
           disabled={isLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+          className="btn-secondary px-4 py-2 text-sm"
         >
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
           Refresh
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white border border-outline-variant rounded-xl p-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-surface border border-outline-variant rounded-xl p-3">
         <label className="space-y-1">
-          <span className="text-xs font-bold text-gray-500">Trạng thái queue</span>
+          <span className="text-xs font-bold text-on-surface-variant">Trạng thái queue</span>
           <select
             value={status}
             onChange={event => {
@@ -206,9 +206,9 @@ export default function TransactionErrorQueueTab() {
           </select>
         </label>
         <label className="space-y-1 md:col-span-2">
-          <span className="text-xs font-bold text-gray-500">Tìm booth</span>
+          <span className="text-xs font-bold text-on-surface-variant">Tìm booth</span>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
             <input
               value={boothCode}
               onChange={event => {
@@ -221,7 +221,7 @@ export default function TransactionErrorQueueTab() {
           </div>
         </label>
         <label className="space-y-1">
-          <span className="text-xs font-bold text-gray-500">Status transaction</span>
+          <span className="text-xs font-bold text-on-surface-variant">Status transaction</span>
           <input
             value={transactionStatus}
             onChange={event => {
@@ -234,10 +234,10 @@ export default function TransactionErrorQueueTab() {
         </label>
       </div>
 
-      <div className="bg-white border border-outline-variant rounded-xl overflow-hidden">
+      <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-[1100px] w-full text-sm">
-            <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+            <thead className="bg-surface-2 text-xs uppercase text-on-surface-variant">
               <tr>
                 <th className="px-4 py-3 text-left">Booth</th>
                 <th className="px-4 py-3 text-left">Store</th>
@@ -249,38 +249,38 @@ export default function TransactionErrorQueueTab() {
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-on-surface-variant">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                     Đang tải queue
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500">Không có giao dịch lỗi trong queue.</td>
+                  <td colSpan={8} className="px-4 py-10 text-center text-on-surface-variant">Không có giao dịch lỗi trong queue.</td>
                 </tr>
               ) : items.map(item => (
-                <tr key={item.id} className="hover:bg-gray-50">
+                <tr key={item.id} className="hover:bg-surface-2">
                   <td className="px-4 py-3">
-                    <p className="font-bold text-gray-900">{item.boothCode}</p>
-                    <p className="text-xs text-gray-500">{item.boothName}</p>
+                    <p className="font-bold text-on-surface">{item.boothCode}</p>
+                    <p className="text-xs text-on-surface-variant">{item.boothName}</p>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{item.storeName}</td>
+                  <td className="px-4 py-3 text-on-surface-variant">{item.storeName}</td>
                   <td className="px-4 py-3">
-                    <p className="font-mono font-bold text-[#004ac6]">{item.transactionCode || item.transactionId}</p>
-                    <p className="font-mono text-xs text-gray-500 break-all">{item.transactionId}</p>
+                    <p className="font-mono font-bold text-primary">{item.transactionCode || item.transactionId}</p>
+                    <p className="font-mono text-xs text-on-surface-variant break-all">{item.transactionId}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700 border border-red-100">
+                    <span className="badge-error">
                       {item.transactionStatus ?? 'N/A'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(item.detectedAt)}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(item.lastSeenAt)}</td>
+                  <td className="px-4 py-3 text-on-surface-variant">{formatDate(item.detectedAt)}</td>
+                  <td className="px-4 py-3 text-on-surface-variant">{formatDate(item.lastSeenAt)}</td>
                   <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 border border-amber-100">
+                    <span className="badge-warning">
                       {queueStatusLabels[item.queueStatus]}
                     </span>
                   </td>
@@ -288,7 +288,7 @@ export default function TransactionErrorQueueTab() {
                     <button
                       type="button"
                       onClick={() => openDetail(item)}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#004ac6] px-3 py-2 text-xs font-bold text-white hover:bg-[#003a99]"
+                      className="btn-primary px-3 py-2 text-xs"
                     >
                       <Eye className="w-4 h-4" />
                       Check
@@ -299,7 +299,7 @@ export default function TransactionErrorQueueTab() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-outline-variant px-4 py-3 text-sm text-gray-600">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-outline-variant px-4 py-3 text-sm text-on-surface-variant">
           <span>{totalItems} giao dịch</span>
           <div className="flex items-center gap-2">
             <button
@@ -324,12 +324,12 @@ export default function TransactionErrorQueueTab() {
       </div>
 
       {selectedItem && form && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <form onSubmit={handleConvert} className="bg-white w-full sm:max-w-5xl max-h-[94dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl shadow-2xl">
-            <div className="sticky top-0 bg-white border-b border-outline-variant p-4 flex items-center justify-between gap-3">
+        <div className="modal-overlay items-end sm:items-center p-0 sm:p-4">
+          <form onSubmit={handleConvert} className="bg-surface w-full sm:max-w-5xl max-h-[94dvh] overflow-y-auto rounded-t-2xl sm:rounded-xl shadow-elevated">
+            <div className="sticky top-0 bg-surface border-b border-outline-variant p-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-900">{selectedItem.transactionCode || selectedItem.transactionId}</h2>
-                <p className="text-xs text-gray-500">{selectedItem.boothCode} · Status {selectedItem.transactionStatus ?? 'N/A'}</p>
+                <h2 className="text-lg font-bold text-on-surface">{selectedItem.transactionCode || selectedItem.transactionId}</h2>
+                <p className="text-xs text-on-surface-variant">{selectedItem.boothCode} · Status {selectedItem.transactionStatus ?? 'N/A'}</p>
               </div>
               <button type="button" onClick={closeDetail} className="h-9 w-9 rounded-lg border border-outline-variant inline-flex items-center justify-center">
                 <XCircle className="w-5 h-5" />
@@ -338,16 +338,16 @@ export default function TransactionErrorQueueTab() {
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-4 p-4">
               <section className="space-y-3">
-                <h3 className="font-bold text-gray-900">Raw transaction</h3>
+                <h3 className="font-bold text-on-surface">Raw transaction</h3>
                 <div className="border border-outline-variant rounded-xl overflow-auto max-h-[420px]">
                   <table className="min-w-[620px] w-full text-xs">
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-outline-variant/40">
                       {selectedRows.length === 0 ? (
-                        <tr><td className="px-3 py-4 text-gray-500">Không có raw values.</td></tr>
+                        <tr><td className="px-3 py-4 text-on-surface-variant">Không có raw values.</td></tr>
                       ) : selectedRows.map(([key, value]) => (
                         <tr key={key}>
-                          <td className="px-3 py-2 font-bold text-gray-600 bg-gray-50 w-48">{key}</td>
-                          <td className="px-3 py-2 font-mono text-gray-800 break-all">{formatCellValue(value)}</td>
+                          <td className="px-3 py-2 font-bold text-on-surface-variant bg-surface-2 w-48">{key}</td>
+                          <td className="px-3 py-2 font-mono text-on-surface break-all">{formatCellValue(value)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -356,64 +356,64 @@ export default function TransactionErrorQueueTab() {
               </section>
 
               <section className="space-y-3">
-                <h3 className="font-bold text-gray-900">Tạo log lỗi</h3>
+                <h3 className="font-bold text-on-surface">Tạo log lỗi</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="space-y-1">
-                    <span className="text-xs font-bold text-gray-500">Ngày tiếp nhận</span>
+                    <span className="text-xs font-bold text-on-surface-variant">Ngày tiếp nhận</span>
                     <input type="datetime-local" value={form.receivedDate} onChange={e => updateForm('receivedDate', e.target.value)} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-bold text-gray-500">Cửa hàng</span>
+                    <span className="text-xs font-bold text-on-surface-variant">Cửa hàng</span>
                     <input value={form.store} onChange={e => updateForm('store', e.target.value)} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-bold text-gray-500">Booth</span>
+                    <span className="text-xs font-bold text-on-surface-variant">Booth</span>
                     <input value={form.booth ?? ''} onChange={e => updateForm('booth', e.target.value)} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-bold text-gray-500">Nhóm lỗi</span>
+                    <span className="text-xs font-bold text-on-surface-variant">Nhóm lỗi</span>
                     <select value={form.errorGroup} onChange={e => updateForm('errorGroup', Number(e.target.value) as ErrorGroup)} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm">
                       {errorGroupOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-bold text-gray-500">Luồng xử lý</span>
+                    <span className="text-xs font-bold text-on-surface-variant">Luồng xử lý</span>
                     <select value={form.processingFlow} onChange={e => updateForm('processingFlow', Number(e.target.value) as ProcessingFlow)} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm">
                       {processingFlowOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-bold text-gray-500">Mức độ</span>
+                    <span className="text-xs font-bold text-on-surface-variant">Mức độ</span>
                     <select value={form.severity} onChange={e => updateForm('severity', Number(e.target.value) as Severity)} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm">
                       {severityOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                   </label>
                 </div>
                 <label className="space-y-1 block">
-                  <span className="text-xs font-bold text-gray-500">Mô tả lỗi</span>
+                  <span className="text-xs font-bold text-on-surface-variant">Mô tả lỗi</span>
                   <textarea value={form.description} onChange={e => updateForm('description', e.target.value)} rows={3} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                 </label>
                 <label className="space-y-1 block">
-                  <span className="text-xs font-bold text-gray-500">Nguyên nhân sơ bộ</span>
+                  <span className="text-xs font-bold text-on-surface-variant">Nguyên nhân sơ bộ</span>
                   <textarea value={form.preliminaryCause ?? ''} onChange={e => updateForm('preliminaryCause', e.target.value)} rows={2} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                 </label>
                 <label className="space-y-1 block">
-                  <span className="text-xs font-bold text-gray-500">Cách xử lý</span>
+                  <span className="text-xs font-bold text-on-surface-variant">Cách xử lý</span>
                   <textarea value={form.solution ?? ''} onChange={e => updateForm('solution', e.target.value)} rows={2} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                 </label>
                 <label className="space-y-1 block">
-                  <span className="text-xs font-bold text-gray-500">Ghi chú</span>
+                  <span className="text-xs font-bold text-on-surface-variant">Ghi chú</span>
                   <textarea value={form.note ?? ''} onChange={e => updateForm('note', e.target.value)} rows={2} className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm" />
                 </label>
               </section>
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-outline-variant p-4 flex flex-col sm:flex-row gap-2 justify-end">
+            <div className="sticky bottom-0 bg-surface border-t border-outline-variant p-4 flex flex-col sm:flex-row gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => handleIgnore(selectedItem)}
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-outline-variant px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                className="btn-secondary px-4 py-2 text-sm"
               >
                 <XCircle className="w-4 h-4" />
                 Bỏ qua
@@ -421,7 +421,7 @@ export default function TransactionErrorQueueTab() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#004ac6] px-4 py-2 text-sm font-bold text-white hover:bg-[#003a99] disabled:opacity-60"
+                className="btn-primary px-4 py-2 text-sm"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Tạo log lỗi

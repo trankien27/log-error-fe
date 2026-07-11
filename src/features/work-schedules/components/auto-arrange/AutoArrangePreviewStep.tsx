@@ -113,7 +113,7 @@ export default function AutoArrangePreviewStep({
         return (
           <div
             className={`min-h-24 rounded-lg border border-dashed p-1.5 transition-colors ${
-              isDragOver ? 'border-primary bg-blue-50' : 'border-transparent'
+              isDragOver ? 'border-primary bg-primary/10' : 'border-transparent'
             }`}
             onDragOver={event => {
               if (!draggedItemId) return;
@@ -146,7 +146,7 @@ export default function AutoArrangePreviewStep({
                     }}
                     className={`rounded border p-2 space-y-2 transition-all cursor-grab active:cursor-grabbing ${
                       draggedItemId === item.clientId ? 'opacity-40 ring-2 ring-primary/30' : ''
-                    } ${hasError ? 'border-red-300 bg-red-50' : hasWarning ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-white'}`}
+                    } ${hasError ? 'border-error/30 bg-error-container' : hasWarning ? 'border-warning/30 bg-warning-container' : 'border-outline-variant bg-surface'}`}
                     title="Kéo thả sang ô nhân viên/ngày khác để đổi ca đề xuất"
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -189,7 +189,7 @@ export default function AutoArrangePreviewStep({
                 );
               })}
               {row.itemsByDate[date].length === 0 && (
-                <div className="flex min-h-16 items-center justify-center rounded border border-dashed border-slate-200 text-[11px] font-semibold text-slate-400">
+                <div className="flex min-h-16 items-center justify-center rounded border border-dashed border-outline-variant text-[11px] font-semibold text-on-surface-variant">
                   Thả ca vào đây
                 </div>
               )}

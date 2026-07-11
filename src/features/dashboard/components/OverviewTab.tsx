@@ -23,10 +23,10 @@ import { ErrorLog, OvertimeRequestDto, RecentActivity, WorkScheduleDto } from '.
 type RangePreset = 'today' | 'week' | 'month' | 'custom';
 
 const actionMeta: Record<string, { label: string; className: string }> = {
-  task: { label: 'Task', className: 'bg-blue-50 text-blue-700 border-blue-100' },
-  log: { label: 'Log lỗi', className: 'bg-red-50 text-red-700 border-red-100' },
-  overtime: { label: 'OT', className: 'bg-amber-50 text-amber-700 border-amber-100' },
-  schedule: { label: 'Lịch trực', className: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
+  task: { label: 'Task', className: 'badge-info' },
+  log: { label: 'Log lỗi', className: 'badge-error' },
+  overtime: { label: 'OT', className: 'badge-warning' },
+  schedule: { label: 'Lịch trực', className: 'badge-success' },
 };
 
 const errorGroupLabels: Record<string, string> = {
@@ -121,11 +121,11 @@ function Panel({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-outline-variant bg-white shadow-sm">
+    <section className="card-surface">
       <div className="flex items-start justify-between gap-3 border-b border-outline-variant px-4 py-3">
         <div>
-          <h2 className="text-sm font-bold text-gray-950">{title}</h2>
-          {subtitle && <p className="mt-1 text-xs text-gray-500">{subtitle}</p>}
+          <h2 className="text-sm font-bold text-on-surface">{title}</h2>
+          {subtitle && <p className="mt-1 text-xs text-on-surface-variant">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -136,28 +136,28 @@ function Panel({
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="flex min-h-[140px] items-center justify-center px-4 py-8 text-center text-xs font-semibold text-gray-400">
+    <div className="flex min-h-[140px] items-center justify-center px-4 py-8 text-center text-xs font-semibold text-on-surface-variant/70">
       {text}
     </div>
   );
 }
 
 function ActionItemRow({ item }: { item: DashboardActionItem }) {
-  const meta = actionMeta[item.type] || { label: item.type, className: 'bg-slate-50 text-slate-600 border-slate-100' };
+  const meta = actionMeta[item.type] || { label: item.type, className: 'bg-surface-2 text-on-surface-variant border border-outline-variant rounded px-2 py-0.5 text-[10px] font-bold' };
   const content = (
-    <article className="group flex gap-3 px-4 py-3 transition-colors hover:bg-slate-50">
-      <div className={`mt-0.5 h-8 w-8 shrink-0 rounded-lg border ${item.priority === 'high' ? 'border-red-100 bg-red-50 text-red-600' : 'border-blue-100 bg-blue-50 text-blue-600'} flex items-center justify-center`}>
+    <article className="group flex gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
+      <div className={`mt-0.5 h-8 w-8 shrink-0 rounded-lg border ${item.priority === 'high' ? 'border-error-container bg-error-container text-on-error-container' : 'border-secondary-container bg-secondary-container text-on-secondary-container'} flex items-center justify-center`}>
         {item.priority === 'high' ? <ShieldAlert className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`rounded border px-2 py-0.5 text-[10px] font-bold ${meta.className}`}>{meta.label}</span>
-          {item.priority === 'high' && <span className="rounded border border-red-100 bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">Ưu tiên cao</span>}
+          <span className={meta.className}>{meta.label}</span>
+          {item.priority === 'high' && <span className="badge-error">Ưu tiên cao</span>}
         </div>
-        <h3 className="mt-1.5 text-sm font-bold text-gray-950">{item.title}</h3>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-600">{item.description}</p>
+        <h3 className="mt-1.5 text-sm font-bold text-on-surface">{item.title}</h3>
+        <p className="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">{item.description}</p>
       </div>
-      <time className="hidden shrink-0 text-[11px] font-semibold text-gray-400 sm:block">{formatDate(item.occurredAt)}</time>
+      <time className="hidden shrink-0 text-[11px] font-semibold text-on-surface-variant/70 sm:block">{formatDate(item.occurredAt)}</time>
     </article>
   );
 
@@ -206,17 +206,17 @@ export default function OverviewTab() {
 
   return (
     <div className="space-y-5 text-left animate-fadeIn">
-      <div className="rounded-lg border border-outline-variant bg-white p-4 shadow-sm">
+      <div className="card-surface p-4">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
-            <h1 className="text-xl font-black text-gray-950">Tổng quan vận hành</h1>
-            <p className="mt-1 text-xs font-medium text-gray-500">
+            <h1 className="text-xl font-black text-on-surface">Tổng quan vận hành</h1>
+            <p className="mt-1 text-xs font-medium text-on-surface-variant">
               Gom các việc cần xử lý, lịch trực, OT, task và log lỗi vào một màn hình.
             </p>
           </div>
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div className="flex rounded-lg border border-outline-variant bg-slate-50 p-1">
+            <div className="flex rounded-lg border border-outline-variant bg-surface-2 p-1">
               {[
                 ['today', 'Hôm nay'],
                 ['week', 'Tuần này'],
@@ -228,7 +228,7 @@ export default function OverviewTab() {
                   type="button"
                   onClick={() => changePreset(value as RangePreset)}
                   className={`h-9 rounded-md px-3 text-xs font-bold transition-colors cursor-pointer ${
-                    rangePreset === value ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                    rangePreset === value ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   {label}
@@ -236,7 +236,7 @@ export default function OverviewTab() {
               ))}
             </div>
 
-            <label className="block text-xs font-bold text-gray-600">
+            <label className="block text-xs font-bold text-on-surface-variant">
               Từ ngày
               <input
                 type="date"
@@ -245,11 +245,11 @@ export default function OverviewTab() {
                   setRangePreset('custom');
                   setFromDate(event.target.value);
                 }}
-                className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-semibold focus:outline-primary lg:w-40"
+                className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs font-semibold focus:outline-primary lg:w-40"
               />
             </label>
 
-            <label className="block text-xs font-bold text-gray-600">
+            <label className="block text-xs font-bold text-on-surface-variant">
               Đến ngày
               <input
                 type="date"
@@ -258,7 +258,7 @@ export default function OverviewTab() {
                   setRangePreset('custom');
                   setToDate(event.target.value);
                 }}
-                className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-xs font-semibold focus:outline-primary lg:w-40"
+                className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs font-semibold focus:outline-primary lg:w-40"
               />
             </label>
 
@@ -266,7 +266,7 @@ export default function OverviewTab() {
               type="button"
               onClick={() => void fetchSummary()}
               disabled={isLoading}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-white transition-colors hover:bg-primary-container disabled:opacity-60 cursor-pointer"
+              className="btn-primary h-10 px-4"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Làm mới
@@ -276,13 +276,13 @@ export default function OverviewTab() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+        <div className="rounded-lg border border-error-container bg-error-container px-4 py-3 text-sm font-semibold text-on-error-container">
           {error}
         </div>
       )}
 
       {isLoading && !summary ? (
-        <div className="flex h-[420px] items-center justify-center rounded-lg border border-outline-variant bg-white text-sm font-bold text-gray-400">
+        <div className="flex h-[420px] items-center justify-center rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface-variant">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Đang tải dashboard...
         </div>
@@ -292,9 +292,9 @@ export default function OverviewTab() {
             <Panel
               title="Việc cần xử lý ngay"
               subtitle="Ưu tiên task quá hạn, log mức cao, OT chờ duyệt và thiếu lịch trực."
-              action={<AlertTriangle className="h-5 w-5 text-amber-500" />}
+              action={<AlertTriangle className="h-5 w-5 text-warning" />}
             >
-              <div className="divide-y divide-slate-100">
+              <div className="divide-y divide-outline-variant/40">
                 {summary?.actionItems.length ? (
                   summary.actionItems.map((item, index) => <ActionItemRow key={`${item.type}-${index}`} item={item} />)
                 ) : (
@@ -303,18 +303,18 @@ export default function OverviewTab() {
               </div>
             </Panel>
 
-            <Panel title="Task đến hạn" subtitle="Task chưa hoàn tất có deadline đến hôm nay." action={<ListTodo className="h-5 w-5 text-blue-600" />}>
-              <div className="divide-y divide-slate-100">
+            <Panel title="Task đến hạn" subtitle="Task chưa hoàn tất có deadline đến hôm nay." action={<ListTodo className="h-5 w-5 text-primary" />}>
+              <div className="divide-y divide-outline-variant/40">
                 {summary?.dueTasks.length ? (
                   summary.dueTasks.map(task => (
-                    <Link key={task.id} to="/tasks" className="block px-4 py-3 transition-colors hover:bg-slate-50">
+                    <Link key={task.id} to="/tasks" className="block px-4 py-3 transition-colors hover:bg-surface-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-mono text-[10px] font-bold text-gray-400">{task.code}</p>
-                          <h3 className="mt-1 line-clamp-1 text-sm font-bold text-gray-950">{task.title}</h3>
-                          <p className="mt-1 text-xs text-gray-500">{task.assigneeName || 'Chưa có người phụ trách'}</p>
+                          <p className="font-mono text-[10px] font-bold text-on-surface-variant/70">{task.code}</p>
+                          <h3 className="mt-1 line-clamp-1 text-sm font-bold text-on-surface">{task.title}</h3>
+                          <p className="mt-1 text-xs text-on-surface-variant">{task.assigneeName || 'Chưa có người phụ trách'}</p>
                         </div>
-                        <span className="shrink-0 rounded border border-blue-100 bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700">
+                        <span className="shrink-0 rounded border border-secondary-container bg-secondary-container px-2 py-1 text-[11px] font-bold text-on-secondary-container">
                           {formatDate(task.deadline)}
                         </span>
                       </div>
@@ -326,23 +326,23 @@ export default function OverviewTab() {
               </div>
             </Panel>
 
-            <Panel title="Log lỗi cần chú ý" subtitle="Log chưa ổn định hoặc có mức độ cao trong khoảng lọc." action={<ShieldAlert className="h-5 w-5 text-red-600" />}>
-              <div className="divide-y divide-slate-100">
+            <Panel title="Log lỗi cần chú ý" subtitle="Log chưa ổn định hoặc có mức độ cao trong khoảng lọc." action={<ShieldAlert className="h-5 w-5 text-error" />}>
+              <div className="divide-y divide-outline-variant/40">
                 {summary?.attentionLogs.length ? (
                   summary.attentionLogs.map(log => (
-                    <Link key={log.id} to="/error-logs" className="block px-4 py-3 transition-colors hover:bg-slate-50">
+                    <Link key={log.id} to="/error-logs" className="block px-4 py-3 transition-colors hover:bg-surface-2">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-[10px] font-bold text-gray-400">{log.errorCode}</span>
-                            <span className="rounded border border-red-100 bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">
+                            <span className="font-mono text-[10px] font-bold text-on-surface-variant/70">{log.errorCode}</span>
+                            <span className="badge-error">
                               {getSeverityLabel(log.severity)}
                             </span>
                           </div>
-                          <h3 className="mt-1 line-clamp-1 text-sm font-bold text-gray-950">{log.store}</h3>
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-600">{log.description}</p>
+                          <h3 className="mt-1 line-clamp-1 text-sm font-bold text-on-surface">{log.store}</h3>
+                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">{log.description}</p>
                         </div>
-                        <span className="shrink-0 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-slate-600">
+                        <span className="shrink-0 rounded border border-outline-variant bg-surface-2 px-2 py-1 text-[11px] font-bold text-on-surface-variant">
                           {getStatusLabel(log.status)}
                         </span>
                       </div>
@@ -356,17 +356,17 @@ export default function OverviewTab() {
           </div>
 
           <div className="space-y-5 xl:col-span-5">
-            <Panel title="Lịch trực hôm nay" subtitle={summary?.today ? formatDate(summary.today) : undefined} action={<CalendarClock className="h-5 w-5 text-emerald-600" />}>
-              <div className="divide-y divide-slate-100">
+            <Panel title="Lịch trực hôm nay" subtitle={summary?.today ? formatDate(summary.today) : undefined} action={<CalendarClock className="h-5 w-5 text-success" />}>
+              <div className="divide-y divide-outline-variant/40">
                 {summary?.todaySchedules.length ? (
                   summary.todaySchedules.map(schedule => (
-                    <Link key={schedule.id} to="/schedule" className="block px-4 py-3 transition-colors hover:bg-slate-50">
+                    <Link key={schedule.id} to="/schedule" className="block px-4 py-3 transition-colors hover:bg-surface-2">
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="line-clamp-1 text-sm font-bold text-gray-950">{getScheduleUserName(schedule)}</h3>
-                          <p className="mt-1 text-xs font-semibold text-gray-500">{schedule.shiftCode} - {schedule.shiftName}</p>
+                          <h3 className="line-clamp-1 text-sm font-bold text-on-surface">{getScheduleUserName(schedule)}</h3>
+                          <p className="mt-1 text-xs font-semibold text-on-surface-variant">{schedule.shiftCode} - {schedule.shiftName}</p>
                         </div>
-                        <span className="shrink-0 rounded border border-emerald-100 bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
+                        <span className="badge-success">
                           {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
                         </span>
                       </div>
@@ -378,19 +378,19 @@ export default function OverviewTab() {
               </div>
             </Panel>
 
-            <Panel title="OT chờ duyệt" subtitle="Các yêu cầu OT đang ở trạng thái chờ." action={<TimerReset className="h-5 w-5 text-amber-600" />}>
-              <div className="divide-y divide-slate-100">
+            <Panel title="OT chờ duyệt" subtitle="Các yêu cầu OT đang ở trạng thái chờ." action={<TimerReset className="h-5 w-5 text-warning" />}>
+              <div className="divide-y divide-outline-variant/40">
                 {summary?.pendingOvertimeRequests.length ? (
                   summary.pendingOvertimeRequests.map(item => (
-                    <Link key={item.id} to="/overtime-approval" className="block px-4 py-3 transition-colors hover:bg-slate-50">
+                    <Link key={item.id} to="/overtime-approval" className="block px-4 py-3 transition-colors hover:bg-surface-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="line-clamp-1 text-sm font-bold text-gray-950">{item.userFullName}</h3>
-                          <p className="mt-1 text-xs text-gray-500">
+                          <h3 className="line-clamp-1 text-sm font-bold text-on-surface">{item.userFullName}</h3>
+                          <p className="mt-1 text-xs text-on-surface-variant">
                             {formatDate(item.workDate)} · {formatTime(item.startTime)} - {formatTime(item.endTime)}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded border border-amber-100 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700">
+                        <span className="badge-warning">
                           {item.totalHours}h · {getOtStatusLabel(item.status)}
                         </span>
                       </div>
@@ -402,16 +402,16 @@ export default function OverviewTab() {
               </div>
             </Panel>
 
-            <Panel title="Nhóm lỗi nhiều nhất" subtitle={`Từ ${formatDate(fromDate)} đến ${formatDate(toDate)}`} action={<Search className="h-5 w-5 text-slate-500" />}>
+            <Panel title="Nhóm lỗi nhiều nhất" subtitle={`Từ ${formatDate(fromDate)} đến ${formatDate(toDate)}`} action={<Search className="h-5 w-5 text-on-surface-variant" />}>
               <div className="space-y-3 p-4">
                 {summary?.errorGroups.length ? (
                   summary.errorGroups.map(item => (
                     <div key={item.name}>
                       <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                        <span className="font-bold text-gray-700">{errorGroupLabels[item.name] || item.name}</span>
-                        <span className="font-black text-gray-950">{item.count}</span>
+                        <span className="font-bold text-on-surface-variant">{errorGroupLabels[item.name] || item.name}</span>
+                        <span className="font-black text-on-surface tabular-nums">{item.count}</span>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
                         <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max((item.count / maxGroupCount) * 100, 8)}%` }} />
                       </div>
                     </div>
@@ -422,19 +422,19 @@ export default function OverviewTab() {
               </div>
             </Panel>
 
-            <Panel title="Ranking cửa hàng lỗi nhiều" subtitle="Sắp xếp theo khoảng thời gian đang lọc." action={<Clock3 className="h-5 w-5 text-slate-500" />}>
+            <Panel title="Ranking cửa hàng lỗi nhiều" subtitle="Sắp xếp theo khoảng thời gian đang lọc." action={<Clock3 className="h-5 w-5 text-on-surface-variant" />}>
               <div className="space-y-3 p-4">
                 {summary?.storeRanking.length ? (
                   summary.storeRanking.map((item, index) => (
                     <div key={`${item.store}-${index}`}>
                       <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                        <span className="min-w-0 truncate font-bold text-gray-700">
+                        <span className="min-w-0 truncate font-bold text-on-surface-variant">
                           #{index + 1} {item.store}
                         </span>
-                        <span className="font-black text-gray-950">{item.errorCount}</span>
+                        <span className="font-black text-on-surface tabular-nums">{item.errorCount}</span>
                       </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div className="h-full rounded-full bg-orange-500" style={{ width: `${Math.max((item.errorCount / maxStoreCount) * 100, 8)}%` }} />
+                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+                        <div className="h-full rounded-full bg-warning" style={{ width: `${Math.max((item.errorCount / maxStoreCount) * 100, 8)}%` }} />
                       </div>
                     </div>
                   ))
@@ -444,18 +444,18 @@ export default function OverviewTab() {
               </div>
             </Panel>
 
-            <Panel title="Hoạt động gần đây" subtitle="Các thay đổi mới nhất trong hệ thống." action={<History className="h-5 w-5 text-slate-500" />}>
-              <div className="divide-y divide-slate-100">
+            <Panel title="Hoạt động gần đây" subtitle="Các thay đổi mới nhất trong hệ thống." action={<History className="h-5 w-5 text-on-surface-variant" />}>
+              <div className="divide-y divide-outline-variant/40">
                 {summary?.recentActivities.length ? (
                   summary.recentActivities.map((activity: RecentActivity) => (
                     <article key={activity.id} className="px-4 py-3">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                        <span className="rounded border border-outline-variant bg-surface-2 px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
                           {activity.activityTypeLabel}
                         </span>
-                        <time className="text-[10px] font-semibold text-gray-400">{formatDateTime(activity.occurredAt)}</time>
+                        <time className="text-[10px] font-semibold text-on-surface-variant/70">{formatDateTime(activity.occurredAt)}</time>
                       </div>
-                      <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-5 text-gray-700">{activity.description}</p>
+                      <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-5 text-on-surface-variant">{activity.description}</p>
                     </article>
                   ))
                 ) : (

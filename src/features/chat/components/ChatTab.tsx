@@ -187,8 +187,8 @@ export default function ChatTab() {
           <div
             className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
               isMine
-                ? 'bg-primary text-white rounded-br-md'
-                : 'bg-white border border-outline-variant text-gray-900 rounded-bl-md'
+                ? 'bg-primary text-on-primary rounded-br-md'
+                : 'bg-surface border border-outline-variant text-on-surface rounded-bl-md'
             }`}
           >
             {message.deletedAt ? (
@@ -197,7 +197,7 @@ export default function ChatTab() {
               message.content
             )}
           </div>
-          <div className="mt-1 px-1 text-[10px] text-gray-400 font-medium">
+          <div className="mt-1 px-1 text-[10px] text-on-surface-variant font-medium">
             {formatTime(message.createdAt)}
             {message.editedAt && <span> · đã sửa</span>}
           </div>
@@ -216,18 +216,18 @@ export default function ChatTab() {
   return (
     <div className="h-auto xl:h-[calc(100vh-112px)] min-h-[calc(100dvh-96px)] xl:min-h-[620px] text-left animate-fadeIn">
       <div className="h-full grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4">
-        <section className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[340px] xl:min-h-0">
+        <section className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[340px] xl:min-h-0">
           <div className="p-4 border-b border-outline-variant space-y-3">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-gray-950">Tin nhắn</h2>
-                <p className="text-[11px] text-gray-500 mt-0.5">Trao đổi trực tiếp giữa người dùng</p>
+                <h2 className="text-lg font-bold text-on-surface">Tin nhắn</h2>
+                <p className="text-[11px] text-on-surface-variant mt-0.5">Trao đổi trực tiếp giữa người dùng</p>
               </div>
               <span
                 className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold ${
                   connectionReady
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                    : 'bg-slate-50 text-slate-500 border border-slate-200'
+                    ? 'bg-success-container text-on-success-container border border-success/20'
+                    : 'bg-surface-2 text-on-surface-variant border border-outline-variant'
                 }`}
                 title={connectionReady ? 'SignalR connected' : 'SignalR disconnected'}
               >
@@ -237,12 +237,12 @@ export default function ChatTab() {
             </div>
 
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
               <input
                 value={searchQuery}
                 onChange={event => setSearchQuery(event.target.value)}
                 placeholder="Tìm hội thoại..."
-                className="w-full pl-9 pr-3 py-2.5 bg-[#f3f3fe] border border-outline-variant rounded-lg text-xs focus:outline-primary"
+                className="w-full pl-9 pr-3 py-2.5 bg-surface-2 border border-outline-variant rounded-lg text-xs focus:outline-primary"
               />
             </div>
 
@@ -251,7 +251,7 @@ export default function ChatTab() {
               <select
                 value={selectedReceiverId}
                 onChange={event => handleSelectReceiver(event.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 bg-white border border-outline-variant rounded-lg text-xs font-semibold focus:outline-primary cursor-pointer"
+                className="w-full pl-9 pr-3 py-2.5 bg-surface border border-outline-variant rounded-lg text-xs font-semibold focus:outline-primary cursor-pointer"
               >
                 <option value="">Tạo chat 1-1 mới</option>
                 {directUsers.map(user => (
@@ -265,13 +265,14 @@ export default function ChatTab() {
 
           <div className="flex-1 min-h-0 overflow-y-auto">
             {isLoadingConversations ? (
-              <div className="py-14 text-center text-xs font-bold text-gray-400">
+              <div className="py-14 text-center text-xs font-bold text-on-surface-variant">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                 Đang tải hội thoại...
               </div>
             ) : filteredConversations.length === 0 ? (
-              <div className="py-14 px-6 text-center text-xs font-semibold text-gray-400">
-                Chưa có hội thoại phù hợp.
+              <div className="empty-state border-none bg-transparent py-14">
+                <MessageSquare className="w-8 h-8 text-on-surface-variant/50 mb-2" />
+                <p className="text-xs font-semibold text-on-surface-variant">Chưa có hội thoại phù hợp.</p>
               </div>
             ) : (
               filteredConversations.map(conversation => {
@@ -283,8 +284,8 @@ export default function ChatTab() {
                   <button
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation)}
-                    className={`w-full px-4 py-3 flex gap-3 text-left border-b border-[#f1f5f9] transition-colors cursor-pointer ${
-                      isActive ? 'bg-[#eef4ff]' : 'hover:bg-[#faf8ff]'
+                    className={`w-full px-4 py-3 flex gap-3 text-left border-b border-outline-variant/40 transition-colors cursor-pointer ${
+                      isActive ? 'bg-primary/10' : 'hover:bg-surface-2'
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-black shrink-0">
@@ -292,17 +293,17 @@ export default function ChatTab() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className={`text-sm text-gray-950 truncate ${hasUnread ? 'font-black' : 'font-bold'}`}>{name}</p>
-                        <span className={`text-[10px] shrink-0 ${hasUnread ? 'font-black text-primary' : 'text-gray-400'}`}>
+                        <p className={`text-sm text-on-surface truncate ${hasUnread ? 'font-black' : 'font-bold'}`}>{name}</p>
+                        <span className={`text-[10px] shrink-0 ${hasUnread ? 'font-black text-primary' : 'text-on-surface-variant'}`}>
                           {formatTime(conversation.lastMessage?.createdAt || conversation.updatedAt)}
                         </span>
                       </div>
-                      <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'font-black text-gray-950' : 'text-gray-500'}`}>
+                      <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'font-black text-on-surface' : 'text-on-surface-variant'}`}>
                         {conversation.lastMessage?.content || conversation.otherUser?.email || 'Chưa có tin nhắn'}
                       </p>
                     </div>
                     {hasUnread && (
-                      <span className="self-center bg-primary text-white text-[10px] font-bold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center">
+                      <span className="self-center bg-primary text-on-primary text-[10px] font-bold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center">
                         {conversation.unreadCount}
                       </span>
                     )}
@@ -313,15 +314,15 @@ export default function ChatTab() {
           </div>
         </section>
 
-        <section className="bg-[#f8fafc] border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[460px] xl:min-h-0">
-          <header className="h-[68px] bg-white border-b border-outline-variant px-5 py-3 flex items-center justify-between gap-4">
+        <section className="bg-surface-2 border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[460px] xl:min-h-0">
+          <header className="h-[68px] bg-surface border-b border-outline-variant px-5 py-3 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-[#dbe1ff] text-[#00174b] flex items-center justify-center text-xs font-black shrink-0">
+              <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-black shrink-0">
                 {getInitials(activeTitle)}
               </div>
               <div className="min-w-0">
-                <h3 className="font-bold text-gray-950 truncate">{activeTitle}</h3>
-                <p className="text-[11px] text-gray-500 truncate">
+                <h3 className="font-bold text-on-surface truncate">{activeTitle}</h3>
+                <p className="text-[11px] text-on-surface-variant truncate">
                   {activeConversation?.otherUser?.email || selectedReceiver?.email || 'Chọn người nhận để bắt đầu'}
                 </p>
               </div>
@@ -329,7 +330,7 @@ export default function ChatTab() {
             {activeConversationId && (
               <button
                 onClick={() => markAsRead(activeConversationId).catch((err: any) => toast.error(err.message))}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-outline-variant rounded-lg text-xs font-bold text-primary bg-white hover:bg-blue-50 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-outline-variant rounded-lg text-xs font-bold text-primary bg-surface hover:bg-primary/10 transition-colors cursor-pointer"
               >
                 <CheckCheck className="w-4 h-4" />
                 Đã đọc
@@ -341,18 +342,18 @@ export default function ChatTab() {
             {!receiverId ? (
               <div className="h-full flex items-center justify-center text-center">
                 <div>
-                  <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-                  <p className="text-sm font-bold text-gray-500">Chọn hội thoại hoặc người nhận mới</p>
+                  <MessageSquare className="w-10 h-10 text-on-surface-variant/40 mx-auto mb-3" />
+                  <p className="text-sm font-bold text-on-surface-variant">Chọn hội thoại hoặc người nhận mới</p>
                 </div>
               </div>
             ) : isLoadingMessages && activeConversationId ? (
-              <div className="py-14 text-center text-xs font-bold text-gray-400">
+              <div className="py-14 text-center text-xs font-bold text-on-surface-variant">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                 Đang tải tin nhắn...
               </div>
             ) : activeMessages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-center">
-                <p className="text-sm font-semibold text-gray-400">Chưa có tin nhắn trong hội thoại này.</p>
+                <p className="text-sm font-semibold text-on-surface-variant">Chưa có tin nhắn trong hội thoại này.</p>
               </div>
             ) : (
               activeMessages.map(renderMessage)
@@ -360,7 +361,7 @@ export default function ChatTab() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white border-t border-outline-variant p-3 sm:p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+          <form onSubmit={handleSubmit} className="bg-surface border-t border-outline-variant p-3 sm:p-4 flex flex-col sm:flex-row sm:items-end gap-3">
             <textarea
               value={content}
               onChange={event => setContent(event.target.value)}
@@ -373,12 +374,12 @@ export default function ChatTab() {
               disabled={!receiverId || isSending}
               rows={2}
               placeholder={receiverId ? 'Nhập tin nhắn...' : 'Chọn người nhận trước khi gửi'}
-              className="flex-1 resize-none rounded-lg border border-outline-variant bg-[#f8fafc] px-3 py-2 text-sm focus:outline-primary disabled:opacity-60"
+              className="flex-1 resize-none rounded-lg border border-outline-variant bg-surface-2 px-3 py-2 text-sm focus:outline-primary disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={!receiverId || !content.trim() || isSending}
-              className="h-10 w-full sm:w-auto px-4 rounded-lg bg-primary text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:bg-primary-container active:scale-95 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="btn-primary h-10 w-full sm:w-auto px-4"
             >
               {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Gửi

@@ -185,38 +185,38 @@ export default function BoothsTab() {
       {/* Screen title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 font-sans">Quản trị danh sách Trạm Booth hỗ trợ</h2>
-          <p className="text-xs text-gray-500 mt-1">Danh sách điều kiểm mẫu máy tại hiện trường. Đi kèm ID đăng nhập UltraView để nhân viên kỹ thuật kết nối lập tức.</p>
+          <h2 className="text-xl font-bold text-on-surface font-sans">Quản trị danh sách Trạm Booth hỗ trợ</h2>
+          <p className="text-xs text-on-surface-variant mt-1">Danh sách điều kiểm mẫu máy tại hiện trường. Đi kèm ID đăng nhập UltraView để nhân viên kỹ thuật kết nối lập tức.</p>
         </div>
         <button
           onClick={() => handleOpenBoothModal()}
-          className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+          className="btn-primary"
         >
           <Plus className="w-4 h-4" /> Thêm Booth
         </button>
       </div>
 
       {/* Page Filters or search */}
-      <div className="bg-white rounded-xl border border-outline-variant p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+      <div className="card-surface p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
           <input
             type="text"
             placeholder="Tìm theo tên hoặc code booth..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg text-xs"
+            className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-outline-variant rounded-lg text-xs"
           />
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400 font-medium text-center md:text-left">
+          <span className="text-xs text-on-surface-variant font-medium text-center md:text-left">
             {boothTotalItems} booth
           </span>
           <button
             type="button"
             onClick={() => syncBoothsMutation.mutate()}
             disabled={syncBoothsMutation.isPending || isLoading}
-            className="h-9 px-3 border border-emerald-200 rounded-lg bg-white text-emerald-700 hover:bg-emerald-50 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="h-9 px-3 border border-success/30 rounded-lg bg-surface text-success hover:bg-success-container text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
             Sync Booth
@@ -225,7 +225,7 @@ export default function BoothsTab() {
             type="button"
             onClick={() => fetchBooths()}
             disabled={isLoading || syncBoothsMutation.isPending}
-            className="h-9 px-3 border border-outline-variant rounded-lg hover:bg-[#f3f3fe] text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="h-9 px-3 border border-outline-variant rounded-lg hover:bg-surface-2 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -234,18 +234,18 @@ export default function BoothsTab() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700 flex items-start gap-2">
+        <div className="rounded-lg border border-error/30 bg-error-container p-3 text-xs font-medium text-on-error-container flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Data table booths */}
-      <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div className="card-surface overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[780px] text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 font-bold select-none font-sans">
+              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold select-none font-sans">
                 <th className="py-4 px-5">Mã Trạm Booth</th>
                 <th className="py-4 px-5">Tên Trạm Kỹ Thuật</th>
                 <th className="py-4 px-5">ID Kết Nối Từ Xa</th>
@@ -253,47 +253,47 @@ export default function BoothsTab() {
                 <th className="py-4 px-5 text-right w-36">Tác vụ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#f1f5f9]">
+            <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
+                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
                     Đang tải dữ liệu Booth...
                   </td>
                 </tr>
               ) : booths.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-gray-400">
+                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
                     Không tìm thấy booth nào khớp với điều kiện tìm kiếm.
                   </td>
                 </tr>
               ) : (
                 booths.map(b => (
-                  <tr key={b.id} className="hover:bg-[#faf8ff] transition-colors group">
-                    <td className="py-4 px-5 font-mono font-bold text-[#004ac6] text-sm">{b.code || b.id}</td>
+                  <tr key={b.id} className="hover:bg-surface-2/60 transition-colors group">
+                    <td className="py-4 px-5 font-mono font-bold text-primary text-sm">{b.code || b.id}</td>
                     <td className="py-4 px-5">
-                      <span className="font-bold text-gray-900 text-sm block">{b.name}</span>
-                      <span className="text-[10px] text-gray-400">Hỗ trợ UltraView tự động kết nối</span>
+                      <span className="font-bold text-on-surface text-sm block">{b.name}</span>
+                      <span className="text-[10px] text-on-surface-variant">Hỗ trợ UltraView tự động kết nối</span>
                     </td>
                     <td className="py-4 px-5 font-mono">
                       <div className="flex items-center gap-2">
-                        <span className="bg-[#f0f0fb] px-2.5 py-1 rounded text-xs text-gray-800 font-bold select-all tracking-wider font-mono">
+                        <span className="bg-secondary-container px-2.5 py-1 rounded text-xs text-on-secondary-container font-bold select-all tracking-wider font-mono">
                           {b.ultraviewId}
                         </span>
                         <button
                           onClick={() => copyToClipboard(b.ultraviewId, `Đã sao chép UltraView ID: ${b.ultraviewId}`)}
-                          className="p-1 rounded text-gray-400 hover:text-primary hover:bg-[#ededf9] transition-all outline-none cursor-pointer"
+                          className="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all outline-none cursor-pointer"
                           title="Sao chép ID"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
-                    <td className="py-4 px-5 text-gray-600 font-medium">{b.relatedStores}</td>
+                    <td className="py-4 px-5 text-on-surface-variant font-medium">{b.relatedStores}</td>
                     <td className="py-4 px-5 text-right w-36">
                       <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => handleViewAgentKey(b)}
-                          className="p-1 px-1.5 border rounded hover:bg-amber-50 hover:text-amber-600 transition-colors border-outline-variant cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="p-1 px-1.5 border rounded hover:bg-warning-container hover:text-warning transition-colors border-outline-variant cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                           title="View Agent Key"
                           disabled={viewAgentKeyMutation.isPending}
                         >
@@ -301,14 +301,14 @@ export default function BoothsTab() {
                         </button>
                         <button
                           onClick={() => handleOpenBoothModal(b)}
-                          className="p-1 px-1.5 border rounded hover:bg-blue-50 hover:text-primary transition-colors border-outline-variant cursor-pointer"
+                          className="p-1 px-1.5 border rounded hover:bg-primary/10 hover:text-primary transition-colors border-outline-variant cursor-pointer"
                           title="Sửa thông tin"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteBoothClick(b.id)}
-                          className="p-1 px-1.5 border rounded hover:bg-red-50 hover:text-red-500 transition-colors border-outline-variant cursor-pointer"
+                          className="p-1 px-1.5 border rounded hover:bg-error-container hover:text-error transition-colors border-outline-variant cursor-pointer"
                           title="Xóa Booth"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -322,13 +322,13 @@ export default function BoothsTab() {
           </table>
         </div>
 
-        <div className="border-t border-outline-variant bg-gray-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="border-t border-outline-variant bg-surface-2 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs text-on-surface-variant">
             <span>Hiển thị</span>
             <select
               value={boothPageSize}
               onChange={event => setBoothPageSize(Number(event.target.value))}
-              className="h-8 px-2 border border-outline-variant rounded-lg bg-white text-xs font-bold focus:outline-[#004ac6]"
+              className="h-8 px-2 border border-outline-variant rounded-lg bg-surface text-xs font-bold focus:outline-primary"
             >
               {[10, 20, 50, 100].map(size => (
                 <option key={size} value={size}>{size}</option>
@@ -338,7 +338,7 @@ export default function BoothsTab() {
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-3">
-            <span className="text-xs font-semibold text-gray-500">
+            <span className="text-xs font-semibold text-on-surface-variant">
               Trang {boothTotalPages === 0 ? 0 : boothPageIndex + 1}/{boothTotalPages}
             </span>
             <div className="flex items-center gap-1">
@@ -346,7 +346,7 @@ export default function BoothsTab() {
                 type="button"
                 onClick={() => setBoothPageIndex(Math.max(boothPageIndex - 1, 0))}
                 disabled={isLoading || boothPageIndex <= 0}
-                className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-white hover:bg-[#f3f3fe] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Trang trước"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -355,7 +355,7 @@ export default function BoothsTab() {
                 type="button"
                 onClick={() => setBoothPageIndex(boothPageIndex + 1)}
                 disabled={isLoading || boothTotalPages === 0 || boothPageIndex + 1 >= boothTotalPages}
-                className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-white hover:bg-[#f3f3fe] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Trang sau"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -367,13 +367,13 @@ export default function BoothsTab() {
 
       {/* Booth CRUD Modal */}
       {isBoothModalOpen && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingBooth ? `Chỉnh sửa Booth: ${currentEditingBooth.id}` : 'Đăng ký trạm hỗ trợ (Booth) mới'}
               </h3>
-              <button onClick={() => setIsBoothModalOpen(false)} className="text-gray-400 hover:text-gray-655 font-bold cursor-pointer">&#x2715;</button>
+              <button onClick={() => setIsBoothModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
             </div>
             <form onSubmit={handleSaveBoothSubmit} className="space-y-4 text-sm">
               <div>
@@ -401,7 +401,7 @@ export default function BoothsTab() {
                     value={boothIdField}
                     onChange={e => setBoothIdField(e.target.value)}
                     disabled={!!currentEditingBooth}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] bg-gray-50"
+                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary bg-surface-2"
                   />
                 </div>
                 <div>
@@ -412,7 +412,7 @@ export default function BoothsTab() {
                     placeholder="Ví dụ: 12 345 678"
                     value={boothUltraviewField}
                     onChange={e => setBoothUltraviewField(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
                   />
                 </div>
               </div>
@@ -424,7 +424,7 @@ export default function BoothsTab() {
                   placeholder="Ví dụ: Kiosk Tự Phục Vụ Tầng G"
                   value={boothNameField}
                   onChange={e => setBoothNameField(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
                 />
               </div>
               <div>
@@ -442,14 +442,14 @@ export default function BoothsTab() {
                 <button
                   type="button"
                   onClick={() => setIsBoothModalOpen(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="btn-secondary px-4 py-2"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-primary px-5 py-2"
                 >
                   {isLoading ? 'Đang lưu...' : 'Xác nhận'}
                 </button>
@@ -460,38 +460,38 @@ export default function BoothsTab() {
       )}
 
       {agentKeyBooth && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-start gap-4 mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-start gap-4 mb-4 pb-2 border-b border-outline-variant">
               <div>
                 <h3 className="text-lg font-bold text-on-surface">View AgentKey cho {agentKeyBooth.code || agentKeyBooth.id}</h3>
-                <p className="text-xs text-gray-500 mt-1">{agentKeyBooth.name}</p>
+                <p className="text-xs text-on-surface-variant mt-1">{agentKeyBooth.name}</p>
               </div>
               <button
                 type="button"
                 onClick={closeAgentKeyModal}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-gray-500 hover:bg-gray-50 cursor-pointer"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 cursor-pointer transition-colors"
                 aria-label="Đóng"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800 flex items-start gap-2 mb-4">
+            <div className="rounded-lg border border-warning/30 bg-warning-container p-3 text-xs font-medium text-on-warning-container flex items-start gap-2 mb-4">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>Key này dùng cấu hình local agent tại booth trong appsettings.json, không public.</span>
             </div>
 
             {viewAgentKeyMutation.isPending ? (
-              <div className="py-8 text-center text-sm font-bold text-gray-500">
+              <div className="py-8 text-center text-sm font-bold text-on-surface-variant">
                 <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                 Đang tải AgentKey...
               </div>
             ) : viewAgentKey ? (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1.5">AgentKey</label>
-                  <div className="rounded-lg border border-outline-variant bg-[#f3f3fe] p-3 font-mono text-xs text-gray-900 break-all select-all">
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1.5">AgentKey</label>
+                  <div className="rounded-lg border border-outline-variant bg-surface-2 p-3 font-mono text-xs text-on-surface break-all select-all">
                     {viewAgentKey}
                   </div>
                 </div>
@@ -500,7 +500,7 @@ export default function BoothsTab() {
                     type="button"
                     onClick={closeAgentKeyModal}
                     disabled={generateAgentKeyMutation.isPending}
-                    className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                    className="btn-secondary px-4 py-2"
                   >
                     Đóng
                   </button>
@@ -508,7 +508,7 @@ export default function BoothsTab() {
                     type="button"
                     onClick={handleGenerateAgentKey}
                     disabled={generateAgentKeyMutation.isPending}
-                    className="px-5 py-2 border border-amber-200 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 cursor-pointer inline-flex items-center justify-center gap-2 font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="px-5 py-2 border border-warning/30 bg-warning-container text-on-warning-container rounded-lg hover:brightness-95 cursor-pointer inline-flex items-center justify-center gap-2 font-bold disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                   >
                     {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
                     Tạo nếu chưa có
@@ -517,7 +517,7 @@ export default function BoothsTab() {
                     type="button"
                     onClick={() => copyToClipboard(viewAgentKey, 'Đã sao chép AgentKey.')}
                     disabled={generateAgentKeyMutation.isPending}
-                    className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer inline-flex items-center justify-center gap-2 font-bold"
+                    className="btn-primary px-5 py-2"
                   >
                     <Copy className="w-4 h-4" />
                     Copy
@@ -526,12 +526,12 @@ export default function BoothsTab() {
               </div>
             ) : (
               <div className="py-8 text-center">
-                <p className="text-sm font-bold text-red-500">Booth này chưa có AgentKey.</p>
+                <p className="text-sm font-bold text-error">Booth này chưa có AgentKey.</p>
                 <button
                   type="button"
                   onClick={handleGenerateAgentKey}
                   disabled={generateAgentKeyMutation.isPending}
-                  className="mt-4 px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer inline-flex items-center justify-center gap-2 text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-primary mt-4 px-5 py-2 text-sm"
                 >
                   {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
                   Gen key

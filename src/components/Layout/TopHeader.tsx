@@ -82,35 +82,17 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   };
 
   return (
-    <header className="h-[64px] bg-white border-b border-outline-variant flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 sticky top-0 z-10 w-full shrink-0">
+    <header className="h-[64px] bg-surface border-b border-outline-variant flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 sticky top-0 z-10 w-full shrink-0">
       <button
         type="button"
         onClick={onOpenSidebar}
-        className="lg:hidden h-10 w-10 inline-flex items-center justify-center rounded-lg border border-outline-variant text-[#434655] hover:bg-[#f3f3fe] cursor-pointer shrink-0"
+        className="lg:hidden h-10 w-10 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 cursor-pointer shrink-0"
         aria-label="Mở menu điều hướng"
       >
         <Menu className="w-5 h-5" />
       </button>
 
-      {/* Search Input Box */}
-      <div className="flex-1 max-w-sm min-w-0">
-        {/* {['/error-logs', '/users', '/booths'].includes(location.pathname) ? (
-          <div className="relative animate-fadeIn">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#737686] w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm log lỗi, tài khoản, máy trạm..."
-              value={getSearchQuery()}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-[#f3f3fe] border border-outline-variant rounded-full text-xs focus:outline-none focus:border-primary focus:bg-white transition-all placeholder:text-[#434655]"
-            />
-          </div>
-        ) : (
-          <div className="text-xs text-gray-400 select-none font-medium italic">
-            Nhấn đúp chuột hoặc dùng Sidebar để chuyển đổi trang
-          </div>
-        )} */}
-      </div>
+      <div className="flex-1 max-w-sm min-w-0" />
 
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Notification Bell Dropdown Container */}
@@ -118,40 +100,40 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
           <button
             onClick={() => setIsQuickNotifModalOpen(prev => !prev)}
             className={`relative p-2 rounded-full transition-all duration-200 select-none ${
-              isQuickNotifModalOpen ? 'text-primary bg-primary/10' : 'text-[#434655] hover:bg-[#f3f3fe]'
+              isQuickNotifModalOpen ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:bg-surface-2'
             }`}
             title="Thông báo hệ thống"
           >
             <Bell className="w-5 h-5" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface"></span>
             )}
           </button>
 
           {isQuickNotifModalOpen && (
-            <div className="fixed left-3 right-3 top-[60px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 bg-white rounded-2xl shadow-xl border border-outline-variant sm:w-96 md:w-[420px] z-50 flex flex-col max-h-[calc(100dvh-5rem)] sm:max-h-[460px] transition-all overflow-hidden animate-fadeIn">
-              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/50">
+            <div className="fixed left-3 right-3 top-[60px] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 bg-surface rounded-2xl shadow-elevated border border-outline-variant sm:w-96 md:w-[420px] z-50 flex flex-col max-h-[calc(100dvh-5rem)] sm:max-h-[460px] transition-all overflow-hidden animate-fadeIn">
+              <div className="p-4 border-b border-outline-variant/60 flex items-center justify-between bg-surface-2/50">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                     <Bell className="w-4 h-4" />
                   </div>
                   <div className="text-left">
-                    <h3 className="font-extrabold text-xs text-gray-900">Trung tâm thông báo</h3>
-                    <p className="text-[10px] text-gray-500 font-medium">
+                    <h3 className="font-extrabold text-xs text-on-surface">Trung tâm thông báo</h3>
+                    <p className="text-[10px] text-on-surface-variant font-medium">
                       {unreadCount > 0 ? `Bạn có ${unreadCount} tin mới` : 'Không có tin mới chưa đọc'}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsQuickNotifModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 font-bold p-1 rounded hover:bg-gray-200/50 transition-colors cursor-pointer"
+                  className="text-on-surface-variant hover:text-on-surface font-bold p-1 rounded hover:bg-surface-2 transition-colors cursor-pointer"
                 >
                   &#x2715;
                 </button>
               </div>
 
-              <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between bg-white text-xs select-none">
-                <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Danh sách tin nhận được</span>
+              <div className="px-4 py-2 border-b border-outline-variant/60 flex items-center justify-between bg-surface text-xs select-none">
+                <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Danh sách tin nhận được</span>
                 {notifications.some(n => !n.isRead) && (
                   <button
                     type="button"
@@ -167,11 +149,12 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto divide-y divide-gray-50 p-2 space-y-1">
+              <div className="flex-1 overflow-y-auto divide-y divide-outline-variant/40 p-2 space-y-1">
                 {notifications.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <p className="text-gray-400 text-xs font-medium">Hộp thư trống</p>
-                    <p className="text-[10px] text-gray-400 mt-1">Hệ thống chưa phát thanh thông báo nào.</p>
+                  <div className="empty-state py-10 border-none bg-transparent">
+                    <Bell className="w-8 h-8 text-on-surface-variant/50 mb-2" />
+                    <p className="text-on-surface-variant text-xs font-bold">Hộp thư trống</p>
+                    <p className="text-[10px] text-on-surface-variant/70 mt-1">Hệ thống chưa phát thanh thông báo nào.</p>
                   </div>
                 ) : (
                   notifications.map(notif => (
@@ -186,36 +169,36 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                       }}
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex gap-3 ${
                         notif.isRead
-                          ? 'border-gray-100 bg-white hover:bg-gray-50 opacity-75'
-                          : 'border-primary/20 bg-blue-50/10 hover:bg-blue-50/20 shadow-sm'
+                          ? 'border-outline-variant/60 bg-surface hover:bg-surface-2 opacity-75'
+                          : 'border-primary/20 bg-primary/5 hover:bg-primary/10 shadow-sm'
                       }`}
                     >
                       {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl"></div>}
 
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                         notif.type === 'warning'
-                          ? 'bg-red-50 text-red-600'
+                          ? 'bg-error-container text-on-error-container'
                           : notif.type === 'update'
-                          ? 'bg-blue-50 text-primary'
-                          : 'bg-emerald-50 text-emerald-600'
+                          ? 'bg-secondary-container text-primary'
+                          : 'bg-success-container text-on-success-container'
                       }`}>
                         <AlertTriangle className="w-4 h-4" />
                       </div>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
-                          <p className={`text-xs truncate ${notif.isRead ? 'text-gray-500 font-normal' : 'text-gray-900 font-extrabold'}`}>
+                          <p className={`text-xs truncate ${notif.isRead ? 'text-on-surface-variant font-normal' : 'text-on-surface font-extrabold'}`}>
                             {notif.title}
                           </p>
-                          <span className="text-[9px] text-gray-400 font-mono whitespace-nowrap shrink-0">{notif.time}</span>
+                          <span className="text-[9px] text-on-surface-variant font-mono tabular-nums whitespace-nowrap shrink-0">{notif.time}</span>
                         </div>
-                        <p className="text-[10px] text-gray-500 line-clamp-2 mt-0.5 whitespace-pre-wrap">{notif.content}</p>
+                        <p className="text-[10px] text-on-surface-variant line-clamp-2 mt-0.5 whitespace-pre-wrap">{notif.content}</p>
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
-                          <span className="text-[9px] text-gray-400 font-bold bg-[#f1f5f9] px-1.5 py-0.5 rounded truncate max-w-[180px]">
+                          <span className="text-[9px] text-on-surface-variant font-bold bg-surface-2 px-1.5 py-0.5 rounded truncate max-w-[180px]">
                             Gửi đến: {notif.tagName}
                           </span>
                           {notif.tagType === 'Urgent' && (
-                            <span className="bg-red-100 text-red-700 text-[8px] font-extrabold px-1.5 py-0.5 rounded uppercase font-mono">
+                            <span className="badge-error font-mono">
                               Khẩn cấp
                             </span>
                           )}
@@ -226,14 +209,14 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                 )}
               </div>
 
-              <div className="p-3 border-t bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 select-none">
+              <div className="p-3 border-t border-outline-variant/60 bg-surface-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 select-none">
                 <button
                   type="button"
                   onClick={() => {
                     navigate('/notifications');
                     setIsQuickNotifModalOpen(false);
                   }}
-                  className="text-[10px] text-gray-600 hover:text-gray-950 font-bold hover:underline text-left shrink-0 cursor-pointer"
+                  className="text-[10px] text-on-surface-variant hover:text-on-surface font-bold hover:underline text-left shrink-0 cursor-pointer"
                 >
                   Trang lưu trữ thông báo
                 </button>
@@ -245,14 +228,14 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                       setIsQuickNotifModalOpen(false);
                       setIsNotificationModalOpen(true);
                     }}
-                    className="bg-primary text-white hover:bg-primary-container px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-sm cursor-pointer"
+                    className="bg-primary text-on-primary hover:bg-primary-hover active:bg-primary-active px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-brand cursor-pointer"
                   >
                     <Send className="w-3 h-3" /> Gửi phát thanh
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsQuickNotifModalOpen(false)}
-                    className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer"
+                    className="bg-surface border border-outline-variant text-on-surface-variant hover:bg-surface-2 px-2.5 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer"
                   >
                     Đóng
                   </button>
@@ -268,7 +251,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
           <button
             type="button"
             onClick={() => setIsUserMenuOpen(current => !current)}
-            className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-slate-50 transition-all cursor-pointer"
+            className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-surface-2 transition-all cursor-pointer"
             aria-label="Mở thiết lập tài khoản"
           >
             {currentUser?.avatar ? (
@@ -284,21 +267,21 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                 </span>
               </span>
             )}
-            <span className="text-xs font-semibold text-[#191b23] hidden md:inline">{currentUser?.name}</span>
+            <span className="text-xs font-semibold text-on-surface hidden md:inline">{currentUser?.name}</span>
           </button>
 
           {isUserMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 overflow-hidden rounded-xl border border-outline-variant bg-white shadow-xl z-50 animate-fadeIn">
-              <div className="border-b border-slate-100 px-4 py-3">
-                <p className="truncate text-sm font-black text-gray-950">{currentUser?.name || 'Tài khoản'}</p>
-                <p className="truncate text-xs font-medium text-gray-500">{currentUser?.email || 'Đang đăng nhập'}</p>
+            <div className="absolute right-0 top-full mt-2 w-64 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-elevated z-50 animate-fadeIn">
+              <div className="border-b border-outline-variant/60 px-4 py-3">
+                <p className="truncate text-sm font-black text-on-surface">{currentUser?.name || 'Tài khoản'}</p>
+                <p className="truncate text-xs font-medium text-on-surface-variant">{currentUser?.email || 'Đang đăng nhập'}</p>
               </div>
 
               <div className="p-2">
                 <button
                   type="button"
                   onClick={openAccountSettings}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-gray-800 hover:bg-slate-50 cursor-pointer"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-on-surface hover:bg-surface-2 cursor-pointer"
                 >
                   <UserCog className="h-4 w-4 text-primary" />
                   <span>Thiết lập tài khoản</span>
@@ -306,7 +289,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                 <button
                   type="button"
                   onClick={handleLogoutClick}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50 cursor-pointer"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-error hover:bg-error-container cursor-pointer"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Đăng xuất</span>

@@ -124,7 +124,7 @@ function getShiftClass(code?: string | null) {
     'C+': 'bg-[#ffeaf0] border-[#ea8fa2] text-[#4b1020]',
   };
 
-  return styles[code || ''] || 'bg-slate-50 border-slate-200 text-slate-700';
+  return styles[code || ''] || 'bg-surface-2 border-outline-variant text-on-surface-variant';
 }
 
 function getVietnameseWeekday(dateValue: string) {
@@ -375,50 +375,50 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
     const daysByDate = new Map(user.days.map(day => [day.date, day]));
 
     return (
-      <tr key={user.userId} className="border-b border-slate-100">
-        <td className="sticky left-0 z-10 w-[170px] bg-white px-3 py-3 align-top shadow-[1px_0_0_#e5e7eb]">
-          <p className="w-36 truncate text-xs font-black text-slate-900">{user.userName}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{user.summary.workingDays} ngày làm trong tháng</p>
+      <tr key={user.userId} className="border-b border-outline-variant">
+        <td className="sticky left-0 z-10 w-[170px] bg-surface px-3 py-3 align-top shadow-[1px_0_0_var(--color-outline-variant)]">
+          <p className="w-36 truncate text-xs font-black text-on-surface">{user.userName}</p>
+          <p className="mt-1 text-[11px] text-on-surface-variant">{user.summary.workingDays} ngày làm trong tháng</p>
         </td>
         {previewWeekDates.map(date => {
           const day = daysByDate.get(date);
           return (
-            <td key={date} className="w-[112px] min-w-[112px] border-r border-slate-100 px-2 py-3 align-top">
+            <td key={date} className="w-[112px] min-w-[112px] border-r border-outline-variant px-2 py-3 align-top">
               {day ? (
                 <>
                   <select
                     value={day.isOff ? '' : 'temporary-flex'}
                     onChange={event => updatePreviewCell(user.userId, date, event.target.value)}
-                    className={`h-10 w-full rounded border px-2 text-xs font-black ${day.isOff ? 'border-slate-200 bg-slate-100 text-slate-500' : day.isTemporaryShift ? 'border-blue-200 bg-blue-50 text-blue-700' : getShiftClass(day.shiftCode)}`}
+                    className={`h-10 w-full rounded border px-2 text-xs font-black ${day.isOff ? 'border-outline-variant bg-surface-2 text-on-surface-variant' : day.isTemporaryShift ? 'border-primary/30 bg-primary/10 text-primary' : getShiftClass(day.shiftCode)}`}
                     title={day.warnings.join('\n')}
                   >
                     <option value="">OFF</option>
                     {!day.isOff && <option value="temporary-flex">{day.shiftCode || 'LĐ'}</option>}
                   </select>
                   {!day.isOff && (
-                    <p className="mt-1 truncate text-[10px] font-bold text-slate-500" title={`${formatShiftTime(day.startTime || '')}-${formatShiftTime(day.endTime || '')} · ${day.totalHours}h`}>
+                    <p className="mt-1 truncate text-[10px] font-bold text-on-surface-variant" title={`${formatShiftTime(day.startTime || '')}-${formatShiftTime(day.endTime || '')} · ${day.totalHours}h`}>
                       {formatShiftTime(day.startTime || '')}-{formatShiftTime(day.endTime || '')}
                     </p>
                   )}
-                  {day.warnings.length > 0 && <p className="mt-1 text-[10px] font-bold text-amber-600">Có cảnh báo</p>}
+                  {day.warnings.length > 0 && <p className="mt-1 text-[10px] font-bold text-warning">Có cảnh báo</p>}
                 </>
               ) : (
-                <span className="text-[11px] font-semibold text-slate-300">Ngoài tháng</span>
+                <span className="text-[11px] font-semibold text-on-surface-variant">Ngoài tháng</span>
               )}
             </td>
           );
         })}
-        <td className="sticky right-[82px] z-10 w-[82px] min-w-[82px] border-l border-slate-200 bg-white px-2 py-3 text-center shadow-[-1px_0_0_#e5e7eb]">
-          <p className={`text-sm font-black ${preview?.monthlyTargetHours && preview.monthlyTargetHours > 0 && user.summary.totalHours !== preview.monthlyTargetHours ? 'text-red-600' : 'text-slate-900'}`}>
+        <td className="sticky right-[82px] z-10 w-[82px] min-w-[82px] border-l border-outline-variant bg-surface px-2 py-3 text-center shadow-[-1px_0_0_var(--color-outline-variant)]">
+          <p className={`text-sm font-black ${preview?.monthlyTargetHours && preview.monthlyTargetHours > 0 && user.summary.totalHours !== preview.monthlyTargetHours ? 'text-error' : 'text-on-surface'}`}>
             {preview?.monthlyTargetHours && preview.monthlyTargetHours > 0 ? `${user.summary.totalHours}/${preview.monthlyTargetHours}` : user.summary.totalHours}
           </p>
-          <p className="text-[10px] font-bold text-slate-500">giờ</p>
+          <p className="text-[10px] font-bold text-on-surface-variant">giờ</p>
         </td>
-        <td className="sticky right-0 z-10 w-[82px] min-w-[82px] border-l border-slate-200 bg-white px-2 py-3 text-center shadow-[-1px_0_0_#e5e7eb]">
-          <p className={`text-sm font-black ${user.summary.offDays === preview?.monthlyOffDays ? 'text-emerald-600' : 'text-red-600'}`}>
+        <td className="sticky right-0 z-10 w-[82px] min-w-[82px] border-l border-outline-variant bg-surface px-2 py-3 text-center shadow-[-1px_0_0_var(--color-outline-variant)]">
+          <p className={`text-sm font-black ${user.summary.offDays === preview?.monthlyOffDays ? 'text-success' : 'text-error'}`}>
             {user.summary.offDays}/{preview?.monthlyOffDays}
           </p>
-          <p className="text-[10px] font-bold text-slate-500">nghỉ</p>
+          <p className="text-[10px] font-bold text-on-surface-variant">nghỉ</p>
         </td>
       </tr>
     );
@@ -441,14 +441,14 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#111827]/50 p-2 sm:p-4">
-      <div className="flex max-h-[96dvh] w-[98vw] max-w-none flex-col overflow-hidden rounded-xl border border-outline-variant bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/50 p-2 sm:p-4">
+      <div className="flex max-h-[96dvh] w-[98vw] max-w-none flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b border-outline-variant px-4 py-3">
           <div>
-            <h3 className="text-base font-black text-slate-950">Đề xuất lịch tháng</h3>
-            <p className="text-xs text-slate-500">Xếp lịch cả tháng, nghỉ đúng N ngày, có preview trước khi áp dụng.</p>
+            <h3 className="text-base font-black text-on-surface">Đề xuất lịch tháng</h3>
+            <p className="text-xs text-on-surface-variant">Xếp lịch cả tháng, nghỉ đúng N ngày, có preview trước khi áp dụng.</p>
           </div>
-          <button type="button" onClick={onClose} className="h-9 w-9 rounded-lg border border-outline-variant text-slate-500 hover:bg-slate-50">
+          <button type="button" onClick={onClose} className="h-9 w-9 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2">
             <X className="mx-auto h-4 w-4" />
           </button>
         </div>
@@ -456,19 +456,19 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[340px_1fr]">
           <div className="overflow-y-auto border-b border-outline-variant p-4 lg:border-b-0 lg:border-r">
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-xs font-bold text-slate-700">
+              <label className="block text-xs font-bold text-on-surface-variant">
                 Tháng
                 <select
                   value={getMonthNumber(monthValue)}
                   onChange={event => setMonthValue(buildMonthValue(getYearNumber(monthValue), Number(event.target.value)))}
-                  className="mt-1 h-10 w-full rounded-md border border-outline-variant bg-white px-3 text-sm"
+                  className="mt-1 h-10 w-full rounded-md border border-outline-variant bg-surface px-3 text-sm"
                 >
                   {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
                     <option key={month} value={month}>Tháng {month}</option>
                   ))}
                 </select>
               </label>
-              <label className="block text-xs font-bold text-slate-700">
+              <label className="block text-xs font-bold text-on-surface-variant">
                 Năm
                 <input
                   type="number"
@@ -482,7 +482,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
             </div>
 
             <div className="mt-3 grid grid-cols-1 gap-3">
-              <label className="block text-xs font-bold text-slate-700">
+              <label className="block text-xs font-bold text-on-surface-variant">
                 Số ngày nghỉ mỗi nhân viên
                 <input
                   type="number"
@@ -492,7 +492,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                   className="mt-1 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
                 />
               </label>
-              <label className="block text-xs font-bold text-slate-700">
+              <label className="block text-xs font-bold text-on-surface-variant">
                 Số tiếng mỗi nhân viên trong tháng
                 <input
                   type="number"
@@ -502,13 +502,13 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                   onChange={event => setMonthlyTargetHours(Number(event.target.value))}
                   className="mt-1 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
                 />
-                <span className="mt-1 block text-[11px] font-semibold text-slate-500">
+                <span className="mt-1 block text-[11px] font-semibold text-on-surface-variant">
                   Nhập 0 để không giới hạn và không validate min/max số tiếng.
                 </span>
               </label>
             </div>
 
-            <label className="mt-3 flex items-center gap-2 text-xs font-bold text-slate-700">
+            <label className="mt-3 flex items-center gap-2 text-xs font-bold text-on-surface-variant">
               <input
                 type="checkbox"
                 checked={overwriteExisting}
@@ -518,16 +518,16 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
               Ghi đè lịch cũ trong tháng
             </label>
 
-            <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-900">
+            <div className="mt-3 rounded-lg border border-primary/20 bg-secondary-container px-3 py-2 text-xs font-bold text-on-secondary-container">
               Sắp xếp linh động đang bật mặc định.
-              <span className="mt-1 block text-[11px] font-semibold text-blue-700">
+              <span className="mt-1 block text-[11px] font-semibold text-on-secondary-container/80">
                 Hệ thống tự tạo khoảng thời gian ca trong preview và lưu trực tiếp vào lịch, không cần chọn ca cố định.
               </span>
             </div>
 
             <div className="mt-4 space-y-3">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Nhân viên & rule</p>
-              <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] leading-relaxed text-blue-900">
+              <p className="text-xs font-black uppercase tracking-wide text-on-surface-variant">Nhân viên & rule</p>
+              <div className="rounded-lg border border-primary/20 bg-secondary-container px-3 py-2 text-[11px] leading-relaxed text-on-secondary-container">
                 <p className="font-black">Cú pháp nhập rule</p>
                 <p>Mỗi dòng là một rule. <b>2026-07-10</b> = không muốn làm ngày đó. <b>2026-07-10 S+</b> = không muốn làm ca S+ ngày đó. <b>T2 C</b> = không muốn làm ca C vào thứ 2.</p>
               </div>
@@ -536,8 +536,8 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                 const rule = normalizeRuleState(rules[user.id]);
 
                 return (
-                  <div key={user.id} className={`rounded-lg border p-3 ${selected ? 'border-outline-variant bg-white' : 'border-slate-100 bg-slate-50 opacity-70'}`}>
-                    <label className="flex items-center gap-2 text-sm font-black text-slate-900">
+                  <div key={user.id} className={`rounded-lg border p-3 ${selected ? 'border-outline-variant bg-surface' : 'border-outline-variant bg-surface-2 opacity-70'}`}>
+                    <label className="flex items-center gap-2 text-sm font-black text-on-surface">
                       <input
                         type="checkbox"
                         checked={selected}
@@ -548,7 +548,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                     </label>
 
                     {selected && (
-                      <label className="mt-3 block text-[11px] font-bold text-slate-500">
+                      <label className="mt-3 block text-[11px] font-bold text-on-surface-variant">
                         Rule không muốn làm
                         <textarea
                           value={rule.ruleText}
@@ -568,7 +568,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
 
           <div className="min-w-0 overflow-hidden">
             <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+              <div className="flex items-center gap-2 text-xs font-bold text-on-surface-variant">
                 <CalendarDays className="h-4 w-4" />
                 {preview ? `${preview.month}/${preview.year}` : 'Chưa có preview'}
               </div>
@@ -577,7 +577,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                   type="button"
                   onClick={handlePreview}
                   disabled={isPreviewing}
-                  className="h-10 rounded-md border border-outline-variant px-4 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="h-10 rounded-md border border-outline-variant px-4 text-xs font-black text-on-surface-variant hover:bg-surface-2 disabled:opacity-60"
                 >
                   {isPreviewing ? <Loader2 className="inline h-4 w-4 animate-spin" /> : <Sparkles className="inline h-4 w-4" />} Tạo preview
                 </button>
@@ -585,7 +585,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                   type="button"
                   onClick={handleApply}
                   disabled={!preview || isApplying}
-                  className="h-10 rounded-md bg-primary px-4 text-xs font-black text-white hover:bg-primary-container disabled:opacity-60"
+                  className="btn-primary h-10 font-black"
                 >
                   {isApplying ? <Loader2 className="inline h-4 w-4 animate-spin" /> : null} Áp dụng lịch
                 </button>
@@ -593,14 +593,14 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
             </div>
 
             {!preview ? (
-              <div className="flex h-[520px] items-center justify-center px-4 text-center text-sm font-semibold text-slate-400">
+              <div className="flex h-[520px] items-center justify-center px-4 text-center text-sm font-semibold text-on-surface-variant">
                 {previewError ? (
-                  <div className="w-full max-w-2xl rounded-lg border border-red-200 bg-red-50 p-4 text-left text-red-700">
+                  <div className="w-full max-w-2xl rounded-lg border border-error/30 bg-error-container p-4 text-left text-on-error-container">
                     <div className="mb-2 flex items-center gap-2 text-sm font-black">
                       <AlertTriangle className="h-4 w-4" />
                       Preview không tạo được
                     </div>
-                    <pre className="max-h-72 whitespace-pre-wrap break-words rounded-md bg-white/70 p-3 font-mono text-xs leading-relaxed text-red-800">
+                    <pre className="max-h-72 whitespace-pre-wrap break-words rounded-md bg-surface/70 p-3 font-mono text-xs leading-relaxed text-on-error-container">
                       {previewError}
                     </pre>
                   </div>
@@ -610,10 +610,10 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
               </div>
             ) : (
               <div className="h-[calc(94dvh-123px)] overflow-auto">
-                <div className="sticky top-0 z-30 flex flex-col gap-3 border-b border-outline-variant bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="sticky top-0 z-30 flex flex-col gap-3 border-b border-outline-variant bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Preview lịch theo tuần</p>
-                    <p className="text-sm font-black text-slate-950">
+                    <p className="text-xs font-black uppercase tracking-wide text-on-surface-variant">Preview lịch theo tuần</p>
+                    <p className="text-sm font-black text-on-surface">
                       {previewWeekDates.length > 0
                         ? `${formatShortDate(previewWeekDates[0])} - ${formatShortDate(previewWeekDates[previewWeekDates.length - 1])}`
                         : `Tháng ${preview.month}/${preview.year}`}
@@ -624,7 +624,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                       type="button"
                       onClick={() => movePreviewWeek(-1)}
                       disabled={!canGoPreviousPreviewWeek}
-                      className="h-9 rounded-md border border-outline-variant px-3 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                      className="h-9 rounded-md border border-outline-variant px-3 text-xs font-black text-on-surface-variant hover:bg-surface-2 disabled:opacity-40"
                     >
                       <ChevronLeft className="inline h-4 w-4" /> Tuần trước
                     </button>
@@ -632,19 +632,19 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                       type="button"
                       onClick={() => movePreviewWeek(1)}
                       disabled={!canGoNextPreviewWeek}
-                      className="h-9 rounded-md border border-outline-variant px-3 text-xs font-black text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                      className="h-9 rounded-md border border-outline-variant px-3 text-xs font-black text-on-surface-variant hover:bg-surface-2 disabled:opacity-40"
                     >
                       Tuần sau <ChevronRight className="inline h-4 w-4" />
                     </button>
                   </div>
                 </div>
                 {preview.warnings.length > 0 && (
-                  <div className="border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+                  <div className="border-b border-warning/30 bg-warning-container px-4 py-3 text-xs font-semibold text-on-warning-container">
                     <div className="mb-2 flex items-center gap-2 font-black">
                       <AlertTriangle className="h-4 w-4" />
                       Cảnh báo preview ({preview.warnings.length})
                     </div>
-                    <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-amber-200 bg-white/60 p-2">
+                    <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-warning/30 bg-surface/60 p-2">
                       {preview.warnings.map((warning, index) => (
                         <p key={`${index}-${warning}`}>{warning}</p>
                       ))}
@@ -653,18 +653,18 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                 )}
                 <table className="w-max min-w-full border-collapse text-left">
                   <thead>
-                    <tr className="bg-slate-50 text-[11px] uppercase text-slate-500">
-                      <th className="sticky left-0 top-[65px] z-20 w-[170px] bg-slate-50 px-3 py-3 shadow-[1px_0_0_#e5e7eb]">Nhân viên</th>
+                    <tr className="bg-surface-2 text-[11px] uppercase text-on-surface-variant">
+                      <th className="sticky left-0 top-[65px] z-20 w-[170px] bg-surface-2 px-3 py-3 shadow-[1px_0_0_var(--color-outline-variant)]">Nhân viên</th>
                       {previewWeekDates.map(date => (
-                        <th key={date} className="sticky top-[65px] z-10 w-[112px] min-w-[112px] border-r border-slate-100 bg-slate-50 px-2 py-3 text-center">
-                          <span className="block text-sm font-black text-slate-900">{formatShortDate(date)}</span>
-                          <span className="block text-[10px] font-bold text-slate-500">{getVietnameseWeekday(date)}</span>
+                        <th key={date} className="sticky top-[65px] z-10 w-[112px] min-w-[112px] border-r border-outline-variant bg-surface-2 px-2 py-3 text-center">
+                          <span className="block text-sm font-black text-on-surface">{formatShortDate(date)}</span>
+                          <span className="block text-[10px] font-bold text-on-surface-variant">{getVietnameseWeekday(date)}</span>
                         </th>
                       ))}
-                      <th className="sticky right-[82px] top-[65px] z-20 w-[82px] min-w-[82px] border-l border-slate-200 bg-slate-50 px-1 py-3 text-center shadow-[-1px_0_0_#e5e7eb]">
+                      <th className="sticky right-[82px] top-[65px] z-20 w-[82px] min-w-[82px] border-l border-outline-variant bg-surface-2 px-1 py-3 text-center shadow-[-1px_0_0_var(--color-outline-variant)]">
                         Tổng giờ
                       </th>
-                      <th className="sticky right-0 top-[65px] z-20 w-[82px] min-w-[82px] border-l border-slate-200 bg-slate-50 px-1 py-3 text-center shadow-[-1px_0_0_#e5e7eb]">
+                      <th className="sticky right-0 top-[65px] z-20 w-[82px] min-w-[82px] border-l border-outline-variant bg-surface-2 px-1 py-3 text-center shadow-[-1px_0_0_var(--color-outline-variant)]">
                         Ngày nghỉ
                       </th>
                     </tr>

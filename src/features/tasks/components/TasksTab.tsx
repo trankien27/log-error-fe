@@ -437,9 +437,9 @@ export default function TasksTab() {
   };
 
   const statusClassByTask = (status: Task['status']) => {
-    if (status === 'pending') return 'border-gray-200 bg-gray-50 text-gray-700';
-    if (status === 'progress') return 'border-blue-200 bg-blue-50 text-[#004ac6]';
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    if (status === 'pending') return 'border-outline-variant bg-surface-2 text-on-surface-variant';
+    if (status === 'progress') return 'border-primary/30 bg-primary/10 text-primary';
+    return 'border-success/30 bg-success-container text-success';
   };
 
   const getTaskDisplayPriority = (status: Task['status']) => {
@@ -515,10 +515,10 @@ export default function TasksTab() {
       {/* Panel Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 font-sans">
+          <h2 className="text-xl font-bold text-on-surface font-sans">
             {activeTaskView === 'kanban' ? 'Bảng Kanban điều phối nhiệm vụ IT' : 'Lịch công việc IT'}
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-on-surface-variant mt-1">
             {activeTaskView === 'kanban'
               ? 'Phân bổ công việc bằng cách kéo thả hoặc thao tác nhanh.'
               : activeTaskView === 'calendar'
@@ -527,12 +527,12 @@ export default function TasksTab() {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <div className="inline-flex rounded-lg border border-outline-variant bg-white p-1">
+          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-1">
             <button
               type="button"
               onClick={() => setActiveTaskView('kanban')}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
-                activeTaskView === 'kanban' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                activeTaskView === 'kanban' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
               }`}
             >
               <Columns3 className="w-4 h-4" />
@@ -542,7 +542,7 @@ export default function TasksTab() {
               type="button"
               onClick={() => setActiveTaskView('calendar')}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
-                activeTaskView === 'calendar' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                activeTaskView === 'calendar' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
               }`}
             >
               <CalendarDays className="w-4 h-4" />
@@ -552,7 +552,7 @@ export default function TasksTab() {
               type="button"
               onClick={() => setActiveTaskView('month')}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
-                activeTaskView === 'month' ? 'bg-primary text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'
+                activeTaskView === 'month' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
               }`}
             >
               <CalendarRange className="w-4 h-4" />
@@ -561,7 +561,7 @@ export default function TasksTab() {
           </div>
           <button
             onClick={() => handleOpenTaskModal()}
-            className="bg-primary text-white hover:bg-primary-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" /> Khởi tạo Tác vụ
           </button>
@@ -573,12 +573,12 @@ export default function TasksTab() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch text-left">
         
         {/* Column 1: CHỜ XỬ LÝ (pending) */}
-        <div className="bg-white rounded-xl border border-outline-variant flex flex-col">
-          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-gray-50 rounded-t-xl select-none">
+        <div className="bg-surface rounded-xl border border-outline-variant flex flex-col">
+          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-2 rounded-t-xl select-none">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-gray-700 font-sans">Chờ xử lý</h4>
-              <span className="bg-gray-200 text-gray-700 text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-on-surface-variant"></span>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface-variant font-sans">Chờ xử lý</h4>
+              <span className="bg-surface-2 text-on-surface-variant text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
                 {tasks.filter(t => t.status === 'pending').length}
               </span>
             </div>
@@ -589,11 +589,11 @@ export default function TasksTab() {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'pending')}
             className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
-              dragOverColumn === 'pending' ? 'bg-[#e0e7ff] border-2 border-dashed border-primary shadow-inner' : 'bg-[#f8fafc]'
+              dragOverColumn === 'pending' ? 'bg-primary/10 border-2 border-dashed border-primary shadow-inner' : 'bg-surface-2'
             }`}
           >
             {tasks.filter(t => t.status === 'pending').length === 0 ? (
-              <p className="text-[11px] text-gray-400 text-center py-10">Cột trống</p>
+              <p className="text-[11px] text-on-surface-variant text-center py-10">Cột trống</p>
             ) : (
               tasks.filter(t => t.status === 'pending').map(task => (
                 <div
@@ -604,18 +604,18 @@ export default function TasksTab() {
                     setSelectedTaskDetails(task);
                     setTaskNotesInput(task.description || '');
                   }}
-                  className={`bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md hover:border-primary/40 shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
+                  className={`bg-surface p-4 rounded-lg border border-outline-variant hover:shadow-md hover:border-primary/40 shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
                     draggedTaskId === task.id ? 'opacity-30 border-primary' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                     <h5 className="text-xs font-bold text-gray-900 leading-snug">{task.title}</h5>
+                     <h5 className="text-xs font-bold text-on-surface leading-snug">{task.title}</h5>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         handleOpenTaskModal(task);
                       }}
-                      className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                      className="p-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-2 transition-colors"
                       title="Sửa tác vụ"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -624,31 +624,31 @@ export default function TasksTab() {
                  
 
                   <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-1 text-red-650 font-medium">
+                    <div className="flex items-center gap-1 text-error font-medium">
                       <Clock className="w-3.5 h-3.5" />
                       <span className="text-[10px] font-bold">{task.dueText}</span>
                     </div>
                     {task.attachments && task.attachments.length > 0 && (
-                      <div className="flex items-center gap-1 bg-[#f1f5f9] px-1.5 py-0.5 rounded text-gray-500 font-semibold text-[9px]" title={`${task.attachments.length} tệp đính kèm`}>
+                      <div className="flex items-center gap-1 bg-surface-2 px-1.5 py-0.5 rounded text-on-surface-variant font-semibold text-[9px]" title={`${task.attachments.length} tệp đính kèm`}>
                         <Paperclip className="w-3 h-3 text-primary shrink-0" />
                         <span>{task.attachments.length}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
+                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center font-bold text-[9px] text-[#004ac6]">
+                      <div className="w-5 h-5 rounded-full bg-secondary-container flex items-center justify-center font-bold text-[9px] text-primary">
                         {getTaskAssigneeInitial(task)}
                       </div>
-                      <span className="text-[10px] text-gray-500 font-medium truncate">{getTaskAssigneeName(task)}</span>
+                      <span className="text-[10px] text-on-surface-variant font-medium truncate">{getTaskAssigneeName(task)}</span>
                     </div>
                     
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
                         disabled={isLoading}
-                        className="text-[10px] border border-blue-200 text-[#004ac6] hover:bg-blue-50 px-2 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
+                        className="text-[10px] border border-primary/30 text-primary hover:bg-primary/10 px-2 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
                       >
                         Bắt đầu <ArrowRight className="w-3 h-3" />
                       </button>
@@ -661,12 +661,12 @@ export default function TasksTab() {
         </div>
 
         {/* Column 2: ĐANG THỰC HIỆN (progress) */}
-        <div className="bg-white rounded-xl border border-outline-variant flex flex-col">
-          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-gray-50 rounded-t-xl select-none font-sans">
+        <div className="bg-surface rounded-xl border border-outline-variant flex flex-col">
+          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-2 rounded-t-xl select-none font-sans">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-[#004ac6]">Đang thực hiện</h4>
-              <span className="bg-[#dbe1ff] text-primary text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-primary">Đang thực hiện</h4>
+              <span className="bg-secondary-container text-primary text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
                 {tasks.filter(t => t.status === 'progress').length}
               </span>
             </div>
@@ -677,11 +677,11 @@ export default function TasksTab() {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'progress')}
             className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
-              dragOverColumn === 'progress' ? 'bg-[#e0e7ff] border-2 border-dashed border-primary shadow-inner' : 'bg-[#f8fafc]'
+              dragOverColumn === 'progress' ? 'bg-primary/10 border-2 border-dashed border-primary shadow-inner' : 'bg-surface-2'
             }`}
           >
             {tasks.filter(t => t.status === 'progress').length === 0 ? (
-              <p className="text-[11px] text-gray-400 text-center py-10">Cột trống</p>
+              <p className="text-[11px] text-on-surface-variant text-center py-10">Cột trống</p>
             ) : (
               tasks.filter(t => t.status === 'progress').map(task => (
                 <div
@@ -692,12 +692,12 @@ export default function TasksTab() {
                     setSelectedTaskDetails(task);
                     setTaskNotesInput(task.description || '');
                   }}
-                  className={`bg-white p-4 rounded-lg border shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
-                    task.isOverdue ? 'border-red-400 bg-red-50/50' : 'border-outline-variant'
+                  className={`bg-surface p-4 rounded-lg border shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
+                    task.isOverdue ? 'border-error/40 bg-error-container/40' : 'border-outline-variant'
                   } ${draggedTaskId === task.id ? 'opacity-30 border-primary' : ''}`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="bg-blue-50 text-blue-600 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                    <span className="bg-secondary-container text-primary text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
                       {task.id}
                     </span>
                     <div className="flex gap-1">
@@ -706,48 +706,48 @@ export default function TasksTab() {
                           e.stopPropagation();
                           handleOpenTaskModal(task);
                         }}
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors cursor-pointer"
+                        className="p-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-2 transition-colors cursor-pointer"
                         title="Sửa tác vụ"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                  <h5 className="text-xs font-bold text-gray-900 leading-snug">{task.title}</h5>
+                  <h5 className="text-xs font-bold text-on-surface leading-snug">{task.title}</h5>
 
                   <div className="flex items-center justify-between mt-2">
-                    <div className={`flex items-center gap-1 text-xs ${task.isOverdue ? 'text-red-700 font-bold' : 'text-gray-500 font-medium'}`}>
+                    <div className={`flex items-center gap-1 text-xs ${task.isOverdue ? "text-error font-bold" : "text-on-surface-variant font-medium"}`}>
                       <Clock className="w-3.5 h-3.5" />
                       <span className="text-[10px]">{task.dueText}</span>
                     </div>
                     {task.attachments && task.attachments.length > 0 && (
-                      <div className="flex items-center gap-1 bg-[#f1f5f9] px-1.5 py-0.5 rounded text-gray-500 font-semibold text-[9px]" title={`${task.attachments.length} tệp đính kèm`}>
+                      <div className="flex items-center gap-1 bg-surface-2 px-1.5 py-0.5 rounded text-on-surface-variant font-semibold text-[9px]" title={`${task.attachments.length} tệp đính kèm`}>
                         <Paperclip className="w-3 h-3 text-primary shrink-0" />
                         <span>{task.attachments.length}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
+                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center font-bold text-[9px] text-red-650">
+                      <div className="w-5 h-5 rounded-full bg-error-container flex items-center justify-center font-bold text-[9px] text-on-error-container">
                         {getTaskAssigneeInitial(task)}
                       </div>
-                      <span className="text-[10px] text-gray-500 font-medium truncate">{getTaskAssigneeName(task)}</span>
+                      <span className="text-[10px] text-on-surface-variant font-medium truncate">{getTaskAssigneeName(task)}</span>
                     </div>
                     
                     <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
                         disabled={isLoading}
-                        className="text-[10px] text-gray-400 hover:text-gray-600 font-medium cursor-pointer"
+                        className="text-[10px] text-on-surface-variant hover:text-on-surface font-medium cursor-pointer"
                       >
                         Hoãn
                       </button>
                       <button
                         onClick={() => handleUpdateTaskStatus(task.id, 'done')}
                         disabled={isLoading}
-                        className="text-[10px] bg-emerald-600 text-white font-bold hover:bg-emerald-700 px-2 py-1 rounded whitespace-nowrap shadow-sm active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
+                        className="text-[10px] bg-success text-on-primary font-bold hover:bg-on-success-container px-2 py-1 rounded whitespace-nowrap shadow-sm active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
                       >
                         Đã xong <Check className="w-3 h-3" />
                       </button>
@@ -760,12 +760,12 @@ export default function TasksTab() {
         </div>
 
         {/* Column 3: HOÀN THÀNH (done) */}
-        <div className="bg-white rounded-xl border border-outline-variant flex flex-col opacity-90">
-          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-gray-50 rounded-t-xl select-none font-sans">
+        <div className="bg-surface rounded-xl border border-outline-variant flex flex-col opacity-90">
+          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-2 rounded-t-xl select-none font-sans">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-800">Hoàn thành</h4>
-              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-success"></span>
+              <h4 className="font-bold text-xs uppercase tracking-wider text-success">Hoàn thành</h4>
+              <span className="bg-success-container text-on-success-container text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
                 {tasks.filter(t => t.status === 'done').length}
               </span>
             </div>
@@ -776,11 +776,11 @@ export default function TasksTab() {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, 'done')}
             className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
-              dragOverColumn === 'done' ? 'bg-[#e2f1e9] border-2 border-dashed border-emerald-500 shadow-inner' : 'bg-[#f8fafc]'
+              dragOverColumn === 'done' ? 'bg-success-container border-2 border-dashed border-success shadow-inner' : 'bg-surface-2'
             }`}
           >
             {tasks.filter(t => t.status === 'done').length === 0 ? (
-              <p className="text-[11px] text-gray-400 text-center py-10">Cột trống</p>
+              <p className="text-[11px] text-on-surface-variant text-center py-10">Cột trống</p>
             ) : (
               tasks.filter(t => t.status === 'done').map(task => (
                 <div
@@ -791,32 +791,32 @@ export default function TasksTab() {
                     setSelectedTaskDetails(task);
                     setTaskNotesInput(task.description || '');
                   }}
-                  className={`bg-white p-4 rounded-lg border border-outline-variant hover:shadow-md shadow-sm space-y-3 min-h-[90px] transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
-                    draggedTaskId === task.id ? 'opacity-30 border-emerald-500' : ''
+                  className={`bg-surface p-4 rounded-lg border border-outline-variant hover:shadow-md shadow-sm space-y-3 min-h-[90px] transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
+                    draggedTaskId === task.id ? 'opacity-30 border-success' : ''
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="bg-gray-100 text-gray-400 line-through text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                    <span className="bg-surface-2 text-on-surface-variant line-through text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
                       {task.id}
                     </span>
                     <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <button 
                         onClick={() => handleOpenTaskModal(task)}
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-100 transition-colors cursor-pointer"
+                        className="p-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-2 transition-colors cursor-pointer"
                         title="Sửa tác vụ"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                  <h5 className="text-xs text-gray-400 leading-snug line-through font-medium">{task.title}</h5>
+                  <h5 className="text-xs text-on-surface-variant leading-snug line-through font-medium">{task.title}</h5>
 
-                  <div className="flex justify-between items-center pt-2 border-t border-[#f1f5f9]">
+                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[9px] text-gray-400 font-sans">{task.dueText}</span>
+                      <span className="text-[9px] text-on-surface-variant font-sans">{task.dueText}</span>
                       {task.attachments && task.attachments.length > 0 && (
-                        <span className="flex items-center gap-0.5 bg-slate-50 border border-slate-100 px-1 py-0.5 rounded text-gray-400 font-semibold text-[8px]" title={`${task.attachments.length} tệp đính kèm`}>
-                          <Paperclip className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                        <span className="flex items-center gap-0.5 bg-surface-2 border border-outline-variant px-1 py-0.5 rounded text-on-surface-variant font-semibold text-[8px]" title={`${task.attachments.length} tệp đính kèm`}>
+                          <Paperclip className="w-2.5 h-2.5 text-on-surface-variant shrink-0" />
                           <span>{task.attachments.length}</span>
                         </span>
                       )}
@@ -825,7 +825,7 @@ export default function TasksTab() {
                       <button
                         onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
                         disabled={isLoading}
-                        className="text-[10px] border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 px-1.5 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
+                        className="text-[10px] border border-outline-variant text-on-surface-variant hover:bg-surface-2 hover:text-on-surface-variant px-1.5 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
                       >
                         Mở lại
                       </button>
@@ -838,21 +838,21 @@ export default function TasksTab() {
         </div>
       </div>
       ) : activeTaskView === 'calendar' ? (
-        <div className="bg-white rounded-xl border border-outline-variant overflow-hidden text-left">
+        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden text-left">
           <div className="p-4 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-gray-900">
+              <h3 className="font-bold text-on-surface">
                 {calendarDays[0]?.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                 {' - '}
                 {calendarDays[6]?.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </h3>
-              <p className="text-xs text-gray-500 mt-1">Cột ngang là ngày, cột dọc là giờ. Click vào ô giờ để tạo task, click vào task để sửa hoặc đổi trạng thái.</p>
+              <p className="text-xs text-on-surface-variant mt-1">Cột ngang là ngày, cột dọc là giờ. Click vào ô giờ để tạo task, click vào task để sửa hoặc đổi trạng thái.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => moveCalendarWeek(-1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-gray-50"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
                 aria-label="Tuần trước"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -860,23 +860,23 @@ export default function TasksTab() {
               <button
                 type="button"
                 onClick={resetCalendarWeek}
-                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-gray-50"
+                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-2"
               >
                 Hôm nay
               </button>
               <button
                 type="button"
                 onClick={() => moveCalendarWeek(1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-gray-50"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
                 aria-label="Tuần sau"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <div className="h-9 inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-white px-2">
+              <div className="h-9 inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface px-2">
                 <button
                   type="button"
                   onClick={() => setCalendarZoom(prev => Math.max(0.7, Number((prev - 0.1).toFixed(1))))}
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-surface-2 text-on-surface-variant"
                   aria-label="Thu nhỏ calendar"
                 >
                   <ZoomOut className="w-4 h-4" />
@@ -888,18 +888,18 @@ export default function TasksTab() {
                   step="0.1"
                   value={calendarZoom}
                   onChange={event => setCalendarZoom(Number(event.target.value))}
-                  className="w-24 accent-[#004ac6]"
+                  className="w-24 accent-primary"
                   aria-label="Calendar zoom"
                 />
                 <button
                   type="button"
                   onClick={() => setCalendarZoom(prev => Math.min(1.6, Number((prev + 0.1).toFixed(1))))}
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-gray-50 text-gray-600"
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-surface-2 text-on-surface-variant"
                   aria-label="Phóng to calendar"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
-                <span className="w-10 text-right text-[11px] font-bold text-gray-500">{Math.round(calendarZoom * 100)}%</span>
+                <span className="w-10 text-right text-[11px] font-bold text-on-surface-variant">{Math.round(calendarZoom * 100)}%</span>
               </div>
             </div>
           </div>
@@ -907,19 +907,19 @@ export default function TasksTab() {
           <div ref={calendarScrollRef} className="max-h-[calc(100dvh-300px)] min-h-[420px] overflow-auto overscroll-contain">
             <div style={{ minWidth: 72 + calendarDayColumnWidth * 7 }}>
               <div
-                className="grid bg-gray-50 border-b border-outline-variant sticky top-0 z-20 shadow-sm"
+                className="grid bg-surface-2 border-b border-outline-variant sticky top-0 z-20 shadow-sm"
                 style={{ gridTemplateColumns: `72px repeat(7, minmax(${calendarDayColumnWidth}px, 1fr))` }}
               >
-                <div className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-500 border-r border-outline-variant bg-gray-50">
+                <div className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-on-surface-variant border-r border-outline-variant bg-surface-2">
                   Giờ
                 </div>
                 {calendarDays.map(day => (
-                  <div key={day.key} className="px-3 py-2 text-center border-r border-outline-variant bg-gray-50">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+                  <div key={day.key} className="px-3 py-2 text-center border-r border-outline-variant bg-surface-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
                       {day.date.toLocaleDateString('vi-VN', { weekday: 'short' })}
                     </p>
                     <p className={`mt-1 inline-flex min-w-8 h-8 items-center justify-center rounded-full text-xs font-bold ${
-                      day.isToday ? 'bg-primary text-white' : 'text-gray-800'
+                      day.isToday ? 'bg-primary text-on-primary' : 'text-on-surface'
                     }`}>
                       {day.date.getDate()}
                     </p>
@@ -933,7 +933,7 @@ export default function TasksTab() {
                     className="grid border-b border-outline-variant"
                     style={{ gridTemplateColumns: `72px repeat(7, minmax(${calendarDayColumnWidth}px, 1fr))` }}
                   >
-                    <div className="px-3 py-2 text-center text-xs font-bold text-gray-500 bg-gray-50 border-r border-outline-variant">
+                    <div className="px-3 py-2 text-center text-xs font-bold text-on-surface-variant bg-surface-2 border-r border-outline-variant">
                       {String(hour).padStart(2, '0')}:00
                     </div>
                     {calendarDays.map(day => {
@@ -958,8 +958,8 @@ export default function TasksTab() {
                               handleOpenTaskModal(null, slotDateTime);
                             }
                           }}
-                          className={`border-r border-outline-variant p-1.5 hover:bg-[#f8fafc] focus:outline-[#004ac6] cursor-pointer overflow-y-auto transition-colors ${
-                            calendarDragOverSlot === slotKey ? 'bg-blue-50 ring-2 ring-inset ring-[#004ac6]/40' : 'bg-white'
+                          className={`border-r border-outline-variant p-1.5 hover:bg-surface-2 focus:outline-primary cursor-pointer overflow-y-auto transition-colors ${
+                            calendarDragOverSlot === slotKey ? 'bg-primary/10 ring-2 ring-inset ring-primary/40' : 'bg-surface'
                           }`}
                           style={{ minHeight: calendarSlotHeight }}
                         >
@@ -997,7 +997,7 @@ export default function TasksTab() {
                                     tasks: slotTasks,
                                   });
                                 }}
-                                className="inline-flex max-w-full rounded-md border border-dashed border-[#004ac6]/30 bg-blue-50/70 px-1.5 py-0.5 text-[10px] font-bold leading-4 text-[#004ac6] hover:bg-blue-100 transition-colors"
+                                className="inline-flex max-w-full rounded-md border border-dashed border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold leading-4 text-primary hover:bg-primary/20 transition-colors"
                               >
                                 +{hiddenSlotTasksCount} task khác
                               </button>
@@ -1013,19 +1013,19 @@ export default function TasksTab() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-outline-variant overflow-hidden text-left">
+        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden text-left">
           <div className="p-4 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-gray-900 capitalize">
+              <h3 className="font-bold text-on-surface capitalize">
                 {calendarMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
               </h3>
-              <p className="text-xs text-gray-500 mt-1">Click vào ngày để tạo task. Kéo task sang ngày khác để đổi deadline và giữ nguyên giờ.</p>
+              <p className="text-xs text-on-surface-variant mt-1">Click vào ngày để tạo task. Kéo task sang ngày khác để đổi deadline và giữ nguyên giờ.</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => moveCalendarMonth(-1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-gray-50"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
                 aria-label="Tháng trước"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1033,14 +1033,14 @@ export default function TasksTab() {
               <button
                 type="button"
                 onClick={resetCalendarMonth}
-                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-gray-50"
+                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-2"
               >
                 Hôm nay
               </button>
               <button
                 type="button"
                 onClick={() => moveCalendarMonth(1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-gray-50"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
                 aria-label="Tháng sau"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -1050,9 +1050,9 @@ export default function TasksTab() {
 
           <div className="overflow-x-auto overscroll-contain">
             <div className="min-w-[840px]">
-              <div className="grid grid-cols-7 bg-gray-50 border-b border-outline-variant">
+              <div className="grid grid-cols-7 bg-surface-2 border-b border-outline-variant">
                 {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(dayLabel => (
-                  <div key={dayLabel} className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-gray-500 border-r last:border-r-0 border-outline-variant">
+                  <div key={dayLabel} className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-on-surface-variant border-r last:border-r-0 border-outline-variant">
                     {dayLabel}
                   </div>
                 ))}
@@ -1078,18 +1078,18 @@ export default function TasksTab() {
                           handleOpenTaskModal(null, `${day.key}T09:00`);
                         }
                       }}
-                      className={`min-h-36 border-r border-b border-outline-variant p-2 cursor-pointer focus:outline-[#004ac6] transition-colors ${
-                        day.isCurrentMonth ? 'bg-white hover:bg-[#f8fafc]' : 'bg-gray-50/70 text-gray-400'
-                      } ${calendarDragOverSlot === day.key ? 'bg-blue-50 ring-2 ring-inset ring-[#004ac6]/40' : ''}`}
+                      className={`min-h-36 border-r border-b border-outline-variant p-2 cursor-pointer focus:outline-primary transition-colors ${
+                        day.isCurrentMonth ? 'bg-surface hover:bg-surface-2' : 'bg-surface-2/70 text-on-surface-variant'
+                      } ${calendarDragOverSlot === day.key ? 'bg-primary/10 ring-2 ring-inset ring-primary/40' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <span className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold ${
-                          day.isToday ? 'bg-primary text-white' : day.isCurrentMonth ? 'text-gray-800' : 'text-gray-400'
+                          day.isToday ? 'bg-primary text-on-primary' : day.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant'
                         }`}>
                           {day.date.getDate()}
                         </span>
                         {dayTasks.length > 0 && (
-                          <span className="text-[10px] font-bold text-gray-400">{dayTasks.length} task</span>
+                          <span className="text-[10px] font-bold text-on-surface-variant">{dayTasks.length} task</span>
                         )}
                       </div>
                       <div className="space-y-1">
@@ -1128,7 +1128,7 @@ export default function TasksTab() {
                                 tasks: dayTasks,
                               });
                             }}
-                            className="inline-flex rounded-md border border-dashed border-[#004ac6]/30 bg-blue-50/70 px-1.5 py-0.5 text-[10px] font-bold text-[#004ac6] hover:bg-blue-100"
+                            className="inline-flex rounded-md border border-dashed border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary hover:bg-primary/20"
                           >
                             +{hiddenTasksCount} task khác
                           </button>
@@ -1145,13 +1145,13 @@ export default function TasksTab() {
 
       {/* Task Edit/Create Form Modal */}
       {isTaskModalOpen && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingTask ? `Chỉnh sửa Tác vụ IT [${currentEditingTask.id}]` : 'Tạo Tác vụ công việc IT mới'}
               </h3>
-              <button onClick={() => setIsTaskModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+              <button onClick={() => setIsTaskModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
             </div>
             <form onSubmit={handleSaveTaskSubmit} className="space-y-4 text-sm">
               <div>
@@ -1162,7 +1162,7 @@ export default function TasksTab() {
                   placeholder="Ví dụ: Fix lỗi đồng bộ hóa POS CH Q1"
                   value={taskTitle}
                   onChange={e => setTaskTitle(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary"
                 />
               </div>
               <div>
@@ -1172,7 +1172,7 @@ export default function TasksTab() {
                   placeholder="Nhập mô tả chi tiết cho nhiệm vụ"
                   value={taskDescription}
                   onChange={e => setTaskDescription(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1187,7 +1187,7 @@ export default function TasksTab() {
                       setTaskAssigneeId(selectedUser?.id || '');
                       setTaskAssignee(selectedUser?.name || '');
                     }}
-                    className="w-full px-3 py-2 border rounded-lg bg-white focus:outline-[#004ac6] disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border rounded-lg bg-surface focus:outline-primary disabled:bg-surface-2 disabled:text-on-surface-variant disabled:cursor-not-allowed"
                   >
                     <option value="" disabled>
                       {assigneeUsers.length === 0 ? 'Không có user role 2' : 'Chọn người đảm nhận'}
@@ -1205,7 +1205,7 @@ export default function TasksTab() {
                     type="datetime-local"
                     value={taskDue}
                     onChange={e => setTaskDue(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-primary"
                   />
                 </div>
               </div>
@@ -1214,7 +1214,7 @@ export default function TasksTab() {
                 <select
                   value={taskStatusField}
                   onChange={e => setTaskStatusField(e.target.value as any)}
-                  className="w-full px-3 py-2 border rounded-lg bg-white"
+                  className="w-full px-3 py-2 border rounded-lg bg-surface"
                 >
                   <option value="pending">Chờ xử lý (Pending)</option>
                   <option value="progress">Đang thực hiện (In Progress)</option>
@@ -1223,10 +1223,10 @@ export default function TasksTab() {
               </div>
 
               {/* Attachments Section */}
-              <div className="border border-outline-variant rounded-xl p-3 bg-[#f8fafc] text-left">
+              <div className="border border-outline-variant rounded-xl p-3 bg-surface-2 text-left">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-gray-700 text-xs">Đính kèm tài liệu hỗ trợ ({taskAttachments.length})</span>
-                  <label className="text-[10px] text-primary hover:underline font-bold cursor-pointer select-none bg-white border border-outline-variant px-2 py-1 rounded shadow-sm hover:bg-gray-50 flex items-center gap-1">
+                  <span className="font-bold text-on-surface-variant text-xs">Đính kèm tài liệu hỗ trợ ({taskAttachments.length})</span>
+                  <label className="text-[10px] text-primary hover:underline font-bold cursor-pointer select-none bg-surface border border-outline-variant px-2 py-1 rounded shadow-sm hover:bg-surface-2 flex items-center gap-1">
                     <Plus className="w-3 h-3" />
                     <span>Thêm tệp</span>
                     <input
@@ -1237,20 +1237,20 @@ export default function TasksTab() {
                   </label>
                 </div>
                 {taskAttachments.length === 0 ? (
-                  <p className="text-[10px] text-gray-400 italic text-center py-2">Chưa đính kèm tài liệu nào.</p>
+                  <p className="text-[10px] text-on-surface-variant italic text-center py-2">Chưa đính kèm tài liệu nào.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
                     {taskAttachments.map((att, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-white border border-gray-150 p-1.5 rounded-lg text-xs">
+                      <div key={idx} className="flex items-center justify-between bg-surface border border-outline-variant p-1.5 rounded-lg text-xs">
                         <div className="flex items-center gap-1.5 truncate max-w-[80%]">
                           <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span className="truncate font-medium text-gray-700">{att.name}</span>
-                          <span className="text-[9px] text-gray-400">({att.size})</span>
+                          <span className="truncate font-medium text-on-surface-variant">{att.name}</span>
+                          <span className="text-[9px] text-on-surface-variant">({att.size})</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleDeleteAttachmentClick(att.name)}
-                          className="text-[10px] text-red-600 hover:text-red-700 font-bold px-1.5 py-0.5 rounded hover:bg-red-50 cursor-pointer"
+                          className="text-[10px] text-error hover:text-error font-bold px-1.5 py-0.5 rounded hover:bg-error-container cursor-pointer"
                         >
                           Xóa
                         </button>
@@ -1264,14 +1264,14 @@ export default function TasksTab() {
                 <button
                   type="button"
                   onClick={() => setIsTaskModalOpen(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="btn-secondary"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-primary"
                 >
                   {isLoading ? 'Đang lưu...' : 'Lưu tác vụ'}
                 </button>
@@ -1282,22 +1282,22 @@ export default function TasksTab() {
       )}
 
       {calendarSlotDetails && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-hidden border border-outline-variant text-left">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-hidden border border-outline-variant text-left">
             <div className="flex items-center justify-between gap-3 p-4 border-b border-outline-variant">
               <div>
-                <h3 className="text-base font-bold text-gray-900">Danh sách tác vụ</h3>
-                <p className="text-xs text-gray-500 mt-1">{calendarSlotDetails.title}</p>
+                <h3 className="text-base font-bold text-on-surface">Danh sách tác vụ</h3>
+                <p className="text-xs text-on-surface-variant mt-1">{calendarSlotDetails.title}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCalendarSlotDetails(null)}
-                className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer px-2 py-1 rounded hover:bg-gray-100"
+                className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer px-2 py-1 rounded hover:bg-surface-2"
               >
                 &#x2715;
               </button>
             </div>
-            <div className="p-4 space-y-2 max-h-[70dvh] overflow-y-auto bg-[#f8fafc]">
+            <div className="p-4 space-y-2 max-h-[70dvh] overflow-y-auto bg-surface-2">
               {calendarSlotDetails.tasks.map(task => (
                 <button
                   key={task.id}
@@ -1306,7 +1306,7 @@ export default function TasksTab() {
                     setCalendarSlotDetails(null);
                     handleOpenTaskModal(task);
                   }}
-                  className={`w-full text-left rounded-lg border px-3 py-2.5 shadow-sm hover:shadow transition-shadow bg-white ${statusClassByTask(task.status)}`}
+                  className={`w-full text-left rounded-lg border px-3 py-2.5 shadow-sm hover:shadow transition-shadow bg-surface ${statusClassByTask(task.status)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -1327,60 +1327,60 @@ export default function TasksTab() {
 
       {/* Task Details Panel Modal */}
       {selectedTaskDetails && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-orange-50 text-orange-600">
+                <span className="p-1.5 rounded-lg bg-warning-container text-warning">
                   <Plus className="w-4 h-4" />
                 </span>
-                <span className="text-xs font-mono font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                <span className="text-xs font-mono font-bold text-on-surface-variant bg-surface-2 px-2 py-0.5 rounded">
                   {selectedTaskDetails.id}
                 </span>
-                <span className="text-xs text-gray-550 font-bold">Chi tiết tác vụ IT</span>
+                <span className="text-xs text-on-surface-variant font-bold">Chi tiết tác vụ IT</span>
               </div>
               <button
                 onClick={() => setSelectedTaskDetails(null)}
-                className="text-gray-400 hover:text-gray-650 font-bold px-2 py-1 rounded hover:bg-gray-100 transition-colors cursor-pointer"
+                className="text-on-surface-variant hover:text-on-surface font-bold px-2 py-1 rounded hover:bg-surface-2 transition-colors cursor-pointer"
                 type="button"
               >
                 &#x2715;
               </button>
             </div>
 
-            <div className="space-y-4 text-sm text-[#191b23]">
+            <div className="space-y-4 text-sm text-on-surface">
               <div>
-                <h3 className="text-base font-extrabold text-gray-900 leading-snug">
+                <h3 className="text-base font-extrabold text-on-surface leading-snug">
                   {selectedTaskDetails.title}
                 </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Trạng thái</span>
+                <div className="bg-surface-2 border border-outline-variant p-3 rounded-xl">
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wide block mb-1">Trạng thái</span>
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
                       selectedTaskDetails.status === 'pending'
-                        ? 'bg-gray-100 text-gray-800'
+                        ? 'bg-surface-2 text-on-surface'
                         : selectedTaskDetails.status === 'progress'
-                        ? 'bg-blue-100 text-primary'
-                        : 'bg-emerald-100 text-emerald-800'
+                        ? 'bg-secondary-container text-primary'
+                        : 'bg-success-container text-on-success-container'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         selectedTaskDetails.status === 'pending'
-                          ? 'bg-gray-500'
+                          ? 'bg-on-surface-variant'
                           : selectedTaskDetails.status === 'progress'
                           ? 'bg-primary'
-                          : 'bg-emerald-500'
+                          : 'bg-success'
                       }`}></span>
                       {selectedTaskDetails.status === 'pending' ? 'Chờ xử lý' : selectedTaskDetails.status === 'progress' ? 'Đang làm' : 'Hoàn thành'}
                     </span>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide block mb-1">Hạn xử lý</span>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-red-650">
+                <div className="bg-surface-2 border border-outline-variant p-3 rounded-xl">
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wide block mb-1">Hạn xử lý</span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-error">
                     <Clock className="w-4 h-4 shrink-0" />
                     <span>{selectedTaskDetails.dueText}</span>
                   </div>
@@ -1388,31 +1388,31 @@ export default function TasksTab() {
               </div>
 
               {/* Assignee details */}
-              <div className="flex items-center gap-3 bg-[#f8fafc] border border-outline-variant p-3.5 rounded-xl">
+              <div className="flex items-center gap-3 bg-surface-2 border border-outline-variant p-3.5 rounded-xl">
                 <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm">
                   {getTaskAssigneeInitial(selectedTaskDetails)}
                 </div>
                 <div className="text-xs">
-                  <p className="font-extrabold text-gray-900 leading-snug">Phụ trách kỹ thuật</p>
-                  <p className="text-gray-500 font-medium mt-0.5">{getTaskAssigneeName(selectedTaskDetails)}</p>
+                  <p className="font-extrabold text-on-surface leading-snug">Phụ trách kỹ thuật</p>
+                  <p className="text-on-surface-variant font-medium mt-0.5">{getTaskAssigneeName(selectedTaskDetails)}</p>
                 </div>
               </div>
 
               {/* Notes Area */}
               <div className="space-y-1.5 text-left">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Nhật ký xử lý & Ghi chú</span>
+                <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wide">Nhật ký xử lý & Ghi chú</span>
                 <textarea
                   rows={3}
                   value={taskNotesInput}
                   onChange={e => setTaskNotesInput(e.target.value)}
                   placeholder="Ghi chú chi tiết linh kiện máy thay thế, tiến trình..."
-                  className="w-full text-xs p-3 border rounded-xl focus:outline-none focus:border-[#004ac6] bg-slate-50/50 hover:bg-slate-50 focus:bg-white transition-all resize-none"
+                  className="w-full text-xs p-3 border rounded-xl focus:outline-none focus:border-primary bg-surface-2/50 hover:bg-surface-2 focus:bg-surface transition-all resize-none"
                 />
                 <div className="flex justify-end">
                   <button
                     onClick={handleSaveNotes}
                     disabled={isLoading}
-                    className="bg-[#004ac6] hover:bg-primary-container text-white text-[11px] font-bold px-3.5 py-1.5 rounded-lg shadow-sm cursor-pointer select-none active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="btn-primary text-[11px]"
                   >
                     {isLoading ? 'Đang lưu...' : 'Lưu ghi chú'}
                   </button>
@@ -1422,7 +1422,7 @@ export default function TasksTab() {
               {/* Attachments Section in detail */}
               <div className="space-y-1.5 text-left">
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Tài liệu đính kèm</span>
+                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wide">Tài liệu đính kèm</span>
                   <label className="text-[10px] text-primary hover:underline font-bold cursor-pointer select-none flex items-center gap-0.5">
                     <Plus className="w-3 h-3" /> Gửi tệp mới
                     <input
@@ -1433,21 +1433,21 @@ export default function TasksTab() {
                   </label>
                 </div>
 
-                <div className="border border-slate-100 rounded-xl p-3 bg-slate-50/30 space-y-2">
+                <div className="border border-outline-variant rounded-xl p-3 bg-surface-2/30 space-y-2">
                   {!selectedTaskDetails.attachments || selectedTaskDetails.attachments.length === 0 ? (
-                    <p className="text-[11px] text-gray-400 italic text-center py-2">Không có tệp đính kèm nào.</p>
+                    <p className="text-[11px] text-on-surface-variant italic text-center py-2">Không có tệp đính kèm nào.</p>
                   ) : (
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
                       {selectedTaskDetails.attachments.map((att, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-white border border-[#f1f5f9] p-2 rounded-xl text-xs">
+                        <div key={idx} className="flex items-center justify-between bg-surface border border-outline-variant p-2 rounded-xl text-xs">
                           <div className="flex items-center gap-2 truncate max-w-[80%]">
                             <PaperclipIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <span className="truncate font-semibold text-gray-800">{att.name}</span>
-                            <span className="text-[10px] text-gray-400">({att.size})</span>
+                            <span className="truncate font-semibold text-on-surface">{att.name}</span>
+                            <span className="text-[10px] text-on-surface-variant">({att.size})</span>
                           </div>
                           <button
                             onClick={() => handleDeleteAttachmentClick(att.name)}
-                            className="text-[10px] text-red-600 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-50 cursor-pointer"
+                            className="text-[10px] text-error hover:text-error font-bold px-2 py-1 rounded hover:bg-error-container cursor-pointer"
                           >
                             Xóa tệp
                           </button>
@@ -1458,10 +1458,10 @@ export default function TasksTab() {
                 </div>
               </div>
 
-              <div className="flex sm:justify-end gap-2.5 pt-4 border-t border-gray-150">
+              <div className="flex sm:justify-end gap-2.5 pt-4 border-t border-outline-variant">
                 <button
                   onClick={() => setSelectedTaskDetails(null)}
-                  className="w-full sm:w-auto px-5 py-2 bg-gray-900 text-white font-bold rounded-lg hover:bg-black transition-transform active:scale-95 text-xs cursor-pointer"
+                  className="btn-secondary w-full sm:w-auto px-5 py-2 text-xs"
                 >
                   Hoàn tất xem
                 </button>

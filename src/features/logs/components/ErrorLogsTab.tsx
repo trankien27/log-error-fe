@@ -87,21 +87,20 @@ function formatDate(date: string) {
 }
 
 function getStatusClass(status: ErrorLogStatus) {
-  if (status === 1) return 'bg-blue-50 text-blue-700 border-blue-100';
-  if (status === 2) return 'bg-orange-50 text-orange-700 border-orange-100';
-  return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (status === 1) return 'badge-info';
+  if (status === 2) return 'badge-warning';
+  return 'badge-success';
 }
 
 function getSeverityClass(severity: Severity) {
-  if (severity === 3) return 'bg-red-50 text-red-700 border-red-100';
-  if (severity === 2) return 'bg-amber-50 text-amber-700 border-amber-100';
-  return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (severity === 3) return 'badge-error';
+  if (severity === 2) return 'badge-warning';
+  return 'badge-success';
 }
 
 export default function ErrorLogsTab() {
   const currentUser = useAuthStore(s => s.currentUser);
   const isAdmin = currentUser?.role === 'Admin';
-  console.log('Current user in ErrorLogsTab:', currentUser);
   const {
     logs,
     totalItems,
@@ -414,14 +413,14 @@ export default function ErrorLogsTab() {
     <div className="space-y-6 animate-fadeIn">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 font-sans">Danh sách log lỗi hệ thống</h1>
-          <p className="text-xs text-gray-500 mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
+          <h1 className="text-xl font-bold text-on-surface font-sans">Danh sách log lỗi hệ thống</h1>
+          <p className="text-xs text-on-surface-variant mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
-            className="bg-white text-primary border border-primary/30 hover:bg-blue-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="bg-surface text-primary border border-primary/30 hover:bg-primary/10 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <ImagePlus className="w-4 h-4" /> Tải ảnh giao dịch
           </button>
@@ -430,7 +429,7 @@ export default function ErrorLogsTab() {
               type="button"
               onClick={handleSyncGoogleSheet}
               disabled={isSyncingGoogleSheet || isLoading}
-              className="bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="bg-surface text-success border border-success/30 hover:bg-success-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} /> {isSyncingGoogleSheet ? 'Đang sync...' : 'Sync Google Sheet'}
             </button>
@@ -439,7 +438,7 @@ export default function ErrorLogsTab() {
             type="button"
             onClick={handleExport}
             disabled={isExporting}
-            className="bg-white text-[#004ac6] border border-[#004ac6]/30 hover:bg-blue-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="bg-surface text-primary border border-primary/30 hover:bg-primary/10 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <Download className="w-4 h-4" /> {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
           </button>
@@ -447,14 +446,14 @@ export default function ErrorLogsTab() {
             type="button"
             onClick={handleGenerateReportText}
             disabled={isReportLoading || selectedLogIds.length === 0}
-            className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="bg-surface text-on-surface-variant border border-outline-variant hover:bg-surface-2 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <FileText className="w-4 h-4" /> {isReportLoading ? 'Đang xuất...' : `Xuất báo cáo (${selectedLogIds.length})`}
           </button>
           <button
             type="button"
             onClick={() => handleOpenModal()}
-            className="bg-primary text-white hover:brightness-90 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="btn-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <Plus className="w-4 h-4" /> Log lỗi
           </button>
@@ -465,14 +464,14 @@ export default function ErrorLogsTab() {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/50 p-4 backdrop-blur-sm">
       <form
         onSubmit={handleUploadTransactionImages}
-        className="w-full max-w-2xl rounded-2xl border border-outline-variant bg-white p-5 shadow-2xl text-left"
+        className="w-full max-w-2xl rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl text-left"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <h3 className="font-bold text-on-surface">Tải ảnh lỗi giao dịch</h3>
             <p className="mt-1 text-xs text-on-surface-variant">Ảnh sẽ được gắn trực tiếp với mã giao dịch tương ứng.</p>
           </div>
-          <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label="Đóng">
+          <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label="Đóng">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -494,14 +493,14 @@ export default function ErrorLogsTab() {
               accept="image/jpeg,image/png,image/webp"
               multiple
               onChange={event => setUploadImages(Array.from(event.target.files || []))}
-              className="mt-1 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-blue-50/40 p-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-white focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="mt-1 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-primary/5 p-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </label>
 
           <button
             type="submit"
             disabled={isUploadingImages}
-            className="h-10 px-4 rounded-lg bg-primary text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:brightness-90 disabled:opacity-60 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="btn-primary h-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             {isUploadingImages ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {isUploadingImages ? 'Đang upload...' : 'Upload ảnh'}
@@ -513,7 +512,7 @@ export default function ErrorLogsTab() {
             {uploadImages.map(file => (
               <span
                 key={`${file.name}_${file.size}_${file.lastModified}`}
-                className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-600"
+                className="rounded border border-outline-variant bg-surface-2 px-2 py-1 text-xs font-semibold text-on-surface-variant"
               >
                 {file.name}
               </span>
@@ -524,10 +523,10 @@ export default function ErrorLogsTab() {
       </div>
       )}
 
-      <div className="bg-white rounded-xl border border-outline-variant p-4 shadow-sm text-left">
+      <div className="bg-surface rounded-xl border border-outline-variant p-4 shadow-sm text-left">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-3">
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Cửa hàng</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cửa hàng</label>
             <LazySearchDropdown
               ariaLabel="Lọc log theo cửa hàng"
               value={logStoreFilter}
@@ -549,7 +548,7 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1">Booth</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Booth</label>
             <LazySearchDropdown
               ariaLabel="Lọc log theo booth"
               value={logBoothFilter}
@@ -562,12 +561,12 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" htmlFor="log-month-filter">Tháng</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-month-filter">Tháng</label>
             <select
               id="log-month-filter"
               value={logMonthFilter}
               onChange={e => setLogMonthFilter(e.target.value ? Number(e.target.value) : '')}
-              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
             >
               <option value="">Tất cả</option>
               {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
@@ -577,12 +576,12 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" htmlFor="log-error-group-filter">Nhóm lỗi</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-error-group-filter">Nhóm lỗi</label>
             <select
               id="log-error-group-filter"
               value={logErrorGroupFilter}
               onChange={e => setLogErrorGroupFilter(e.target.value ? Number(e.target.value) as ErrorGroup : '')}
-              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
             >
               <option value="">Tất cả</option>
               {errorGroupOptions.map(option => (
@@ -592,12 +591,12 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" htmlFor="log-status-filter">Trạng thái</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-status-filter">Trạng thái</label>
             <select
               id="log-status-filter"
               value={logStatusFilter}
               onChange={e => setLogStatusFilter(e.target.value ? Number(e.target.value) as ErrorLogStatus : '')}
-              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
             >
               <option value="">Tất cả</option>
               {statusOptions.map(option => (
@@ -607,12 +606,12 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" htmlFor="log-processing-flow-filter">Luồng xử lý</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-processing-flow-filter">Luồng xử lý</label>
             <select
               id="log-processing-flow-filter"
               value={logProcessingFlowFilter}
               onChange={e => setLogProcessingFlowFilter(e.target.value ? Number(e.target.value) as ProcessingFlow : '')}
-              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
             >
               <option value="">Tất cả</option>
               {processingFlowOptions.map(option => (
@@ -622,12 +621,12 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" htmlFor="log-severity-filter">Mức độ</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-severity-filter">Mức độ</label>
             <select
               id="log-severity-filter"
               value={logSeverityFilter}
               onChange={e => setLogSeverityFilter(e.target.value ? Number(e.target.value) as Severity : '')}
-              className="w-full text-xs px-3 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
             >
               <option value="">Tất cả</option>
               {severityOptions.map(option => (
@@ -637,34 +636,34 @@ export default function ErrorLogsTab() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-bold text-gray-700 uppercase tracking-wider mb-1" htmlFor="log-search-input">Tìm kiếm</label>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-search-input">Tìm kiếm</label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
               <input
                 type="text"
                 id="log-search-input"
                 placeholder="Mã lỗi, cửa hàng..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-[#f3f3fe] border border-outline-variant rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-gray-600"
+                className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-outline-variant rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-on-surface-variant"
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-outline-variant text-[11px] uppercase tracking-wider text-gray-500 select-none font-sans">
+              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant select-none font-sans">
                 <th className="py-4 px-5 font-bold w-12">
                   <input
                     type="checkbox"
                     checked={isAllCurrentPageSelected}
                     onChange={handleToggleCurrentPageSelection}
                     disabled={filteredLogs.length === 0}
-                    className="w-6 h-6 accent-[#004ac6] cursor-pointer disabled:cursor-not-allowed"
+                    className="w-4 h-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
                     aria-label="Chọn tất cả log lỗi trên trang hiện tại"
                   />
                 </th>
@@ -677,44 +676,44 @@ export default function ErrorLogsTab() {
                 <th className="py-4 px-5 font-bold text-right">Tùy biến</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#f1f5f9]">
+            <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-bold text-gray-400">
+                  <td colSpan={8} className="py-10 text-center font-bold text-on-surface-variant">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-bold text-gray-400">
+                  <td colSpan={8} className="py-10 text-center font-bold text-on-surface-variant">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-[#faf8ff] transition-colors">
+                  <tr key={log.id} className="hover:bg-surface-2 transition-colors">
                     <td className="py-4 px-5">
                       <input
                         type="checkbox"
                         checked={selectedLogIdSet.has(log.id)}
                         onChange={() => handleToggleLogSelection(log.id)}
-                        className="w-6 h-6 accent-[#004ac6] cursor-pointer"
+                        className="w-4 h-4 accent-primary cursor-pointer"
                         aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
                       />
                     </td>
-                    <td className="py-4 px-5 text-gray-700 font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
-                    <td className="py-4 px-5 font-semibold text-gray-900">{log.store}</td>
-                    <td className="py-4 px-5 text-gray-700 max-w-xs">
+                    <td className="py-4 px-5 text-on-surface-variant font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
+                    <td className="py-4 px-5 font-semibold text-on-surface">{log.store}</td>
+                    <td className="py-4 px-5 text-on-surface-variant max-w-xs">
                       <span className="line-clamp-2">{log.description || 'N/A'}</span>
                     </td>
-                    <td className="py-4 px-5 text-gray-700">{errorGroupLabels[log.errorGroup]}</td>
+                    <td className="py-4 px-5 text-on-surface-variant">{errorGroupLabels[log.errorGroup]}</td>
                     <td className="py-4 px-5">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getStatusClass(log.status)}`}>
+                      <span className={getStatusClass(log.status)}>
                         {statusLabels[log.status]}
                       </span>
                     </td>
                     <td className="py-4 px-5">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getSeverityClass(log.severity)}`}>
+                      <span className={getSeverityClass(log.severity)}>
                         {severityLabels[log.severity]}
                       </span>
                     </td>
@@ -723,7 +722,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-slate-50 hover:text-gray-900 transition-colors hover:border-slate-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-surface-2 hover:text-on-surface transition-colors hover:border-outline-variant cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Xem chi tiết"
                           aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
                         >
@@ -732,7 +731,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => handleOpenModal(log)}
-                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-blue-50 hover:text-primary transition-colors hover:border-blue-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-primary/10 hover:text-primary transition-colors hover:border-primary/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa log lỗi ${log.errorCode || log.id}`}
                         >
@@ -741,7 +740,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => handleDelete(log)}
-                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-red-50 hover:text-red-600 transition-colors hover:border-red-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-error-container hover:text-error transition-colors hover:border-error/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Xóa lỗi"
                           aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
                         >
@@ -756,31 +755,31 @@ export default function ErrorLogsTab() {
           </table>
         </div>
 
-        <div className="bg-gray-50 border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
-          <span className="text-xs text-gray-700">
+        <div className="bg-surface-2 border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
+          <span className="text-xs text-on-surface-variant">
             Hiển thị {filteredLogs.length} của {totalItems} bản ghi lỗi · Đã chọn {selectedLogIds.length}
           </span>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <label className="text-gray-700 font-semibold" htmlFor="log-page-size">Số dòng</label>
+            <label className="text-on-surface-variant font-semibold" htmlFor="log-page-size">Số dòng</label>
             <select
               id="log-page-size"
               value={logPageSize}
               onChange={e => setLogPageSize(Number(e.target.value))}
               disabled={isLoading}
-              className="px-2 py-1.5 bg-white border border-outline-variant rounded-lg text-gray-700 font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-on-surface-variant font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {[10, 20, 50, 100].map(size => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span className="text-[11px] text-gray-700 font-medium min-w-[72px] text-center">
+            <span className="text-[11px] text-on-surface-variant font-medium min-w-[72px] text-center">
               Trang {totalPages === 0 ? 0 : logPageIndex}/{totalPages}
             </span>
             <button
               type="button"
               onClick={() => setLogPageIndex(Math.max(logPageIndex - 1, 1))}
               disabled={isLoading || logPageIndex <= 1}
-              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-white text-gray-700 hover:bg-blue-50 hover:text-[#004ac6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
               aria-label="Trang trước"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -789,7 +788,7 @@ export default function ErrorLogsTab() {
               type="button"
               onClick={() => setLogPageIndex(logPageIndex + 1)}
               disabled={isLoading || totalPages === 0 || logPageIndex >= totalPages}
-              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-white text-gray-700 hover:bg-blue-50 hover:text-[#004ac6] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
               aria-label="Trang sau"
             >
               <ChevronRight className="w-4 h-4" />
@@ -799,11 +798,11 @@ export default function ErrorLogsTab() {
       </div>
 
       {isReportModalOpen && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <h3 className="text-lg font-bold text-on-surface">Xuất báo cáo văn bản</h3>
-              <button type="button" onClick={() => setIsReportModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setIsReportModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
             </div>
 
             <div className="space-y-4 text-sm text-left">
@@ -814,7 +813,7 @@ export default function ErrorLogsTab() {
                   onChange={e => setReportText(e.target.value)}
                   rows={8}
                   placeholder="Nội dung báo cáo sẽ hiển thị sau khi xuất."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] font-mono text-xs resize-y"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary font-mono text-xs resize-y"
                 />
               </div>
 
@@ -823,14 +822,14 @@ export default function ErrorLogsTab() {
                   type="button"
                   onClick={handleCopyReportText}
                   disabled={!reportText}
-                  className="px-4 py-2 rounded-lg border border-outline-variant text-gray-600 hover:bg-gray-50 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <ClipboardCopy className="w-4 h-4" /> Copy
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsReportModalOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-container font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="btn-primary"
                 >
                   Đóng
                 </button>
@@ -841,13 +840,13 @@ export default function ErrorLogsTab() {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <h3 className="text-lg font-bold text-on-surface">
                 {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Thêm lỗi mới'}
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
             </div>
             <form onSubmit={handleSave} onKeyDown={handleSaveShortcut} className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm text-left">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -858,7 +857,7 @@ export default function ErrorLogsTab() {
                     required
                     value={receivedDate}
                     onChange={e => setReceivedDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6]"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-primary"
                   />
                 </div>
                 <div>
@@ -900,7 +899,7 @@ export default function ErrorLogsTab() {
                   <select
                     value={errorGroup}
                     onChange={e => setErrorGroup(Number(e.target.value) as ErrorGroup)}
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    className="w-full px-3 py-2 border rounded-lg bg-surface"
                   >
                     {errorGroupOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -912,7 +911,7 @@ export default function ErrorLogsTab() {
                   <select
                     value={processingFlow}
                     onChange={e => setProcessingFlow(Number(e.target.value) as ProcessingFlow)}
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    className="w-full px-3 py-2 border rounded-lg bg-surface"
                   >
                     {processingFlowOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -924,7 +923,7 @@ export default function ErrorLogsTab() {
                   <select
                     value={status}
                     onChange={e => setStatus(Number(e.target.value) as ErrorLogStatus)}
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    className="w-full px-3 py-2 border rounded-lg bg-surface"
                   >
                     {statusOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -936,7 +935,7 @@ export default function ErrorLogsTab() {
                   <select
                     value={severity}
                     onChange={e => setSeverity(Number(e.target.value) as Severity)}
-                    className="w-full px-3 py-2 border rounded-lg bg-white"
+                    className="w-full px-3 py-2 border rounded-lg bg-surface"
                   >
                     {severityOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -953,7 +952,7 @@ export default function ErrorLogsTab() {
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Nhập mô tả lỗi chi tiết..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
                 />
               </div>
 
@@ -964,7 +963,7 @@ export default function ErrorLogsTab() {
                   value={preliminaryCause}
                   onChange={e => setPreliminaryCause(e.target.value)}
                   placeholder="Nhập nguyên nhân sơ bộ nếu có..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
                 />
               </div>
 
@@ -975,7 +974,7 @@ export default function ErrorLogsTab() {
                   value={solution}
                   onChange={e => setSolution(e.target.value)}
                   placeholder="Nhập cách xử lý nếu có..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
                 />
               </div>
 
@@ -986,7 +985,7 @@ export default function ErrorLogsTab() {
                   value={note}
                   onChange={e => setNote(e.target.value)}
                   placeholder="Nhập ghi chú thêm..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-[#004ac6] resize-none"
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
                 />
               </div>
 
@@ -994,14 +993,14 @@ export default function ErrorLogsTab() {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  className="btn-secondary"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="px-5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-primary"
                 >
                   {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
@@ -1012,46 +1011,46 @@ export default function ErrorLogsTab() {
       )}
 
       {selectedLogDetails && (
-        <div className="fixed inset-0 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-[#e2e8f0]">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <div>
                 <h3 className="text-lg font-bold text-on-surface">Chi tiết log lỗi</h3>
-                <p className="text-xs text-gray-500 mt-1">{selectedLogDetails.errorCode || selectedLogDetails.id}</p>
+                <p className="text-xs text-on-surface-variant mt-1">{selectedLogDetails.errorCode || selectedLogDetails.id}</p>
               </div>
-              <button type="button" onClick={() => setSelectedLogDetails(null)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setSelectedLogDetails(null)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Ngày tiếp nhận</span>
-                <p className="font-semibold text-gray-900">{formatDate(selectedLogDetails.receivedDate)}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Ngày tiếp nhận</span>
+                <p className="font-semibold text-on-surface">{formatDate(selectedLogDetails.receivedDate)}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cửa hàng</span>
-                <p className="font-semibold text-gray-900">{selectedLogDetails.store}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cửa hàng</span>
+                <p className="font-semibold text-on-surface">{selectedLogDetails.store}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Booth</span>
-                <p className="font-semibold text-gray-900">{selectedLogDetails.booth || 'N/A'}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Booth</span>
+                <p className="font-semibold text-on-surface">{selectedLogDetails.booth || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nhóm lỗi</span>
-                <p className="font-semibold text-gray-900">{errorGroupLabels[selectedLogDetails.errorGroup]}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Nhóm lỗi</span>
+                <p className="font-semibold text-on-surface">{errorGroupLabels[selectedLogDetails.errorGroup]}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">IT phụ trách</span>
-                <p className="font-semibold text-gray-900">{selectedLogDetails.assignedToName || selectedLogDetails.assignedToId || 'N/A'}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">IT phụ trách</span>
+                <p className="font-semibold text-on-surface">{selectedLogDetails.assignedToName || selectedLogDetails.assignedToId || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Trạng thái</span>
-                <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getStatusClass(selectedLogDetails.status)}`}>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Trạng thái</span>
+                <span className={getStatusClass(selectedLogDetails.status)}>
                   {statusLabels[selectedLogDetails.status]}
                 </span>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mức độ</span>
-                <span className={`inline-flex px-2.5 py-1 rounded-full border text-[10px] font-bold ${getSeverityClass(selectedLogDetails.severity)}`}>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Mức độ</span>
+                <span className={getSeverityClass(selectedLogDetails.severity)}>
                   {severityLabels[selectedLogDetails.severity]}
                 </span>
               </div>
@@ -1059,20 +1058,20 @@ export default function ErrorLogsTab() {
 
             <div className="space-y-4 mt-5 text-sm">
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Mô tả lỗi</span>
-                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.description || 'N/A'}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Mô tả lỗi</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.description || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Nguyên nhân sơ bộ</span>
-                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.preliminaryCause || 'N/A'}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Nguyên nhân sơ bộ</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.preliminaryCause || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Cách xử lý</span>
-                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.solution || 'N/A'}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cách xử lý</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.solution || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Ghi chú</span>
-                <p className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-gray-700 whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Ghi chú</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
               </div>
             </div>
 
@@ -1080,7 +1079,7 @@ export default function ErrorLogsTab() {
               <button
                 type="button"
                 onClick={() => setSelectedLogDetails(null)}
-                className="px-5 py-2 bg-gray-900 text-white rounded-lg hover:bg-black text-xs font-bold cursor-pointer"
+                className="btn-secondary px-5 py-2 text-xs"
               >
                 Đóng
               </button>

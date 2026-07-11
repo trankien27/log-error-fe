@@ -39,10 +39,12 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-container-low flex items-center justify-center p-4 animate-fadeIn">
-      <div className="w-full max-w-md bg-white border border-outline-variant rounded-2xl shadow-lg p-6 sm:p-8 space-y-6">
+    <div className="relative min-h-screen bg-background flex items-center justify-center p-4 animate-fadeIn overflow-hidden">
+      <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
+      <div className="absolute inset-0 noise-overlay pointer-events-none" />
+      <div className="relative w-full max-w-md bg-surface border border-outline-variant rounded-2xl shadow-elevated p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-1">
-          <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-md">
+          <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-brand">
             <ShieldCheck className="h-6 w-6" />
           </span>
           <h1 className="text-xl font-bold text-on-surface">IT Admin System</h1>
@@ -64,7 +66,7 @@ export default function AuthPage() {
               }}
               aria-invalid={Boolean(authError)}
               className={`mt-1.5 w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition ${
-                authError ? 'border-red-500 focus:ring-2 focus:ring-red-100' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
+                authError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
               }`}
             />
           </label>
@@ -82,13 +84,13 @@ export default function AuthPage() {
                 }}
                 aria-invalid={Boolean(authError)}
                 className={`w-full px-3 py-2.5 pr-11 border rounded-lg text-sm outline-none transition ${
-                  authError ? 'border-red-500 focus:ring-2 focus:ring-red-100' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
+                  authError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(current => !current)}
-                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-gray-500 hover:text-primary"
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -96,14 +98,14 @@ export default function AuthPage() {
             </span>
           </label>
           {authError && (
-            <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+            <p role="alert" className="rounded-lg bg-error-container px-3 py-2 text-xs font-medium text-on-error-container">
               {authError}
             </p>
           )}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:brightness-90 cursor-pointer transition-all active:scale-[0.98] shadow disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-primary w-full h-12"
           >
             {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>

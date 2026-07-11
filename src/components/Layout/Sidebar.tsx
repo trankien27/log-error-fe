@@ -24,10 +24,10 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { TabType } from '../../types';
 
 const navButtonClass = (isActive: boolean) =>
-  `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all ${
+  `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
     isActive
       ? 'bg-secondary-container text-primary border-l-4 border-primary font-bold'
-      : 'text-on-surface-variant hover:bg-[#ededf9] hover:text-[#191b23]'
+      : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
   }`;
 
 type SidebarProps = {
@@ -113,13 +113,13 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
           type="button"
           aria-label="Đóng menu điều hướng"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-[#191b23]/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-on-surface/50 backdrop-blur-sm lg:hidden"
         />
       )}
 
       <aside
         aria-hidden={isMobile && !open}
-        className={`w-[280px] bg-white border-r border-outline-variant flex-col fixed left-0 top-0 h-full transition-transform duration-200 ${
+        className={`w-[280px] bg-surface border-r border-outline-variant flex-col fixed left-0 top-0 h-full transition-transform duration-200 ${
           isMobile
             ? `z-50 flex lg:hidden shadow-2xl ${open ? 'translate-x-0' : '-translate-x-full'}`
             : 'z-20 hidden lg:flex'
@@ -133,13 +133,13 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
             <button
               type="button"
               onClick={onClose}
-              className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-[#434655] hover:bg-[#f3f3fe] cursor-pointer"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 cursor-pointer"
               aria-label="Đóng menu"
             >
               <X className="w-4 h-4" />
             </button>
           ) : (
-            <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
+            <span className="w-2.5 h-2.5 bg-success rounded-full animate-ping"></span>
           )}
         </div>
 
@@ -156,7 +156,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <AlertTriangle className="w-4 h-4" />
                 <span>Log lỗi</span>
                 {newLogsCount > 0 && (
-                  <span className="ml-auto bg-red-600 text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
+                  <span className="ml-auto bg-error text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                     {newLogsCount}
                   </span>
                 )}
@@ -167,7 +167,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <ClipboardList className="w-4 h-4" />
                 <span>Công việc</span>
                 {pendingTasksCount > 0 && (
-                  <span className="ml-auto bg-[#2563eb] text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
+                  <span className="ml-auto bg-primary text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                     {pendingTasksCount}
                   </span>
                 )}
@@ -234,7 +234,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <Bell className="w-4 h-4" />
                 <span>Thông báo</span>
                 {unreadNotificationsCount > 0 && (
-                  <span className="ml-auto bg-[#ba1a1a] text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
+                  <span className="ml-auto bg-error text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                     {unreadNotificationsCount}
                   </span>
                 )}

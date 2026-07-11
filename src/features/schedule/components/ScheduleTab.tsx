@@ -172,7 +172,7 @@ function getUserInitials(name: string) {
 }
 
 function getShiftClass(code: string) {
-  return shiftStyles[code] || 'bg-slate-50 border-slate-300 text-slate-800';
+  return shiftStyles[code] || 'bg-surface-2 border-outline-variant text-on-surface';
 }
 
 function getCellKey(userId: string, workDate: string) {
@@ -199,10 +199,10 @@ function getOvertimeStatusLabel(status: OvertimeStatus) {
 }
 
 function getOvertimeStatusClass(status: OvertimeStatus) {
-  if (status === 1) return 'border-amber-200 bg-amber-50 text-amber-700';
-  if (status === 2) return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  if (status === 3) return 'border-red-200 bg-red-50 text-red-600';
-  return 'border-slate-200 bg-slate-100 text-slate-600';
+  if (status === 1) return 'border-warning/30 bg-warning-container text-warning';
+  if (status === 2) return 'border-success/30 bg-success-container text-success';
+  if (status === 3) return 'border-error/30 bg-error-container text-error';
+  return 'border-outline-variant bg-surface-2 text-on-surface-variant';
 }
 
 function getYearMonth(dateValue: string) {
@@ -1309,7 +1309,7 @@ export default function ScheduleTab() {
           event.stopPropagation();
           openScheduleNotePreview(schedule);
         }}
-        className={`mt-1 block w-full max-w-full truncate rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-left text-[9px] font-bold leading-tight text-amber-800 shadow-sm cursor-pointer ${className}`}
+        className={`mt-1 block w-full max-w-full truncate rounded border border-warning/30 bg-warning-container px-1.5 py-0.5 text-left text-[9px] font-bold leading-tight text-on-warning-container shadow-sm cursor-pointer ${className}`}
       >
         Ghi chú: {note}
       </span>
@@ -1342,10 +1342,10 @@ export default function ScheduleTab() {
     const hasDraft = Boolean(cellDrafts[cellKey]);
     const isOpen = openShiftSelectKey === cellKey;
     const buttonClass = hasDraft
-      ? 'border-primary bg-blue-50 text-primary'
+      ? 'border-primary bg-primary/10 text-primary'
       : selectedShift
         ? getShiftClass(selectedShift.code)
-        : 'border-outline-variant bg-white text-gray-500';
+        : 'border-outline-variant bg-surface text-on-surface-variant';
 
     return (
       <div className="relative w-full">
@@ -1385,7 +1385,7 @@ export default function ScheduleTab() {
           )}
         </button>
         {isOpen && (
-          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-64 overflow-y-auto rounded-md border border-outline-variant bg-white shadow-lg">
+          <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-30 max-h-64 overflow-y-auto rounded-md border border-outline-variant bg-surface shadow-lg">
             <button
               type="button"
               disabled={isSaving}
@@ -1393,7 +1393,7 @@ export default function ScheduleTab() {
                 stageCellShift(row, date, schedule, '');
                 setOpenShiftSelectKey(null);
               }}
-              className="w-full px-2 py-2 text-center text-xs font-bold text-gray-500 hover:bg-slate-50 disabled:opacity-60"
+              className="w-full px-2 py-2 text-center text-xs font-bold text-on-surface-variant hover:bg-surface-2 disabled:opacity-60"
             >
               Nghỉ
             </button>
@@ -1433,7 +1433,7 @@ export default function ScheduleTab() {
       <div
         className={`flex min-w-0 flex-1 flex-col items-end gap-2 rounded-lg border border-dashed p-1 text-right transition-colors ${
           hasDraft ? 'text-primary' : ''
-        } ${isDragOver ? 'border-primary bg-blue-50' : 'border-transparent'}`}
+        } ${isDragOver ? 'border-primary bg-primary/10' : 'border-transparent'}`}
         onDragOver={event => {
           if (!canManageSchedule || !draggedSchedule) return;
           event.preventDefault();
@@ -1463,7 +1463,7 @@ export default function ScheduleTab() {
               >
                 {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item), 'pr-7')}
                 {renderScheduleNote(item, 'pr-7')}
-                {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
+                {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-on-surface-variant" />}
               </button>
             ))}
           </div>
@@ -1480,11 +1480,11 @@ export default function ScheduleTab() {
             {renderShiftBadgeText(effectiveShift.code, getShiftTitle(effectiveShift), getShiftHours(effectiveShift), 'pr-7')}
             {renderScheduleNote(schedule, 'pr-7')}
             {hasDraft && <span className="mt-0.5 block text-[10px] font-black text-primary">Chưa lưu</span>}
-            {canManageSchedule && schedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-gray-500" />}
+            {canManageSchedule && schedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-on-surface-variant" />}
           </button>
         ) : (
           <div className="w-full text-right">
-            <span className={`text-sm italic font-semibold ${hasDraft ? 'text-primary' : 'text-gray-500'}`}>
+            <span className={`text-sm italic font-semibold ${hasDraft ? 'text-primary' : 'text-on-surface-variant'}`}>
               Nghỉ{hasDraft ? ' - chưa lưu' : ''}
             </span>
           </div>
@@ -1510,8 +1510,8 @@ export default function ScheduleTab() {
         <div
           key={date}
           className={`min-h-[112px] w-full border border-dashed p-2 flex flex-col items-center justify-center gap-2 transition-colors ${
-            hasDraft ? 'bg-blue-50/70' : ''
-          } ${isDragOver ? 'border-primary bg-blue-50' : 'border-transparent'}`}
+            hasDraft ? 'bg-primary/10' : ''
+          } ${isDragOver ? 'border-primary bg-primary/10' : 'border-transparent'}`}
           onDragOver={event => {
             if (!draggedSchedule) return;
             event.preventDefault();
@@ -1527,7 +1527,7 @@ export default function ScheduleTab() {
           {renderShiftModeSelect(row, date, schedule, effectiveShiftId, true)}
           {hasDraft && <span className="text-[9px] font-bold text-primary">Chưa lưu</span>}
           {!effectiveShiftId && draggedSchedule && (
-            <span className="text-[9px] font-bold text-slate-400">Thả ca vào đây</span>
+            <span className="text-[9px] font-bold text-on-surface-variant">Thả ca vào đây</span>
           )}
           {renderOvertimeBadges(cellOvertimeRequests)}
         </div>
@@ -1538,7 +1538,7 @@ export default function ScheduleTab() {
       return (
         <div
           key={date}
-          className="h-full min-h-[112px] w-full p-2 text-center text-xs italic font-semibold text-gray-500 flex flex-col items-center justify-center gap-2"
+          className="h-full min-h-[112px] w-full p-2 text-center text-xs italic font-semibold text-on-surface-variant flex flex-col items-center justify-center gap-2"
         >
           <span>Nghỉ</span>
           {renderOvertimeBadges(cellOvertimeRequests)}
@@ -1550,7 +1550,7 @@ export default function ScheduleTab() {
       <div
         key={date}
         className={`h-full min-h-[112px] w-full flex flex-col items-center justify-center gap-2 p-2 transition-colors ${
-          canManageSchedule ? 'hover:bg-slate-50 cursor-pointer' : 'cursor-default'
+          canManageSchedule ? 'hover:bg-surface-2 cursor-pointer' : 'cursor-default'
         }`}
       >
         <div className="w-full max-w-[118px] space-y-1.5">
@@ -1562,7 +1562,7 @@ export default function ScheduleTab() {
               onContextMenu={event => openScheduleContextMenu(event, item, row)}
               className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
             >
-              {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-gray-400" />}
+              {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-on-surface-variant" />}
               {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item))}
               {renderScheduleNote(item)}
             </button>
@@ -1574,7 +1574,7 @@ export default function ScheduleTab() {
   };
 
   return (
-    <div className="h-auto lg:h-[calc(100vh-112px)] min-h-[calc(100dvh-88px)] lg:min-h-[720px] -m-3 sm:-m-4 lg:-m-6 bg-white text-[#111827] animate-fadeIn">
+    <div className="h-auto lg:h-[calc(100vh-112px)] min-h-[calc(100dvh-88px)] lg:min-h-[720px] -m-3 sm:-m-4 lg:-m-6 bg-surface text-on-surface animate-fadeIn">
       <div className="h-full flex flex-col">
         <div className="border-b border-outline-variant px-4 lg:px-6 py-4 lg:py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1583,14 +1583,14 @@ export default function ScheduleTab() {
                 <button
                   type="button"
                   onClick={() => moveWeek(-7)}
-                  className="w-11 flex items-center justify-center border-r border-outline-variant hover:bg-slate-50 cursor-pointer"
+                  className="w-11 flex items-center justify-center border-r border-outline-variant hover:bg-surface-2 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
                   onClick={() => moveWeek(7)}
-                  className="w-11 flex items-center justify-center border-r border-outline-variant hover:bg-slate-50 cursor-pointer"
+                  className="w-11 flex items-center justify-center border-r border-outline-variant hover:bg-surface-2 cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1605,7 +1605,7 @@ export default function ScheduleTab() {
               <button
                 type="button"
                 onClick={goToday}
-                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold hover:bg-slate-50 cursor-pointer"
+                className="h-11 px-4 rounded-md border border-outline-variant bg-surface text-sm font-semibold hover:bg-surface-2 cursor-pointer"
               >
                 Hôm nay
               </button>
@@ -1613,7 +1613,7 @@ export default function ScheduleTab() {
               <select
                 value={departmentFilter}
                 onChange={event => setDepartmentFilter(event.target.value)}
-                className="h-11 w-full sm:w-auto sm:min-w-[190px] rounded-md border border-outline-variant bg-white px-3 text-sm cursor-pointer"
+                className="h-11 w-full sm:w-auto sm:min-w-[190px] rounded-md border border-outline-variant bg-surface px-3 text-sm cursor-pointer"
               >
                 <option value="">Tất cả phòng ban</option>
                 {departments.map(department => (
@@ -1622,7 +1622,7 @@ export default function ScheduleTab() {
               </select>
 
               <div className="relative">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
                 <input
                   value={keyword}
                   onChange={event => setKeyword(event.target.value)}
@@ -1640,8 +1640,7 @@ export default function ScheduleTab() {
               type="button"
               onClick={() => setIsOvertimeExportModalOpen(true)}
               disabled={isExportingOvertime}
-              className="h-11 px-5 rounded-md bg-primary !text-white text-sm font-bold inline-flex items-center gap-2 shadow-sm hover:bg-primary-container cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ color: '#fff' }}
+              className="btn-primary h-11"
             >
               {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               Xuất Excel
@@ -1654,7 +1653,7 @@ export default function ScheduleTab() {
                 type="button"
                 onClick={copyCurrentWeek}
                 disabled={!canManageSchedule}
-                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 px-4 rounded-md border border-outline-variant bg-surface text-sm font-semibold inline-flex items-center gap-2 hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Copy className="w-4 h-4" />
                 Sao chép tuần
@@ -1663,7 +1662,7 @@ export default function ScheduleTab() {
                 type="button"
                 onClick={deleteAllCurrentWeekSchedules}
                 disabled={!canManageSchedule || isSaving || currentWeekScheduleIds.length === 0}
-                className="h-11 px-4 rounded-md border border-red-200 bg-red-50 text-red-600 text-sm font-semibold inline-flex items-center gap-2 hover:bg-red-100 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 px-4 rounded-md border border-error/30 bg-error-container text-error text-sm font-semibold inline-flex items-center gap-2 hover:brightness-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 className="w-4 h-4" />
                 Xóa tất cả lịch
@@ -1672,19 +1671,19 @@ export default function ScheduleTab() {
                 type="button"
                 onClick={() => setIsWeeklySuggestionOpen(true)}
                 disabled={!canManageSchedule}
-                className="h-11 px-4 rounded-md border border-outline-variant bg-white text-sm font-semibold inline-flex items-center gap-2 hover:bg-slate-50 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-11 px-4 rounded-md border border-outline-variant bg-surface text-sm font-semibold inline-flex items-center gap-2 hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-4 h-4" />
                 Đề xuất lịch tuần
               </button>
             </div>}
 
-            <div className="ml-auto inline-flex shrink-0 overflow-hidden rounded-md border border-outline-variant bg-white">
+            <div className="ml-auto inline-flex shrink-0 overflow-hidden rounded-md border border-outline-variant bg-surface">
               <button
                 type="button"
                 onClick={() => setScheduleViewMode('week')}
                 className={`h-11 px-5 text-sm inline-flex items-center gap-2 border-r ${
-                  scheduleViewMode === 'week' ? 'font-bold text-primary bg-blue-50 border-primary' : 'font-semibold bg-white hover:bg-slate-50 border-outline-variant'
+                  scheduleViewMode === 'week' ? 'font-bold text-primary bg-primary/10 border-primary' : 'font-semibold bg-surface hover:bg-surface-2 border-outline-variant'
                 }`}
               >
                 <CalendarDays className="w-4 h-4" />
@@ -1694,7 +1693,7 @@ export default function ScheduleTab() {
                 type="button"
                 onClick={() => setScheduleViewMode('month')}
                 className={`h-11 px-5 text-sm cursor-pointer ${
-                  scheduleViewMode === 'month' ? 'font-bold text-primary bg-blue-50' : 'font-semibold bg-white hover:bg-slate-50'
+                  scheduleViewMode === 'month' ? 'font-bold text-primary bg-primary/10' : 'font-semibold bg-surface hover:bg-surface-2'
                 }`}
               >
                 Theo tháng
@@ -1707,17 +1706,17 @@ export default function ScheduleTab() {
           <div className="min-w-0 overflow-auto">
             {scheduleViewMode === 'month' ? (
               <div className="h-full min-h-[460px] w-full p-2 lg:p-3">
-                <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-outline-variant bg-white">
-                  <div className="grid grid-cols-7 border-b border-outline-variant bg-slate-50">
+                <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface">
+                  <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-2">
                     {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(dayName => (
-                      <div key={dayName} className="border-r border-outline-variant px-1.5 py-2 text-center text-[11px] font-black uppercase tracking-wide text-gray-500 last:border-r-0">
+                      <div key={dayName} className="border-r border-outline-variant px-1.5 py-2 text-center text-[11px] font-black uppercase tracking-wide text-on-surface-variant last:border-r-0">
                         {dayName}
                       </div>
                     ))}
                   </div>
 
                   {isMonthLoading ? (
-                    <div className="py-20 text-center text-gray-400 font-semibold">
+                    <div className="py-20 text-center text-on-surface-variant font-semibold">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" />
                       Đang tải lịch làm việc theo tháng...
                     </div>
@@ -1727,18 +1726,18 @@ export default function ScheduleTab() {
                       style={{ gridTemplateRows: `repeat(${monthView.rowCount}, minmax(0, 1fr))` }}
                     >
                       {Array.from({ length: monthView.leadingBlankCount }, (_, index) => (
-                        <div key={`blank-${index}`} className="border-r border-b border-outline-variant bg-slate-50/60" />
+                        <div key={`blank-${index}`} className="border-r border-b border-outline-variant bg-surface-2/60" />
                       ))}
                       {monthView.days.map(day => (
                         <div
                           key={day.dateKey}
                           className={`min-h-0 overflow-y-auto border-r border-b border-outline-variant p-1.5 ${
-                            day.dateKey === today ? 'bg-blue-50/70 ring-1 ring-inset ring-primary/30' : 'bg-white'
+                            day.dateKey === today ? 'bg-primary/10 ring-1 ring-inset ring-primary/30' : 'bg-surface'
                           }`}
                         >
                           <div className="mb-1 flex h-6 items-center justify-between gap-1">
                             <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black ${
-                              day.dateKey === today ? 'bg-primary text-white' : 'text-gray-800'
+                              day.dateKey === today ? 'bg-primary text-on-primary' : 'text-on-surface'
                             }`}>
                               {day.date.getDate()}
                             </span>
@@ -1746,7 +1745,7 @@ export default function ScheduleTab() {
                               <button
                                 type="button"
                                 onClick={() => openCreatePanel(day.dateKey)}
-                                className="inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold text-gray-400 hover:bg-blue-50 hover:text-primary"
+                                className="inline-flex h-6 w-6 items-center justify-center rounded text-sm font-bold text-on-surface-variant hover:bg-primary/10 hover:text-primary"
                                 aria-label={`Thêm lịch ngày ${formatDate(day.dateKey)}`}
                               >
                                 +
@@ -1772,7 +1771,7 @@ export default function ScheduleTab() {
                                         type="button"
                                         onContextMenu={event => openScheduleContextMenu(event, schedule, getScheduleRowForSchedule(schedule))}
                                         onClick={() => canManageSchedule ? openEditPanel(schedule, getScheduleRowForSchedule(schedule)) : undefined}
-                                        className="min-w-0 max-w-full truncate rounded px-0.5 text-left font-semibold hover:bg-white/50"
+                                        className="min-w-0 max-w-full truncate rounded px-0.5 text-left font-semibold hover:bg-surface/50"
                                         title={getScheduleUserName(schedule)}
                                       >
                                         {getScheduleUserName(schedule)}
@@ -1792,7 +1791,7 @@ export default function ScheduleTab() {
                                               type="button"
                                               onClick={() => openScheduleNotePreview(schedule)}
                                               title={schedule.note || ''}
-                                              className="block w-full truncate rounded border border-amber-200 bg-amber-50 px-1 py-0.5 text-left text-[9px] font-bold text-amber-800 hover:bg-amber-100"
+                                              className="block w-full truncate rounded border border-warning/30 bg-warning-container px-1 py-0.5 text-left text-[9px] font-bold text-on-warning-container hover:brightness-95"
                                             >
                                               {userName}: {schedule.note}
                                             </button>
@@ -1812,41 +1811,41 @@ export default function ScheduleTab() {
               </div>
             ) : (
             <>
-            <div className="lg:hidden divide-y divide-slate-100">
+            <div className="lg:hidden divide-y divide-outline-variant/40">
               {isLoading ? (
-                <div className="py-14 text-center text-gray-400 font-semibold">
+                <div className="py-14 text-center text-on-surface-variant font-semibold">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" />
                   Đang tải lịch làm việc...
                 </div>
               ) : filteredRows.length === 0 ? (
-                <div className="py-14 text-center text-gray-400 font-semibold">
+                <div className="py-14 text-center text-on-surface-variant font-semibold">
                   Không có lịch phù hợp bộ lọc.
                 </div>
               ) : (
                 filteredRows.map(row => (
-                  <article key={row.userId} className="bg-white px-4 py-4">
+                  <article key={row.userId} className="bg-surface px-4 py-4">
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         {row.avatarUrl ? (
                           <img src={row.avatarUrl} alt={row.userName} className="h-10 w-10 rounded-full object-cover" />
                         ) : (
-                          <div className="h-10 w-10 shrink-0 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center">
+                          <div className="h-10 w-10 shrink-0 rounded-full bg-surface-2 text-on-surface-variant flex items-center justify-center">
                             <UserRound className="h-5 w-5" />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="truncate text-base font-black text-gray-950">{row.userName}</p>
-                          <p className="truncate text-xs font-semibold text-gray-500">{row.departmentName || 'Chưa có phòng ban'}</p>
+                          <p className="truncate text-base font-black text-on-surface">{row.userName}</p>
+                          <p className="truncate text-xs font-semibold text-on-surface-variant">{row.departmentName || 'Chưa có phòng ban'}</p>
                         </div>
                       </div>
                       {(() => {
                         const rowHours = getRowTotalHours(row);
                         const overLimit = rowHours > 48;
                         return (
-                          <div className={`shrink-0 rounded-md px-3 py-2 text-right ${overLimit ? 'bg-red-50' : 'bg-blue-50'}`}>
-                            <p className={`text-[10px] font-black uppercase tracking-wider ${overLimit ? 'text-red-600' : 'text-primary'}`}>Tổng</p>
-                            <p className={`text-sm font-black ${overLimit ? 'text-red-600' : 'text-primary'}`}>{rowHours.toFixed(1)}h</p>
-                            {overLimit && <p className="text-[9px] font-bold text-red-600">⚠ vượt 48h</p>}
+                          <div className={`shrink-0 rounded-md px-3 py-2 text-right ${overLimit ? 'bg-error-container' : 'bg-primary/10'}`}>
+                            <p className={`text-[10px] font-black uppercase tracking-wider ${overLimit ? 'text-error' : 'text-primary'}`}>Tổng</p>
+                            <p className={`text-sm font-black ${overLimit ? 'text-error' : 'text-primary'}`}>{rowHours.toFixed(1)}h</p>
+                            {overLimit && <p className="text-[9px] font-bold text-error">⚠ vượt 48h</p>}
                           </div>
                         );
                       })()}
@@ -1854,20 +1853,20 @@ export default function ScheduleTab() {
 
                     <div className="overflow-hidden rounded-lg border border-outline-variant">
                       {(weekSchedule?.days || []).map(day => (
-                        <div key={day.date} className="flex gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
+                        <div key={day.date} className="flex gap-3 border-b border-outline-variant px-3 py-3 last:border-b-0">
                           <button
                             type="button"
                             onClick={() => openCreatePanel(day.date, row.userId)}
                             disabled={!canManageSchedule}
                             className={`w-[74px] shrink-0 rounded-md px-2 py-2 text-left disabled:cursor-default ${
-                              day.date === today ? 'bg-blue-100 ring-1 ring-primary' : 'bg-slate-50'
+                              day.date === today ? 'bg-secondary-container ring-1 ring-primary' : 'bg-surface-2'
                             }`}
                           >
-                            <span className="block text-xs font-black text-gray-950">
+                            <span className="block text-xs font-black text-on-surface">
                               {day.dayName.replace('Thứ ', 'T')}
                               {day.date === today && <span className="ml-1 text-[9px] font-bold text-primary">• Hôm nay</span>}
                             </span>
-                            <span className="block text-[11px] font-semibold text-gray-500">{formatShortDate(day.date)}</span>
+                            <span className="block text-[11px] font-semibold text-on-surface-variant">{formatShortDate(day.date)}</span>
                           </button>
                           {renderMobileScheduleCell(row, day.date)}
                         </div>
@@ -1879,7 +1878,7 @@ export default function ScheduleTab() {
             </div>
 
             <table className="hidden lg:table w-max min-w-[1340px] border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-white">
+              <thead className="sticky top-0 z-10 bg-surface">
                 <tr>
                   <th className="w-[190px] border border-outline-variant px-4 py-5 text-center text-sm font-semibold">
                     Nhân viên
@@ -1888,7 +1887,7 @@ export default function ScheduleTab() {
                     <th
                       key={day.date}
                       className={`w-[150px] border border-outline-variant px-2 py-4 text-center font-semibold ${
-                        day.date === today ? 'bg-blue-50 text-primary' : ''
+                        day.date === today ? 'bg-primary/10 text-primary' : ''
                       }`}
                     >
                       <span className="block text-base">
@@ -1906,32 +1905,32 @@ export default function ScheduleTab() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="border border-outline-variant py-16 text-center text-gray-400 font-semibold">
+                    <td colSpan={9} className="border border-outline-variant py-16 text-center text-on-surface-variant font-semibold">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" />
                       Đang tải lịch làm việc...
                     </td>
                   </tr>
                 ) : filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="border border-outline-variant py-16 text-center text-gray-400 font-semibold">
+                    <td colSpan={9} className="border border-outline-variant py-16 text-center text-on-surface-variant font-semibold">
                       Không có lịch phù hợp bộ lọc.
                     </td>
                   </tr>
                 ) : (
                   filteredRows.map(row => (
-                    <tr key={row.userId} className="bg-white">
+                    <tr key={row.userId} className="bg-surface">
                       <td className="border border-outline-variant px-4 py-4">
                         <div className="flex items-center gap-3">
                           {row.avatarUrl ? (
                             <img src={row.avatarUrl} alt={row.userName} className="w-9 h-9 rounded-full object-cover" />
                           ) : (
-                            <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-xs font-black">
+                            <div className="w-9 h-9 rounded-full bg-surface-2 text-on-surface-variant flex items-center justify-center text-xs font-black">
                               <UserRound className="w-5 h-5" />
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="font-bold text-gray-950 truncate">{row.userName}</p>
-                            <p className="text-xs text-gray-500 truncate">{row.departmentName || 'Chưa có phòng ban'}</p>
+                            <p className="font-bold text-on-surface truncate">{row.userName}</p>
+                            <p className="text-xs text-on-surface-variant truncate">{row.departmentName || 'Chưa có phòng ban'}</p>
                           </div>
                         </div>
                       </td>
@@ -1939,7 +1938,7 @@ export default function ScheduleTab() {
                         <td
                           key={day.date}
                           className={`border border-outline-variant p-0 align-middle ${
-                            day.date === today ? 'bg-blue-50/40' : ''
+                            day.date === today ? 'bg-primary/10' : ''
                           }`}
                         >
                           {renderScheduleCell(row, day.date)}
@@ -1951,7 +1950,7 @@ export default function ScheduleTab() {
                         return (
                           <td
                             className={`border border-outline-variant text-center text-base font-semibold ${
-                              overLimit ? 'text-red-600' : ''
+                              overLimit ? 'text-error' : ''
                             }`}
                             title={overLimit ? 'Vượt 48h/tuần (giới hạn giờ làm việc)' : undefined}
                           >
@@ -1971,7 +1970,7 @@ export default function ScheduleTab() {
                 <button
                   type="button"
                   onClick={() => openOvertimeModal(selectedDate)}
-                  className="h-10 px-4 rounded-md border border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-blue-50 cursor-pointer"
+                  className="h-10 px-4 rounded-md border border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/10 cursor-pointer"
                 >
                   <Clock3 className="w-4 h-4" />
                   Ghi OT
@@ -1979,7 +1978,7 @@ export default function ScheduleTab() {
               </div>
 
               {hasCellDrafts && (
-                <div className="flex flex-col gap-2 rounded-md border border-blue-100 bg-blue-50 p-3 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-2 rounded-md border border-primary/20 bg-primary/10 p-3 sm:flex-row sm:items-center">
                   <span className="text-xs font-semibold text-primary">
                     {Object.keys(cellDrafts).length} thay đổi chưa lưu
                   </span>
@@ -1987,7 +1986,7 @@ export default function ScheduleTab() {
                     type="button"
                     onClick={discardCellDrafts}
                     disabled={isSaving}
-                    className="h-10 px-4 rounded-md border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+                    className="h-10 px-4 rounded-md border border-outline-variant text-sm font-semibold hover:bg-surface-2 cursor-pointer disabled:opacity-60"
                   >
                     Hủy thay đổi
                   </button>
@@ -1995,23 +1994,23 @@ export default function ScheduleTab() {
                     type="button"
                     onClick={submitCellDrafts}
                     disabled={isSaving}
-                    className="h-10 px-4 rounded-md bg-primary text-white text-sm font-bold hover:bg-primary-container cursor-pointer disabled:opacity-60"
+                    className="btn-primary h-10"
                   >
                     {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
               )}
 
-              <div className="rounded-md bg-slate-50 px-3 py-2 text-left lg:text-right">
+              <div className="rounded-md bg-surface-2 px-3 py-2 text-left lg:text-right">
                 <p className="text-base font-bold">
                   Tổng giờ của tuần:
                   <span className="ml-3">{visibleTotalWorkingHours.toFixed(1)}h</span>
                 </p>
-                <p className="text-xs text-gray-500 mt-1">(Tính theo giờ làm việc của shift)</p>
+                <p className="text-xs text-on-surface-variant mt-1">(Tính theo giờ làm việc của shift)</p>
               </div>
             </div>
 
-            <p className="px-4 pb-5 text-sm text-gray-500">
+            <p className="px-4 pb-5 text-sm text-on-surface-variant">
               {canManageSchedule
                 ? 'Click vào ô ca để chỉnh sửa, hoặc kéo-thả ca sang ô khác để đổi nhanh. Thả vào ô có ca sẽ hoán đổi ca; thả vào ô Nghỉ sẽ chuyển ca sang ô đó.'
                 : 'Bạn chỉ có quyền xem, tìm kiếm và lọc lịch làm việc.'}
@@ -2021,11 +2020,11 @@ export default function ScheduleTab() {
           </div>
 
           {panel && (
-            <aside className="border-t xl:border-t-0 xl:border-l border-outline-variant bg-white p-4 lg:p-5 overflow-y-auto">
+            <aside className="border-t xl:border-t-0 xl:border-l border-outline-variant bg-surface p-4 lg:p-5 overflow-y-auto">
               <div className="space-y-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-bold">{panel.mode === 'edit' ? 'Sửa lịch' : 'Thêm lịch'}</h3>
-                  <button type="button" onClick={() => setPanel(null)} className="p-1 rounded hover:bg-slate-100 cursor-pointer">
+                  <button type="button" onClick={() => setPanel(null)} className="p-1 rounded hover:bg-surface-2 cursor-pointer">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -2049,7 +2048,7 @@ export default function ScheduleTab() {
                       const nextShift = activeShifts.find(shift => String(shift.id) === event.target.value);
                       if (nextShift) applyShiftToPanel(nextShift);
                     }}
-                    className="mt-2 h-10 w-full rounded-md border border-outline-variant bg-white px-3 text-sm"
+                    className="mt-2 h-10 w-full rounded-md border border-outline-variant bg-surface px-3 text-sm"
                   >
                     <option value="">Chọn ca</option>
                     {activeShifts.map(shift => (
@@ -2064,7 +2063,7 @@ export default function ScheduleTab() {
                   <label className="block text-sm font-medium">Nhân viên</label>
                   {panel.mode === 'create' && (
                     <div className="relative mt-2">
-                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
                       <input
                         value={employeeSearch}
                         onChange={event => setEmployeeSearch(event.target.value)}
@@ -2080,12 +2079,12 @@ export default function ScheduleTab() {
                         {scheduleRows.find(user => user.userId === panel.userIds[0])?.userName || 'Nhân viên'}
                       </div>
                     ) : visibleUsers.length === 0 ? (
-                      <div className="px-3 py-6 text-center text-sm text-gray-400">Không có nhân viên</div>
+                      <div className="px-3 py-6 text-center text-sm text-on-surface-variant">Không có nhân viên</div>
                     ) : (
                       visibleUsers.map(user => {
                         const checked = panel.userIds.includes(user.id);
                         return (
-                          <label key={user.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-slate-50">
+                          <label key={user.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-surface-2">
                             <input
                               type="checkbox"
                               checked={checked}
@@ -2116,7 +2115,7 @@ export default function ScheduleTab() {
                     type="button"
                     onClick={savePanel}
                     disabled={isSaving}
-                    className="h-10 rounded-md bg-primary text-white text-sm font-bold hover:bg-primary-container cursor-pointer disabled:opacity-60"
+                    className="btn-primary h-10"
                   >
                     {isSaving ? 'Đang lưu...' : 'Lưu'}
                   </button>
@@ -2124,7 +2123,7 @@ export default function ScheduleTab() {
                     type="button"
                     onClick={() => setPanel(null)}
                     disabled={isSaving}
-                    className="h-10 rounded-md border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+                    className="h-10 rounded-md border border-outline-variant text-sm font-semibold hover:bg-surface-2 cursor-pointer disabled:opacity-60"
                   >
                     Hủy
                   </button>
@@ -2135,7 +2134,7 @@ export default function ScheduleTab() {
                     type="button"
                     onClick={deleteSchedule}
                     disabled={isSaving}
-                    className="w-full h-10 rounded-md border border-red-200 bg-red-50 text-red-600 text-sm font-bold hover:bg-red-100 cursor-pointer disabled:opacity-60"
+                    className="w-full h-10 rounded-md border border-error/30 bg-error-container text-error text-sm font-bold hover:brightness-95 cursor-pointer disabled:opacity-60"
                   >
                     Xóa lịch này
                   </button>
@@ -2147,17 +2146,17 @@ export default function ScheduleTab() {
       </div>
 
       {isStatsModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-5xl rounded-lg border border-outline-variant bg-white shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="modal-overlay">
+          <div className="w-full max-w-5xl rounded-lg border border-outline-variant bg-surface shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-950">Thống kê lịch làm việc</h3>
-                <p className="text-xs text-gray-500 mt-1">Xem thống kê theo năm, tháng và nhân viên.</p>
+                <h3 className="text-lg font-bold text-on-surface">Thống kê lịch làm việc</h3>
+                <p className="text-xs text-on-surface-variant mt-1">Xem thống kê theo năm, tháng và nhân viên.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsStatsModalOpen(false)}
-                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+                className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2192,7 +2191,7 @@ export default function ScheduleTab() {
                   <select
                     value={statsUserId}
                     onChange={event => setStatsUserId(event.target.value)}
-                    className="mt-1 h-10 w-full rounded-md border border-outline-variant bg-white px-3 text-sm focus:outline-primary"
+                    className="mt-1 h-10 w-full rounded-md border border-outline-variant bg-surface px-3 text-sm focus:outline-primary"
                   >
                     <option value="">Tất cả nhân viên</option>
                     {scheduleUsers.map(user => (
@@ -2207,7 +2206,7 @@ export default function ScheduleTab() {
                   type="button"
                   onClick={loadMonthlyStats}
                   disabled={isStatsLoading}
-                  className="h-10 px-5 rounded-md bg-primary text-white text-sm font-bold inline-flex items-center gap-2 hover:bg-primary-container cursor-pointer disabled:opacity-60"
+                  className="btn-primary h-10"
                 >
                   {isStatsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
                   Xem thống kê
@@ -2217,31 +2216,31 @@ export default function ScheduleTab() {
               {monthlyStats.length > 0 ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="rounded-md border border-outline-variant bg-slate-50 p-4">
-                      <p className="text-xs font-semibold text-gray-500">Tổng lịch</p>
-                      <p className="mt-2 text-2xl font-black text-gray-950">{formatNumber(monthlyStatsSummary.totalSchedules)}</p>
+                    <div className="rounded-md border border-outline-variant bg-surface-2 p-4">
+                      <p className="text-xs font-semibold text-on-surface-variant">Tổng lịch</p>
+                      <p className="mt-2 text-2xl font-black text-on-surface">{formatNumber(monthlyStatsSummary.totalSchedules)}</p>
                     </div>
-                    <div className="rounded-md border border-outline-variant bg-slate-50 p-4">
-                      <p className="text-xs font-semibold text-gray-500">Tổng giờ</p>
-                      <p className="mt-2 text-2xl font-black text-emerald-600">{formatNumber(monthlyStatsSummary.totalPlannedHours)}h</p>
+                    <div className="rounded-md border border-outline-variant bg-surface-2 p-4">
+                      <p className="text-xs font-semibold text-on-surface-variant">Tổng giờ</p>
+                      <p className="mt-2 text-2xl font-black text-success">{formatNumber(monthlyStatsSummary.totalPlannedHours)}h</p>
                     </div>
                   </div>
 
                   <div className="rounded-md border border-outline-variant overflow-x-auto">
                     <table className="w-full min-w-[420px] text-sm">
                       <thead>
-                        <tr className="bg-slate-50 text-xs uppercase tracking-wider text-gray-500">
+                        <tr className="bg-surface-2 text-xs uppercase tracking-wider text-on-surface-variant">
                           <th className="px-4 py-3 text-left">Nhân viên</th>
                           <th className="px-4 py-3 text-right">Tổng giờ</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      <tbody className="divide-y divide-outline-variant/40">
                         {monthlyStatsRows.map(item => (
-                          <tr key={item.userId} className="hover:bg-slate-50">
+                          <tr key={item.userId} className="hover:bg-surface-2">
                             <td className="px-4 py-3">
-                              <span className="block font-bold text-gray-950">{item.userFullName}</span>
+                              <span className="block font-bold text-on-surface">{item.userFullName}</span>
                             </td>
-                            <td className="px-4 py-3 text-right text-base font-black text-emerald-600">{formatNumber(item.totalPlannedHours)}h</td>
+                            <td className="px-4 py-3 text-right text-base font-black text-success">{formatNumber(item.totalPlannedHours)}h</td>
                           </tr>
                         ))}
                       </tbody>
@@ -2249,7 +2248,7 @@ export default function ScheduleTab() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md border border-dashed border-outline-variant py-10 text-center text-sm font-semibold text-gray-400">
+                <div className="rounded-md border border-dashed border-outline-variant py-10 text-center text-sm font-semibold text-on-surface-variant">
                   Chọn điều kiện và bấm Xem thống kê.
                 </div>
               )}
@@ -2259,18 +2258,18 @@ export default function ScheduleTab() {
       )}
 
       {isOvertimeExportModalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-white shadow-xl">
+        <div className="modal-overlay">
+          <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-surface shadow-xl">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-950">Xuất báo cáo tháng</h3>
-                <p className="text-xs text-gray-500 mt-1">Chọn tháng, năm và nhân viên để xuất file Excel.</p>
+                <h3 className="text-lg font-bold text-on-surface">Xuất báo cáo tháng</h3>
+                <p className="text-xs text-on-surface-variant mt-1">Chọn tháng, năm và nhân viên để xuất file Excel.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOvertimeExportModalOpen(false)}
                 disabled={isExportingOvertime}
-                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer disabled:opacity-60"
+                className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer disabled:opacity-60"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2304,7 +2303,7 @@ export default function ScheduleTab() {
                 <select
                   value={reportUserId}
                   onChange={event => setReportUserId(event.target.value)}
-                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm"
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm"
                 >
                   <option value="">Tất cả</option>
                   {scheduleUsers.map(user => (
@@ -2318,7 +2317,7 @@ export default function ScheduleTab() {
                   type="button"
                   onClick={() => setIsOvertimeExportModalOpen(false)}
                   disabled={isExportingOvertime}
-                  className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer disabled:opacity-60"
+                  className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-surface-2 cursor-pointer disabled:opacity-60"
                 >
                   Hủy
                 </button>
@@ -2326,7 +2325,7 @@ export default function ScheduleTab() {
                   type="button"
                   onClick={exportExcel}
                   disabled={isExportingOvertime}
-                  className="h-10 px-5 rounded-lg bg-primary text-white text-sm font-bold inline-flex items-center justify-center gap-2 hover:bg-primary-container disabled:opacity-60 cursor-pointer"
+                  className="btn-primary h-10"
                 >
                   {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   Xuất báo cáo
@@ -2338,17 +2337,17 @@ export default function ScheduleTab() {
       )}
 
       {overtimeDraft && (
-        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-white shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
+        <div className="modal-overlay">
+          <div className="w-full max-w-lg rounded-lg border border-outline-variant bg-surface shadow-xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-950">Ghi OT</h3>
-                <p className="text-xs text-gray-500 mt-1">OT sau khi tạo sẽ ở trạng thái chờ duyệt.</p>
+                <h3 className="text-lg font-bold text-on-surface">Ghi OT</h3>
+                <p className="text-xs text-on-surface-variant mt-1">OT sau khi tạo sẽ ở trạng thái chờ duyệt.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setOvertimeDraft(null)}
-                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+                className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2360,7 +2359,7 @@ export default function ScheduleTab() {
                 <select
                   value={overtimeDraft.userId}
                   onChange={event => setOvertimeDraft(current => current ? { ...current, userId: event.target.value } : current)}
-                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-white px-3 text-sm focus:outline-primary"
+                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm focus:outline-primary"
                 >
                   <option value="">Chọn nhân viên</option>
                   {scheduleUsers.map(user => (
@@ -2415,7 +2414,7 @@ export default function ScheduleTab() {
                 <button
                   type="button"
                   onClick={() => setOvertimeDraft(null)}
-                  className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-slate-50 cursor-pointer"
+                  className="h-10 px-4 rounded-lg border border-outline-variant text-sm font-semibold hover:bg-surface-2 cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -2423,7 +2422,7 @@ export default function ScheduleTab() {
                   type="button"
                   onClick={saveOvertime}
                   disabled={isSaving}
-                  className="h-10 px-5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary-container disabled:opacity-60 cursor-pointer"
+                  className="btn-primary h-10"
                 >
                   {isSaving ? 'Đang lưu...' : 'Ghi OT'}
                 </button>
@@ -2435,7 +2434,7 @@ export default function ScheduleTab() {
 
       {scheduleContextMenu && (
         <div
-          className="fixed z-[60] w-44 overflow-hidden rounded-lg border border-outline-variant bg-white py-1 text-sm shadow-xl"
+          className="fixed z-[60] w-44 overflow-hidden rounded-lg border border-outline-variant bg-surface py-1 text-sm shadow-xl"
           style={{ left: scheduleContextMenu.x, top: scheduleContextMenu.y }}
           onClick={event => event.stopPropagation()}
           onContextMenu={event => event.preventDefault()}
@@ -2443,18 +2442,18 @@ export default function ScheduleTab() {
           <button
             type="button"
             onClick={viewScheduleFromContextMenu}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-gray-700 hover:bg-slate-50"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-on-surface-variant hover:bg-surface-2"
           >
-            <Clock3 className="h-4 w-4 text-gray-500" />
+            <Clock3 className="h-4 w-4 text-on-surface-variant" />
             Xem
           </button>
           {canManageSchedule && (
             <button
               type="button"
               onClick={editScheduleFromContextMenu}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-gray-700 hover:bg-slate-50"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-on-surface-variant hover:bg-surface-2"
             >
-              <Edit2 className="h-4 w-4 text-gray-500" />
+              <Edit2 className="h-4 w-4 text-on-surface-variant" />
               Chỉnh sửa
             </button>
           )}
@@ -2462,39 +2461,39 @@ export default function ScheduleTab() {
       )}
 
       {scheduleViewPreview && (
-        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-white shadow-xl">
+        <div className="modal-overlay">
+          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-surface shadow-xl">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div className="min-w-0">
-                <h3 className="text-lg font-bold text-gray-950">Thông tin ca trực</h3>
-                <p className="mt-1 truncate text-xs text-gray-500">{scheduleViewPreview.title}</p>
+                <h3 className="text-lg font-bold text-on-surface">Thông tin ca trực</h3>
+                <p className="mt-1 truncate text-xs text-on-surface-variant">{scheduleViewPreview.title}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setScheduleViewPreview(null)}
-                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+                className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-3 p-5 text-sm">
-              <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Nhân viên</p>
-                <p className="mt-1 font-bold text-gray-950">{scheduleViewPreview.userName}</p>
+              <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Nhân viên</p>
+                <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.userName}</p>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Ngày</p>
-                  <p className="mt-1 font-bold text-gray-950">{scheduleViewPreview.date}</p>
+                <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Ngày</p>
+                  <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.date}</p>
                 </div>
-                <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Giờ</p>
-                  <p className="mt-1 font-bold text-gray-950">{scheduleViewPreview.hours}</p>
+                <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2">
+                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Giờ</p>
+                  <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.hours}</p>
                 </div>
               </div>
-              <div className="rounded-lg border border-outline-variant bg-slate-50 px-3 py-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Ghi chú</p>
-                <p className="mt-2 max-h-[38dvh] overflow-y-auto whitespace-pre-wrap break-words leading-6 text-gray-700">
+              <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Ghi chú</p>
+                <p className="mt-2 max-h-[38dvh] overflow-y-auto whitespace-pre-wrap break-words leading-6 text-on-surface-variant">
                   {scheduleViewPreview.note?.trim() || 'Chưa có ghi chú.'}
                 </p>
               </div>
@@ -2502,7 +2501,7 @@ export default function ScheduleTab() {
                 <button
                   type="button"
                   onClick={() => setScheduleViewPreview(null)}
-                  className="h-10 rounded-lg bg-primary px-5 text-sm font-bold text-white hover:bg-primary-container cursor-pointer"
+                  className="btn-primary h-10"
                 >
                   Đóng
                 </button>
@@ -2513,30 +2512,30 @@ export default function ScheduleTab() {
       )}
 
       {scheduleNotePreview && (
-        <div className="fixed inset-0 z-50 bg-[#191b23]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-white shadow-xl">
+        <div className="modal-overlay">
+          <div className="w-full max-w-md rounded-lg border border-outline-variant bg-surface shadow-xl">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div className="min-w-0">
-                <h3 className="text-lg font-bold text-gray-950">Ghi chú ca trực</h3>
-                <p className="mt-1 truncate text-xs text-gray-500">{scheduleNotePreview.title}</p>
+                <h3 className="text-lg font-bold text-on-surface">Ghi chú ca trực</h3>
+                <p className="mt-1 truncate text-xs text-on-surface-variant">{scheduleNotePreview.title}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setScheduleNotePreview(null)}
-                className="h-8 w-8 rounded hover:bg-slate-100 inline-flex items-center justify-center cursor-pointer"
+                className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5">
-              <p className="max-h-[55dvh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-outline-variant bg-slate-50 px-3 py-3 text-sm leading-6 text-gray-700">
+              <p className="max-h-[55dvh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-outline-variant bg-surface-2 px-3 py-3 text-sm leading-6 text-on-surface-variant">
                 {scheduleNotePreview.note}
               </p>
               <div className="mt-4 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setScheduleNotePreview(null)}
-                  className="h-10 rounded-lg bg-primary px-5 text-sm font-bold text-white hover:bg-primary-container cursor-pointer"
+                  className="btn-primary h-10"
                 >
                   Đóng
                 </button>

@@ -266,7 +266,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
                 setPreviewItems([]);
               }}
             />
-            <span className="mt-1 block text-xs text-gray-500">{formatWeekRange(weekStartDate)}</span>
+            <span className="mt-1 block text-xs text-on-surface-variant">{formatWeekRange(weekStartDate)}</span>
           </label>
 
           <label className="block text-sm font-semibold">
