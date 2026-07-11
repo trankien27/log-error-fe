@@ -420,9 +420,10 @@ export default function ErrorLogsTab() {
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
-            className="bg-surface text-primary border border-primary/30 hover:bg-primary/10 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="btn-secondary h-10 px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <ImagePlus className="w-4 h-4" /> Tải ảnh giao dịch
+            <ImagePlus className="h-4 w-4 shrink-0" />
+            <span>Tải ảnh</span>
           </button>
           {isAdmin && (
             <button
@@ -438,17 +439,20 @@ export default function ErrorLogsTab() {
             type="button"
             onClick={handleExport}
             disabled={isExporting}
-            className="bg-surface text-primary border border-primary/30 hover:bg-primary/10 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="btn-secondary h-10 px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <Download className="w-4 h-4" /> {isExporting ? 'Đang xuất...' : 'Xuất Excel'}
+            <Download className="h-4 w-4 shrink-0" />
+            <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
           </button>
           <button
             type="button"
             onClick={handleGenerateReportText}
             disabled={isReportLoading || selectedLogIds.length === 0}
-            className="bg-surface text-on-surface-variant border border-outline-variant hover:bg-surface-2 px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+            title={selectedLogIds.length === 0 ? 'Chọn ít nhất một log lỗi để xuất báo cáo.' : 'Xuất báo cáo văn bản từ các log đã chọn.'}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface px-3.5 text-xs font-semibold text-on-surface-variant transition-all hover:bg-surface-2 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
-            <FileText className="w-4 h-4" /> {isReportLoading ? 'Đang xuất...' : `Xuất báo cáo (${selectedLogIds.length})`}
+            <FileText className="h-4 w-4 shrink-0" />
+            <span>{isReportLoading ? 'Đang xuất...' : `Xuất báo cáo (${selectedLogIds.length})`}</span>
           </button>
           <button
             type="button"
