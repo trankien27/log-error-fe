@@ -257,7 +257,7 @@ export default function ScheduleTab() {
   const { hasAnyRole, currentUser, getCurrentRoleNumber } = useAuthStore();
 
   const [selectedDate, setSelectedDate] = useState(weekStart);
-  const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month'>('week');
+  const [scheduleViewMode, setScheduleViewMode] = useState<'week' | 'month' | 'timeline'>('week');
   const [monthlySchedules, setMonthlySchedules] = useState<WorkScheduleDto[]>([]);
   const [isMonthLoading, setIsMonthLoading] = useState(false);
   const [departmentFilter, setDepartmentFilter] = useState('');
@@ -284,6 +284,7 @@ export default function ScheduleTab() {
   const [openShiftSelectKey, setOpenShiftSelectKey] = useState<string | null>(null);
   const [draggedSchedule, setDraggedSchedule] = useState<DraggedSchedule | null>(null);
   const [dragOverScheduleCell, setDragOverScheduleCell] = useState<string | null>(null);
+  const [isDragOverTrash, setIsDragOverTrash] = useState(false);
   const [scheduleNotePreview, setScheduleNotePreview] = useState<ScheduleNotePreview | null>(null);
   const [scheduleViewPreview, setScheduleViewPreview] = useState<ScheduleViewPreview | null>(null);
   const [scheduleContextMenu, setScheduleContextMenu] = useState<ScheduleContextMenuState | null>(null);
@@ -336,6 +337,41 @@ export default function ScheduleTab() {
       return departmentMatch && keywordMatch;
     });
   }, [departmentFilter, keyword, scheduleRows]);
+
+  const timelineView = useMemo(() => {
+    const days = weekSchedule?.days || [];
+    const rowsByTime = new Map<string, {
+      startTime: string;
+      endTime: string;
+      cellsByDate: Map<string, WorkScheduleDto[]>;
+    }>();
+
+    filteredRows.forEach(row => {
+      row.schedules.forEach(schedule => {
+        const timeKey = `${formatTime(schedule.startTime)}-${formatTime(schedule.endTime)}`;
+        let entry = rowsByTime.get(timeKey);
+        if (!entry) {
+          entry = { startTime: schedule.startTime, endTime: schedule.endTime, cellsByDate: new Map() };
+          rowsByTime.set(timeKey, entry);
+        }
+
+        const dateKey = schedule.workDate.slice(0, 10);
+        const list = entry.cellsByDate.get(dateKey) || [];
+        list.push(schedule);
+        entry.cellsByDate.set(dateKey, list);
+      });
+    });
+
+    const rows = Array.from(rowsByTime.values())
+      .map(entry => ({
+        key: `${entry.startTime}-${entry.endTime}`,
+        label: `${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}`,
+        cellsByDate: entry.cellsByDate,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key));
+
+    return { days, rows };
+  }, [filteredRows, weekSchedule?.days]);
 
   const monthView = useMemo(() => {
     const anchor = new Date(`${selectedDate}T00:00:00`);
@@ -870,6 +906,42 @@ export default function ScheduleTab() {
       setIsSaving(false);
       setDraggedSchedule(null);
       setDragOverScheduleCell(null);
+    }
+  };
+
+  const handleDeleteViaDrag = async () => {
+    const sourceSchedule = draggedSchedule?.sourceSchedule;
+    setIsDragOverTrash(false);
+    setDraggedSchedule(null);
+    setDragOverScheduleCell(null);
+
+    if (!canManageSchedule || !sourceSchedule) return;
+
+    const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
+    const previousMonthlySchedules = monthlySchedules.map(item => ({ ...item }));
+    const deletingScheduleId = sourceSchedule.id;
+
+    const optimisticWeekSchedule = cloneWeekSchedule(weekSchedule);
+    if (optimisticWeekSchedule) {
+      optimisticWeekSchedule.users = optimisticWeekSchedule.users.map(user => ({
+        ...user,
+        schedules: user.schedules.filter(schedule => schedule.id !== deletingScheduleId),
+      }));
+    }
+    setWeekSchedule(optimisticWeekSchedule);
+    setMonthlySchedules(current => current.filter(schedule => schedule.id !== deletingScheduleId));
+    setIsSaving(true);
+
+    try {
+      await scheduleService.deleteWorkSchedule(deletingScheduleId);
+      toast.success('Đã xóa ca.');
+      await reload();
+    } catch (err: any) {
+      setWeekSchedule(previousWeekSchedule);
+      setMonthlySchedules(previousMonthlySchedules);
+      toast.error(err.message || 'Không thể xóa ca.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1480,6 +1552,7 @@ export default function ScheduleTab() {
         onDragEnd={() => {
           setDraggedSchedule(null);
           setDragOverScheduleCell(null);
+          setIsDragOverTrash(false);
         }}
         className={`relative block w-full rounded border text-left font-black leading-tight outline-none transition ${
           compact ? 'px-2 py-1.5 text-[11px]' : 'px-2 py-1 text-[10px]'
@@ -1521,6 +1594,7 @@ export default function ScheduleTab() {
         onDragEnd={() => {
           setDraggedSchedule(null);
           setDragOverScheduleCell(null);
+          setIsDragOverTrash(false);
         }}
         className={`block w-full rounded border px-2 py-1 text-left text-[10px] font-black leading-tight outline-none transition ${getShiftClass(schedule.shiftCode)} ${
           isDragging ? 'opacity-40 ring-2 ring-primary/40' : ''
@@ -1815,7 +1889,7 @@ export default function ScheduleTab() {
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-            {scheduleViewMode === 'week' && <div className="flex flex-wrap gap-3">
+            {scheduleViewMode !== 'month' && <div className="flex flex-wrap gap-3">
               <button
                 type="button"
                 onClick={copyCurrentWeek}
@@ -1857,6 +1931,18 @@ export default function ScheduleTab() {
               >
                 <CalendarDays className="w-4 h-4" />
                 Theo tuần
+              </button>
+              <button
+                type="button"
+                onClick={() => setScheduleViewMode('timeline')}
+                className={`h-11 px-5 text-sm inline-flex items-center gap-2 border-r transition-colors ${
+                  scheduleViewMode === 'timeline'
+                    ? 'font-bold border-primary bg-primary text-on-primary shadow-sm'
+                    : 'font-semibold border-outline-variant bg-surface text-on-surface hover:bg-surface-2'
+                }`}
+              >
+                <Clock3 className="w-4 h-4" />
+                Theo khung giờ
               </button>
               <button
                 type="button"
@@ -1980,6 +2066,103 @@ export default function ScheduleTab() {
                     </div>
                   )}
                 </div>
+              </div>
+            ) : scheduleViewMode === 'timeline' ? (
+              <div className="h-full min-h-[460px] w-full p-2 lg:p-3">
+                <div className="overflow-auto rounded-lg border border-outline-variant bg-surface">
+                  <table className="w-max min-w-[1100px] border-collapse text-sm">
+                    <thead className="sticky top-0 z-10 bg-surface-2">
+                      <tr>
+                        <th className="w-[130px] border border-outline-variant px-3 py-3 text-center text-xs font-black uppercase tracking-wide text-on-surface-variant">
+                          Khung giờ
+                        </th>
+                        {timelineView.days.map(day => (
+                          <th
+                            key={day.date}
+                            className={`w-[170px] border border-outline-variant px-2 py-3 text-center font-semibold ${
+                              day.date === today ? 'bg-primary/10 text-primary' : ''
+                            }`}
+                          >
+                            <span className="block text-sm">
+                              {day.dayName.replace('Thứ ', 'T')}
+                              {day.date === today && <span className="ml-1 text-[10px] font-bold">• Hôm nay</span>}
+                            </span>
+                            <span className="block text-xs font-normal mt-1">{formatShortDate(day.date)}</span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoading ? (
+                        <tr>
+                          <td colSpan={timelineView.days.length + 1} className="border border-outline-variant py-16 text-center text-on-surface-variant font-semibold">
+                            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-3" />
+                            Đang tải lịch làm việc...
+                          </td>
+                        </tr>
+                      ) : timelineView.rows.length === 0 ? (
+                        <tr>
+                          <td colSpan={timelineView.days.length + 1} className="border border-outline-variant py-16 text-center text-on-surface-variant font-semibold">
+                            Chưa có ca trực nào trong tuần này.
+                          </td>
+                        </tr>
+                      ) : (
+                        timelineView.rows.map(row => (
+                          <tr key={row.key}>
+                            <td className="border border-outline-variant bg-surface-2 px-3 py-3 text-center text-xs font-black text-on-surface">
+                              {row.label}
+                            </td>
+                            {timelineView.days.map(day => {
+                              const entries = row.cellsByDate.get(day.date) || [];
+
+                              return (
+                                <td
+                                  key={day.date}
+                                  className={`border border-outline-variant p-2 align-top ${day.date === today ? 'bg-primary/10' : ''}`}
+                                  onContextMenu={event => {
+                                    if (!canManageSchedule) return;
+                                    const cellUserName = entries.length === 1
+                                      ? getScheduleUserName(entries[0])
+                                      : entries.length > 1
+                                        ? `${entries.length} nhân viên`
+                                        : '';
+                                    openScheduleContextMenu(
+                                      event,
+                                      undefined,
+                                      { userId: '', userName: cellUserName, departmentName: null, avatarUrl: null, totalWorkingHours: 0, schedules: [] },
+                                      day.date,
+                                      entries,
+                                    );
+                                  }}
+                                >
+                                  {entries.length === 0 ? (
+                                    <span className="block text-center text-xs italic text-on-surface-variant">—</span>
+                                  ) : (
+                                    <div className="flex flex-col gap-1.5">
+                                      {entries.map(item => (
+                                        <div
+                                          key={item.id}
+                                          onContextMenu={event => openScheduleContextMenu(event, item, getScheduleRowForSchedule(item))}
+                                          className={`rounded border px-2 py-1 text-left text-[11px] font-bold leading-tight ${getShiftClass(item.shiftCode)}`}
+                                        >
+                                          <span className="block truncate">{getScheduleUserName(item)}</span>
+                                          {renderScheduleNote(item)}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="px-1 pt-3 text-sm text-on-surface-variant">
+                  Chuột phải vào ô để xem/thêm/sửa ca trực. Chỉ hiển thị các khung giờ đang có ca đăng ký.
+                </p>
               </div>
             ) : (
             <>
@@ -2316,6 +2499,29 @@ export default function ScheduleTab() {
           )}
         </div>
       </div>
+
+      {draggedSchedule && (
+        <div
+          onDragOver={event => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            setIsDragOverTrash(true);
+          }}
+          onDragLeave={() => setIsDragOverTrash(false)}
+          onDrop={event => {
+            event.preventDefault();
+            void handleDeleteViaDrag();
+          }}
+          className={`fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-4 shadow-xl transition-colors ${
+            isDragOverTrash
+              ? 'scale-110 border-error bg-error-container text-error'
+              : 'border-outline-variant bg-surface text-on-surface-variant'
+          }`}
+        >
+          <Trash2 className={`h-7 w-7 ${isDragOverTrash ? 'text-error' : 'text-on-surface-variant'}`} />
+          <span className="text-xs font-bold">Thả vào đây để xóa ca</span>
+        </div>
+      )}
 
       {isStatsModalOpen && (
         <div className="modal-overlay">
