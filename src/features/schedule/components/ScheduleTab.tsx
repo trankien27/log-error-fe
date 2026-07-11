@@ -10,6 +10,7 @@ import {
   Download,
   Edit2,
   Loader2,
+  Plus,
   Search,
   Sparkles,
   Trash2,
@@ -82,15 +83,16 @@ type ScheduleViewPreview = {
   title: string;
   userName: string;
   date: string;
-  hours: string;
-  note?: string | null;
+  schedules: WorkScheduleDto[];
 };
 
 type ScheduleContextMenuState = {
   x: number;
   y: number;
-  schedule: WorkScheduleDto;
+  schedule?: WorkScheduleDto;
+  schedules: WorkScheduleDto[];
   user: WorkScheduleWeekUserDto;
+  workDate: string;
 };
 
 const shiftStyles: Record<string, string> = {
@@ -475,14 +477,18 @@ export default function ScheduleTab() {
     const next = cloneWeekSchedule(base);
     if (!next) return next;
 
+    next.users = next.users.map(user => ({
+      ...user,
+      schedules: user.schedules.filter(item => item.id !== nextSchedule.id),
+    }));
+
     const userIndex = next.users.findIndex(user => user.userId === nextSchedule.userId);
     if (userIndex < 0) return next;
 
     const user = next.users[userIndex];
-    const withoutSameSchedule = user.schedules.filter(item => item.id !== nextSchedule.id);
     next.users[userIndex] = {
       ...user,
-      schedules: [...withoutSameSchedule, nextSchedule].sort((first, second) => (
+      schedules: [...user.schedules, nextSchedule].sort((first, second) => (
         first.workDate.localeCompare(second.workDate) || first.startTime.localeCompare(second.startTime)
       )),
     };
@@ -807,51 +813,64 @@ export default function ScheduleTab() {
     });
   };
 
-  const handleDropSchedule = (
+  const handleDropSchedule = async (
     targetRow: WorkScheduleWeekUserDto,
     targetDate: string,
-    targetSchedule: WorkScheduleDto | undefined,
   ) => {
     if (!canManageSchedule || !draggedSchedule || !draggedSchedule.shiftId) return;
 
-    const sourceKey = getCellKey(draggedSchedule.sourceUserId, draggedSchedule.sourceWorkDate);
-    const targetKey = getCellKey(targetRow.userId, targetDate);
-
-    setCellDrafts(current => {
-      const nextDrafts = { ...current };
-      const originalTargetShiftId = targetSchedule ? String(targetSchedule.shiftId ?? `schedule-${targetSchedule.id}`) : '';
-      const targetEffectiveShiftId = current[targetKey]?.shiftId ?? originalTargetShiftId;
-
-      if (sourceKey !== targetKey) {
-        if (draggedSchedule.sourceSchedule) {
-          nextDrafts[sourceKey] = {
-            userId: draggedSchedule.sourceUserId,
-            workDate: draggedSchedule.sourceWorkDate,
-            originalSchedule: draggedSchedule.sourceSchedule,
-            shiftId: targetEffectiveShiftId,
-          };
-        } else {
-          delete nextDrafts[sourceKey];
-        }
-      }
-
-      if (draggedSchedule.shiftId === originalTargetShiftId && sourceKey === targetKey) {
-        delete nextDrafts[targetKey];
-      } else {
-        nextDrafts[targetKey] = {
-          userId: targetRow.userId,
-          workDate: targetDate,
-          originalSchedule: targetSchedule,
-          shiftId: draggedSchedule.shiftId,
-        };
-      }
-
-      return nextDrafts;
-    });
-
     setOpenShiftSelectKey(null);
-    setDraggedSchedule(null);
-    setDragOverScheduleCell(null);
+
+    const sourceSchedule = draggedSchedule.sourceSchedule;
+    if (!sourceSchedule) {
+      setDraggedSchedule(null);
+      setDragOverScheduleCell(null);
+      return;
+    }
+
+    if (sourceSchedule.userId === targetRow.userId && sourceSchedule.workDate === targetDate) {
+      setDraggedSchedule(null);
+      setDragOverScheduleCell(null);
+      return;
+    }
+
+    const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
+    const optimisticSchedule = {
+      ...sourceSchedule,
+      userId: targetRow.userId,
+      userName: targetRow.userName,
+      workDate: targetDate,
+    };
+
+    setWeekSchedule(upsertScheduleInWeek(weekSchedule, optimisticSchedule));
+    setIsSaving(true);
+
+    try {
+      const savedSchedule = await scheduleService.updateWorkSchedule(sourceSchedule.id, {
+        workDate: targetDate,
+        shiftId: sourceSchedule.shiftId ?? null,
+        shiftCode: sourceSchedule.shiftCode,
+        shiftName: sourceSchedule.shiftName,
+        startTime: sourceSchedule.startTime,
+        endTime: sourceSchedule.endTime,
+        endDayOffset: sourceSchedule.endDayOffset || 0,
+        paidWorkingHours: sourceSchedule.paidWorkingHours || sourceSchedule.workingHours || 0,
+        userId: targetRow.userId,
+        status: sourceSchedule.status,
+        note: sourceSchedule.note || null,
+      });
+
+      setWeekSchedule(upsertScheduleInWeek(useScheduleStore.getState().weekSchedule, savedSchedule));
+      toast.success('Đã chuyển ca.');
+      await reload();
+    } catch (err: any) {
+      setWeekSchedule(previousWeekSchedule);
+      toast.error(err.message || 'Không thể chuyển ca.');
+    } finally {
+      setIsSaving(false);
+      setDraggedSchedule(null);
+      setDragOverScheduleCell(null);
+    }
   };
 
   const discardCellDrafts = () => {
@@ -1251,15 +1270,18 @@ export default function ScheduleTab() {
     event: React.MouseEvent,
     schedule: WorkScheduleDto | undefined,
     user: WorkScheduleWeekUserDto,
+    workDate = schedule?.workDate || weekStart,
+    schedules = schedule ? [schedule] : getSchedulesForDate(user, workDate),
   ) => {
-    if (!schedule) return;
-
     event.preventDefault();
     event.stopPropagation();
 
     const viewportPadding = 12;
-    const menuWidth = 176;
-    const menuHeight = canManageSchedule ? 96 : 52;
+    const menuWidth = 188;
+    const menuItemCount = (schedules.length > 0 ? 1 : 0)
+      + (canManageSchedule && schedule ? 1 : 0)
+      + (canManageSchedule ? 1 : 0);
+    const menuHeight = Math.max(menuItemCount, 1) * 40 + 8;
     const nextX = Math.min(event.clientX, window.innerWidth - menuWidth - viewportPadding);
     const nextY = Math.min(event.clientY, window.innerHeight - menuHeight - viewportPadding);
 
@@ -1268,26 +1290,34 @@ export default function ScheduleTab() {
       x: Math.max(viewportPadding, nextX),
       y: Math.max(viewportPadding, nextY),
       schedule,
+      schedules,
       user,
+      workDate,
     });
   };
 
   const viewScheduleFromContextMenu = () => {
     if (!scheduleContextMenu) return;
-    const schedule = scheduleContextMenu.schedule;
     setScheduleViewPreview({
-      title: getScheduleTitle(schedule),
-      userName: scheduleContextMenu.user.userName || getScheduleUserName(schedule),
-      date: formatDate(schedule.workDate),
-      hours: getScheduleHours(schedule),
-      note: schedule.note,
+      title: `${scheduleContextMenu.schedules.length} ca trực`,
+      userName: scheduleContextMenu.user.userName || (
+        scheduleContextMenu.schedule ? getScheduleUserName(scheduleContextMenu.schedule) : 'Chưa rõ'
+      ),
+      date: formatDate(scheduleContextMenu.workDate),
+      schedules: scheduleContextMenu.schedules,
     });
     setScheduleContextMenu(null);
   };
 
   const editScheduleFromContextMenu = () => {
-    if (!scheduleContextMenu) return;
+    if (!scheduleContextMenu?.schedule) return;
     openEditPanel(scheduleContextMenu.schedule, scheduleContextMenu.user);
+    setScheduleContextMenu(null);
+  };
+
+  const createScheduleFromContextMenu = () => {
+    if (!scheduleContextMenu) return;
+    openCreatePanel(scheduleContextMenu.workDate, scheduleContextMenu.user.userId);
     setScheduleContextMenu(null);
   };
 
@@ -1419,6 +1449,90 @@ export default function ScheduleTab() {
     );
   };
 
+  const renderManagedScheduleCard = (
+    row: WorkScheduleWeekUserDto,
+    date: string,
+    schedule: WorkScheduleDto,
+    compact = false,
+  ) => {
+    const isDragging = draggedSchedule?.sourceSchedule?.id === schedule.id;
+
+    return (
+      <button
+        key={schedule.id}
+        type="button"
+        disabled={isSaving}
+        draggable={canManageSchedule && !isSaving}
+        title={`${getScheduleTitle(schedule)} | ${getScheduleHours(schedule)}`}
+        onClick={() => openEditPanel(schedule, row)}
+        onContextMenu={event => openScheduleContextMenu(event, schedule, row)}
+        onDragStart={event => {
+          if (isSaving) return;
+          setDraggedSchedule({
+            sourceUserId: row.userId,
+            sourceWorkDate: date,
+            sourceSchedule: schedule,
+            shiftId: String(schedule.shiftId ?? `schedule-${schedule.id}`),
+          });
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', `${row.userId}_${date}_${schedule.id}`);
+        }}
+        onDragEnd={() => {
+          setDraggedSchedule(null);
+          setDragOverScheduleCell(null);
+        }}
+        className={`relative block w-full rounded border text-left font-black leading-tight outline-none transition ${
+          compact ? 'px-2 py-1.5 text-[11px]' : 'px-2 py-1 text-[10px]'
+        } ${getShiftClass(schedule.shiftCode)} ${
+          isDragging ? 'opacity-40 ring-2 ring-primary/40' : ''
+        } ${canManageSchedule ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+      >
+        <Edit2 className="absolute right-1.5 top-1.5 h-3 w-3 text-on-surface-variant" />
+        {renderShiftBadgeText(schedule.shiftCode, getScheduleTitle(schedule), getScheduleHours(schedule), 'pr-5')}
+        {renderScheduleNote(schedule, 'pr-5')}
+      </button>
+    );
+  };
+
+  const renderDesktopScheduleCard = (
+    row: WorkScheduleWeekUserDto,
+    date: string,
+    schedule: WorkScheduleDto,
+  ) => {
+    const isDragging = draggedSchedule?.sourceSchedule?.id === schedule.id;
+
+    return (
+      <div
+        key={schedule.id}
+        draggable={canManageSchedule && !isSaving}
+        title={`${getScheduleTitle(schedule)} | ${getScheduleHours(schedule)}`}
+        onContextMenu={event => openScheduleContextMenu(event, schedule, row)}
+        onDragStart={event => {
+          if (isSaving) return;
+          setDraggedSchedule({
+            sourceUserId: row.userId,
+            sourceWorkDate: date,
+            sourceSchedule: schedule,
+            shiftId: String(schedule.shiftId ?? `schedule-${schedule.id}`),
+          });
+          event.dataTransfer.effectAllowed = 'move';
+          event.dataTransfer.setData('text/plain', `${row.userId}_${date}_${schedule.id}`);
+        }}
+        onDragEnd={() => {
+          setDraggedSchedule(null);
+          setDragOverScheduleCell(null);
+        }}
+        className={`block w-full rounded border px-2 py-1 text-left text-[10px] font-black leading-tight outline-none transition ${getShiftClass(schedule.shiftCode)} ${
+          isDragging ? 'opacity-40 ring-2 ring-primary/40' : ''
+        } ${canManageSchedule ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
+      >
+        <span className="block truncate">{schedule.shiftName || schedule.shiftCode}</span>
+        <span className="mt-0.5 block truncate text-[9px] font-bold">{getScheduleHours(schedule)}</span>
+        {renderScheduleNote(schedule)}
+      </div>
+    );
+  };
+
   const renderMobileScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
     const schedules = getSchedulesForDate(row, date);
     const schedule = schedules[0];
@@ -1444,11 +1558,25 @@ export default function ScheduleTab() {
         onDragLeave={() => setDragOverScheduleCell(current => (current === cellKey ? null : current))}
         onDrop={event => {
           event.preventDefault();
-          handleDropSchedule(row, date, schedule);
+          void handleDropSchedule(row, date);
         }}
       >
         {canManageSchedule ? (
-          renderShiftModeSelect(row, date, schedule, effectiveShiftId)
+          <div className="w-full space-y-2">
+            {schedules.length > 0 ? (
+              schedules.map(item => renderManagedScheduleCard(row, date, item, true))
+            ) : (
+              <span className="block text-sm italic font-semibold text-on-surface-variant">Nghỉ</span>
+            )}
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => openCreatePanel(date, row.userId)}
+              className="w-full rounded border border-dashed border-outline-variant px-2 py-1.5 text-xs font-bold text-on-surface-variant hover:border-primary hover:text-primary disabled:opacity-60"
+            >
+              + Thêm ca
+            </button>
+          </div>
         ) : !draft && schedules.length > 0 ? (
           <div className="w-full space-y-2">
             {schedules.map(item => (
@@ -1498,19 +1626,20 @@ export default function ScheduleTab() {
 
   const renderScheduleCell = (row: WorkScheduleWeekUserDto, date: string) => {
     const schedules = getSchedulesForDate(row, date);
-    const schedule = schedules[0];
     const cellKey = getCellKey(row.userId, date);
     const draft = cellDrafts[cellKey];
-    const effectiveShiftId = draft ? draft.shiftId : schedule?.shiftId ? String(schedule.shiftId) : '';
     const hasDraft = Boolean(draft);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
     const isDragOver = dragOverScheduleCell === cellKey;
 
     if (canManageSchedule) {
+      const visibleSchedules = schedules.slice(0, 2);
+      const extraCount = schedules.length - visibleSchedules.length;
+
       return (
         <div
           key={date}
-          className={`min-h-[112px] w-full border border-dashed p-2 flex flex-col items-center justify-center gap-2 transition-colors ${
+          className={`min-h-[112px] w-full border border-dashed p-2 flex flex-col items-center justify-center gap-1.5 transition-colors ${
             hasDraft ? 'bg-primary/10' : ''
           } ${isDragOver ? 'border-primary bg-primary/10' : 'border-transparent'}`}
           onDragOver={event => {
@@ -1522,12 +1651,35 @@ export default function ScheduleTab() {
           onDragLeave={() => setDragOverScheduleCell(current => (current === cellKey ? null : current))}
           onDrop={event => {
             event.preventDefault();
-            handleDropSchedule(row, date, schedule);
+            void handleDropSchedule(row, date);
           }}
+          onContextMenu={event => openScheduleContextMenu(event, undefined, row, date, schedules)}
         >
-          {renderShiftModeSelect(row, date, schedule, effectiveShiftId, true)}
+          <div className="w-full max-w-[128px] space-y-1.5">
+            {visibleSchedules.length > 0 ? (
+              visibleSchedules.map(item => renderDesktopScheduleCard(row, date, item))
+            ) : (
+              <div className="rounded border border-dashed border-outline-variant px-2 py-4 text-center text-xs italic font-semibold text-on-surface-variant">
+                Nghỉ
+              </div>
+            )}
+            {extraCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setScheduleViewPreview({
+                  title: `${schedules.length} ca trực`,
+                  userName: row.userName,
+                  date: formatDate(date),
+                  schedules,
+                })}
+                className="w-full rounded border border-dashed border-outline-variant px-2 py-1 text-center text-[9px] font-bold text-on-surface-variant hover:border-primary hover:text-primary"
+              >
+                +{extraCount} ca khác
+              </button>
+            )}
+          </div>
           {hasDraft && <span className="text-[9px] font-bold text-primary">Chưa lưu</span>}
-          {!effectiveShiftId && draggedSchedule && (
+          {schedules.length === 0 && draggedSchedule && (
             <span className="text-[9px] font-bold text-on-surface-variant">Thả ca vào đây</span>
           )}
           {renderOvertimeBadges(cellOvertimeRequests)}
@@ -1547,27 +1699,41 @@ export default function ScheduleTab() {
       );
     }
 
+    const visibleSchedules = schedules.slice(0, 2);
+    const extraCount = schedules.length - visibleSchedules.length;
+
     return (
       <div
         key={date}
-        className={`h-full min-h-[112px] w-full flex flex-col items-center justify-center gap-2 p-2 transition-colors ${
-          canManageSchedule ? 'hover:bg-surface-2 cursor-pointer' : 'cursor-default'
-        }`}
+        className="h-full min-h-[112px] w-full flex flex-col items-center justify-center gap-1.5 p-2"
+        onContextMenu={event => openScheduleContextMenu(event, undefined, row, date, schedules)}
       >
         <div className="w-full max-w-[118px] space-y-1.5">
-          {schedules.map(item => (
-            <button
+          {visibleSchedules.map(item => (
+            <div
               key={item.id}
-              type="button"
-              onClick={() => canManageSchedule ? openEditPanel(item, row) : undefined}
               onContextMenu={event => openScheduleContextMenu(event, item, row)}
-              className={`relative block w-full rounded border px-1.5 py-1 text-center text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
+              className={`block w-full rounded border px-1.5 py-1 text-left text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
             >
-              {canManageSchedule && <Edit2 className="absolute right-1 top-1 h-3 w-3 text-on-surface-variant" />}
-              {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item))}
+              <span className="block truncate">{item.shiftName || item.shiftCode}</span>
+              <span className="mt-0.5 block truncate text-[9px] font-bold">{getScheduleHours(item)}</span>
               {renderScheduleNote(item)}
-            </button>
+            </div>
           ))}
+          {extraCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setScheduleViewPreview({
+                title: `${schedules.length} ca trực`,
+                userName: row.userName,
+                date: formatDate(date),
+                schedules,
+              })}
+              className="w-full rounded border border-dashed border-outline-variant px-2 py-1 text-center text-[9px] font-bold text-on-surface-variant hover:border-primary hover:text-primary"
+            >
+              +{extraCount} ca khác
+            </button>
+          )}
         </div>
         {renderOvertimeBadges(cellOvertimeRequests)}
       </div>
@@ -2018,7 +2184,7 @@ export default function ScheduleTab() {
 
             <p className="px-4 pb-5 text-sm text-on-surface-variant">
               {canManageSchedule
-                ? 'Click vào ô ca để chỉnh sửa, hoặc kéo-thả ca sang ô khác để đổi nhanh. Thả vào ô có ca sẽ hoán đổi ca; thả vào ô Nghỉ sẽ chuyển ca sang ô đó.'
+                ? 'Click vào ca để chỉnh sửa, hoặc kéo-thả từng ca sang ô khác để đổi nhanh. Một nhân viên có thể có nhiều ca trong ngày nếu không vượt giới hạn giờ.'
                 : 'Bạn chỉ có quyền xem, tìm kiếm và lọc lịch làm việc.'}
             </p>
             </>
@@ -2445,15 +2611,17 @@ export default function ScheduleTab() {
           onClick={event => event.stopPropagation()}
           onContextMenu={event => event.preventDefault()}
         >
-          <button
-            type="button"
-            onClick={viewScheduleFromContextMenu}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-on-surface-variant hover:bg-surface-2"
-          >
-            <Clock3 className="h-4 w-4 text-on-surface-variant" />
-            Xem
-          </button>
-          {canManageSchedule && (
+          {scheduleContextMenu.schedules.length > 0 && (
+            <button
+              type="button"
+              onClick={viewScheduleFromContextMenu}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-on-surface-variant hover:bg-surface-2"
+            >
+              <Clock3 className="h-4 w-4 text-on-surface-variant" />
+              Xem tất cả lịch
+            </button>
+          )}
+          {canManageSchedule && scheduleContextMenu.schedule && (
             <button
               type="button"
               onClick={editScheduleFromContextMenu}
@@ -2461,6 +2629,16 @@ export default function ScheduleTab() {
             >
               <Edit2 className="h-4 w-4 text-on-surface-variant" />
               Chỉnh sửa
+            </button>
+          )}
+          {canManageSchedule && (
+            <button
+              type="button"
+              onClick={createScheduleFromContextMenu}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left font-semibold text-on-surface-variant hover:bg-surface-2"
+            >
+              <Plus className="h-4 w-4 text-on-surface-variant" />
+              Thêm ca
             </button>
           )}
         </div>
@@ -2487,21 +2665,22 @@ export default function ScheduleTab() {
                 <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Nhân viên</p>
                 <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.userName}</p>
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Ngày</p>
-                  <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.date}</p>
-                </div>
-                <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Giờ</p>
-                  <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.hours}</p>
-                </div>
+              <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Ngày</p>
+                <p className="mt-1 font-bold text-on-surface">{scheduleViewPreview.date}</p>
               </div>
-              <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Ghi chú</p>
-                <p className="mt-2 max-h-[38dvh] overflow-y-auto whitespace-pre-wrap break-words leading-6 text-on-surface-variant">
-                  {scheduleViewPreview.note?.trim() || 'Chưa có ghi chú.'}
-                </p>
+              <div className="space-y-2">
+                {scheduleViewPreview.schedules.map(item => (
+                  <div key={item.id} className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-3">
+                    <p className="font-bold text-on-surface">{item.shiftName || item.shiftCode}</p>
+                    <p className="mt-1 text-xs font-bold text-on-surface-variant">{getScheduleHours(item)}</p>
+                    {item.note?.trim() && (
+                      <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-6 text-on-surface-variant">
+                        Ghi chú: {item.note}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
               <div className="flex justify-end">
                 <button
