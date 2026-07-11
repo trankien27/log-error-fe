@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
+  Calendar,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -1682,8 +1683,10 @@ export default function ScheduleTab() {
               <button
                 type="button"
                 onClick={() => setScheduleViewMode('week')}
-                className={`h-11 px-5 text-sm inline-flex items-center gap-2 border-r ${
-                  scheduleViewMode === 'week' ? 'font-bold text-primary bg-primary/10 border-primary' : 'font-semibold bg-surface hover:bg-surface-2 border-outline-variant'
+                className={`h-11 px-5 text-sm inline-flex items-center gap-2 border-r transition-colors ${
+                  scheduleViewMode === 'week'
+                    ? 'font-bold border-primary bg-primary text-on-primary shadow-sm'
+                    : 'font-semibold border-outline-variant bg-surface text-on-surface hover:bg-surface-2'
                 }`}
               >
                 <CalendarDays className="w-4 h-4" />
@@ -1692,10 +1695,13 @@ export default function ScheduleTab() {
               <button
                 type="button"
                 onClick={() => setScheduleViewMode('month')}
-                className={`h-11 px-5 text-sm cursor-pointer ${
-                  scheduleViewMode === 'month' ? 'font-bold text-primary bg-primary/10' : 'font-semibold bg-surface hover:bg-surface-2'
+                className={`h-11 px-5 text-sm inline-flex items-center gap-2 cursor-pointer transition-colors ${
+                  scheduleViewMode === 'month'
+                    ? 'font-bold bg-primary text-on-primary shadow-sm'
+                    : 'font-semibold bg-surface text-on-surface hover:bg-surface-2'
                 }`}
               >
+                <Calendar className="w-4 h-4" />
                 Theo tháng
               </button>
             </div>
@@ -1970,7 +1976,7 @@ export default function ScheduleTab() {
                 <button
                   type="button"
                   onClick={() => openOvertimeModal(selectedDate)}
-                  className="h-10 px-4 rounded-md border border-outline-variant text-primary text-sm font-semibold inline-flex items-center justify-center gap-2 hover:bg-primary/10 cursor-pointer"
+                  className="btn-secondary h-10 px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   <Clock3 className="w-4 h-4" />
                   Ghi OT
