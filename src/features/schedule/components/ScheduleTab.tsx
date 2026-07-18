@@ -1065,14 +1065,14 @@ export default function ScheduleTab() {
       setIsSaving(false);
     }
 
-    try {
-      await reload();
-    } catch (err: any) {
-      toast.error(err.message || 'Không thể tải lại lịch làm việc.');
-    }
-
-    // Neu con thao tac keo tha/xoa chua luu duoc, hien lai trang thai cho luu tren tuan vua tai
+    // Thanh cong: giao dien da phan anh dung tu luc keo tha nen khong reload (tranh nhay man hinh).
+    // Chi khi co loi giua chung moi dong bo lai voi server roi ap lai cac thao tac chua luu.
     if (hasError) {
+      try {
+        await reload();
+      } catch (err: any) {
+        toast.error(err.message || 'Không thể tải lại lịch làm việc.');
+      }
       const remainingOps = scheduleOps.slice(savedScheduleOpsCount);
       if (remainingOps.length > 0) {
         setWeekSchedule(applyPendingOpsToWeek(useScheduleStore.getState().weekSchedule, remainingOps));
@@ -1161,8 +1161,10 @@ export default function ScheduleTab() {
           })),
         });
 
+        const savedSchedules = Array.isArray(result) ? result : [];
         let savedWeekSchedule = useScheduleStore.getState().weekSchedule;
-        result.items.forEach((savedSchedule, index) => {
+        savedSchedules.forEach((savedSchedule, index) => {
+          if (!optimisticSchedules[index]) return;
           savedWeekSchedule = replaceTemporaryScheduleInWeek(savedWeekSchedule, optimisticSchedules[index].id, savedSchedule);
         });
         setWeekSchedule(savedWeekSchedule);
@@ -1170,13 +1172,12 @@ export default function ScheduleTab() {
           const temporaryIds = new Set(optimisticSchedules.map(item => item.id));
           return [
             ...current.filter(item => !temporaryIds.has(item.id)),
-            ...result.items,
+            ...savedSchedules,
           ];
         });
         toast.success('Đã thêm lịch.');
       }
-
-      await reload();
+      // Da ap du lieu server tra ve o tren, khong reload de giu nguyen giao dien vua cap nhat.
     } catch (err: any) {
       setWeekSchedule(previousWeekSchedule);
       setMonthlySchedules(previousMonthlySchedules);
@@ -1211,7 +1212,7 @@ export default function ScheduleTab() {
 
       await scheduleService.deleteWorkSchedule(panel.schedule.id);
       toast.success('Đã xóa lịch.');
-      await reload();
+      // Da xoa lac quan khoi state o tren, khong reload de tranh nhay man hinh.
     } catch (err: any) {
       setWeekSchedule(previousWeekSchedule);
       setMonthlySchedules(previousMonthlySchedules);

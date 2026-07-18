@@ -104,8 +104,9 @@ export const scheduleService = {
     return apiClient.post<BulkCreateResponse>('/api/work-schedules/bulk', request);
   },
 
-  batchCreateWorkSchedules: (request: BulkCreateWorkScheduleRequest): Promise<BulkCreateResponse> => {
-    return apiClient.post<BulkCreateResponse>('/api/work-schedules/batch', request);
+  // Endpoint /batch tra ve mang WorkScheduleDto truc tiep trong `data`, khong boc trong { items }
+  batchCreateWorkSchedules: (request: BulkCreateWorkScheduleRequest): Promise<WorkScheduleDto[]> => {
+    return apiClient.post<WorkScheduleDto[]>('/api/work-schedules/batch', request);
   },
 
   updateWorkSchedule: (id: number, schedule: UpdateWorkScheduleRequest): Promise<WorkScheduleDto> => {
