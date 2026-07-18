@@ -39,9 +39,15 @@
   --color-on-warning-container: #7a4a05;
 }
 
+:root {
+  /* Phong to toan bo giao dien de cac element khong qua nho. Chinh 1 cho o day. */
+  --app-zoom: 1.5;
+}
+
 @layer base {
   html {
     text-rendering: optimizeLegibility;
+    zoom: var(--app-zoom);
   }
 
   body {
