@@ -463,6 +463,35 @@ export default function ScheduleTab() {
     };
   }, [activeShifts, departmentFilter, keyword, monthlySchedules, scheduleUsers, selectedDate]);
 
+  // Tong gio theo tung nguoi trong thang (ap dung cung bo loc phong ban/tu khoa nhu lich thang)
+  const monthlyUserHours = useMemo(() => {
+    const query = keyword.trim().toLowerCase();
+    const userById = new Map(scheduleUsers.map(user => [user.id, user]));
+
+    const isAllowed = (userId: string) => {
+      const user = userById.get(userId);
+      if (departmentFilter && user?.department !== departmentFilter) return false;
+      if (query && !(
+        (user?.name || '').toLowerCase().includes(query)
+        || (user?.department || '').toLowerCase().includes(query)
+      )) return false;
+      return true;
+    };
+
+    const totals = new Map<string, { userId: string; userName: string; hours: number }>();
+    monthlySchedules.forEach(schedule => {
+      if (!isAllowed(schedule.userId)) return;
+      const hours = schedule.paidWorkingHours || schedule.workingHours || 0;
+      const userName = schedule.userName || userById.get(schedule.userId)?.name || 'Chưa rõ';
+      const current = totals.get(schedule.userId) || { userId: schedule.userId, userName, hours: 0 };
+      current.hours += hours;
+      current.userName = userName;
+      totals.set(schedule.userId, current);
+    });
+
+    return Array.from(totals.values()).sort((a, b) => a.userName.localeCompare(b.userName, 'vi'));
+  }, [departmentFilter, keyword, monthlySchedules, scheduleUsers]);
+
   const loadMonthSchedules = async () => {
     setIsMonthLoading(true);
     try {
@@ -2048,8 +2077,8 @@ export default function ScheduleTab() {
         <div className={`flex-1 min-h-0 grid grid-cols-1 ${panel ? 'xl:grid-cols-[1fr_320px]' : ''}`}>
           <div className="min-w-0 overflow-auto">
             {scheduleViewMode === 'month' ? (
-              <div className="h-full min-h-[460px] w-full p-2 lg:p-3">
-                <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface">
+              <div className="flex h-full min-h-[460px] w-full flex-col gap-3 p-2 lg:p-3">
+                <div className="flex min-h-[420px] w-full flex-1 flex-col overflow-hidden rounded-lg border border-outline-variant bg-surface">
                   <div className="grid grid-cols-7 border-b border-outline-variant bg-surface-2">
                     {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(dayName => (
                       <div key={dayName} className="border-r border-outline-variant px-1.5 py-2 text-center text-[11px] font-black uppercase tracking-wide text-on-surface-variant last:border-r-0">
@@ -2146,6 +2175,30 @@ export default function ScheduleTab() {
                               ))}
                             </div>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="shrink-0 rounded-lg border border-outline-variant bg-surface p-3 lg:p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Clock3 className="h-4 w-4 text-on-surface-variant" />
+                    <h3 className="text-sm font-black text-on-surface">Tổng giờ theo từng người trong tháng</h3>
+                  </div>
+                  {isMonthLoading ? (
+                    <p className="py-3 text-center text-xs font-semibold text-on-surface-variant">Đang tải...</p>
+                  ) : monthlyUserHours.length === 0 ? (
+                    <p className="py-3 text-center text-xs font-semibold text-on-surface-variant">Chưa có lịch trong tháng.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {monthlyUserHours.map(item => (
+                        <div
+                          key={item.userId}
+                          className="flex items-center justify-between gap-2 rounded-md border border-outline-variant bg-surface-2 px-3 py-2"
+                        >
+                          <span className="min-w-0 truncate text-sm font-bold text-on-surface" title={item.userName}>{item.userName}</span>
+                          <span className="shrink-0 text-sm font-black text-primary">{item.hours.toFixed(1)}h</span>
                         </div>
                       ))}
                     </div>
