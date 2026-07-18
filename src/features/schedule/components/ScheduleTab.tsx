@@ -66,6 +66,19 @@ type DraggedSchedule = {
   shiftId: string;
 };
 
+type PendingScheduleOp =
+  | {
+    type: 'move';
+    schedule: WorkScheduleDto;
+    targetUserId: string;
+    targetUserName: string;
+    targetDate: string;
+  }
+  | {
+    type: 'delete';
+    schedule: WorkScheduleDto;
+  };
+
 type OvertimeDraft = {
   userId: string;
   workDate: string;
@@ -283,6 +296,7 @@ export default function ScheduleTab() {
   const [isWeeklySuggestionOpen, setIsWeeklySuggestionOpen] = useState(false);
   const [openShiftSelectKey, setOpenShiftSelectKey] = useState<string | null>(null);
   const [draggedSchedule, setDraggedSchedule] = useState<DraggedSchedule | null>(null);
+  const [pendingScheduleOps, setPendingScheduleOps] = useState<Record<number, PendingScheduleOp>>({});
   const [dragOverScheduleCell, setDragOverScheduleCell] = useState<string | null>(null);
   const [isDragOverTrash, setIsDragOverTrash] = useState(false);
   const [scheduleNotePreview, setScheduleNotePreview] = useState<ScheduleNotePreview | null>(null);
@@ -584,6 +598,19 @@ export default function ScheduleTab() {
     };
   };
 
+  const pendingOpCellKeys = useMemo(() => {
+    const keys = new Set<string>();
+
+    Object.values(pendingScheduleOps).forEach(op => {
+      keys.add(getCellKey(op.schedule.userId, op.schedule.workDate));
+      if (op.type === 'move') {
+        keys.add(getCellKey(op.targetUserId, op.targetDate));
+      }
+    });
+
+    return keys;
+  }, [pendingScheduleOps]);
+
   const overtimeByCell = useMemo(() => {
     const result = new Map<string, OvertimeRequestDto[]>();
 
@@ -715,7 +742,8 @@ export default function ScheduleTab() {
     ]);
     setOvertimeRequests(weeklyOvertime);
   };
-  const hasCellDrafts = Object.keys(cellDrafts).length > 0;
+  const pendingChangesCount = Object.keys(cellDrafts).length + Object.keys(pendingScheduleOps).length;
+  const hasPendingChanges = pendingChangesCount > 0;
 
   const applyShiftToPanel = (shift: ShiftDto) => {
     setPanel(current => current ? ({
@@ -849,132 +877,169 @@ export default function ScheduleTab() {
     });
   };
 
-  const handleDropSchedule = async (
+  const removeScheduleFromWeek = (base: WorkScheduleWeekResponse | null, scheduleId: number) => {
+    const next = cloneWeekSchedule(base);
+    if (!next) return next;
+
+    next.users = next.users.map(user => ({
+      ...user,
+      schedules: user.schedules.filter(schedule => schedule.id !== scheduleId),
+    }));
+
+    return next;
+  };
+
+  const applyPendingOpsToWeek = (
+    base: WorkScheduleWeekResponse | null,
+    ops: PendingScheduleOp[],
+  ) => {
+    return ops.reduce((next, op) => {
+      if (op.type === 'delete') {
+        return removeScheduleFromWeek(next, op.schedule.id);
+      }
+
+      return upsertScheduleInWeek(next, {
+        ...op.schedule,
+        userId: op.targetUserId,
+        userName: op.targetUserName,
+        workDate: op.targetDate,
+      });
+    }, base);
+  };
+
+  const handleDropSchedule = (
     targetRow: WorkScheduleWeekUserDto,
     targetDate: string,
   ) => {
-    if (!canManageSchedule || !draggedSchedule || !draggedSchedule.shiftId) return;
-
+    const sourceSchedule = draggedSchedule?.sourceSchedule;
+    const hasShift = Boolean(draggedSchedule?.shiftId);
     setOpenShiftSelectKey(null);
+    setDraggedSchedule(null);
+    setDragOverScheduleCell(null);
 
-    const sourceSchedule = draggedSchedule.sourceSchedule;
-    if (!sourceSchedule) {
-      setDraggedSchedule(null);
-      setDragOverScheduleCell(null);
-      return;
-    }
+    if (!canManageSchedule || isSaving || !hasShift || !sourceSchedule) return;
+    if (sourceSchedule.userId === targetRow.userId && sourceSchedule.workDate === targetDate) return;
 
-    if (sourceSchedule.userId === targetRow.userId && sourceSchedule.workDate === targetDate) {
-      setDraggedSchedule(null);
-      setDragOverScheduleCell(null);
-      return;
-    }
+    // Ca da co thao tac cho luu thi giu nguyen ban goc tu server lam moc de commit/hoan tac
+    const originalSchedule = pendingScheduleOps[sourceSchedule.id]?.schedule || sourceSchedule;
 
-    const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
-    const optimisticSchedule = {
+    setWeekSchedule(upsertScheduleInWeek(weekSchedule, {
       ...sourceSchedule,
       userId: targetRow.userId,
       userName: targetRow.userName,
       workDate: targetDate,
-    };
+    }));
 
-    setWeekSchedule(upsertScheduleInWeek(weekSchedule, optimisticSchedule));
-    setIsSaving(true);
+    setPendingScheduleOps(current => {
+      const next = { ...current };
 
-    try {
-      const savedSchedule = await scheduleService.updateWorkSchedule(sourceSchedule.id, {
-        workDate: targetDate,
-        shiftId: sourceSchedule.shiftId ?? null,
-        shiftCode: sourceSchedule.shiftCode,
-        shiftName: sourceSchedule.shiftName,
-        startTime: sourceSchedule.startTime,
-        endTime: sourceSchedule.endTime,
-        endDayOffset: sourceSchedule.endDayOffset || 0,
-        paidWorkingHours: sourceSchedule.paidWorkingHours || sourceSchedule.workingHours || 0,
-        userId: targetRow.userId,
-        status: sourceSchedule.status,
-        note: sourceSchedule.note || null,
-      });
+      if (originalSchedule.userId === targetRow.userId && originalSchedule.workDate === targetDate) {
+        delete next[sourceSchedule.id];
+      } else {
+        next[sourceSchedule.id] = {
+          type: 'move',
+          schedule: originalSchedule,
+          targetUserId: targetRow.userId,
+          targetUserName: targetRow.userName,
+          targetDate,
+        };
+      }
 
-      setWeekSchedule(upsertScheduleInWeek(useScheduleStore.getState().weekSchedule, savedSchedule));
-      toast.success('Đã chuyển ca.');
-      await reload();
-    } catch (err: any) {
-      setWeekSchedule(previousWeekSchedule);
-      toast.error(err.message || 'Không thể chuyển ca.');
-    } finally {
-      setIsSaving(false);
-      setDraggedSchedule(null);
-      setDragOverScheduleCell(null);
-    }
+      return next;
+    });
   };
 
-  const handleDeleteViaDrag = async () => {
+  const handleDeleteViaDrag = () => {
     const sourceSchedule = draggedSchedule?.sourceSchedule;
     setIsDragOverTrash(false);
     setDraggedSchedule(null);
     setDragOverScheduleCell(null);
 
-    if (!canManageSchedule || !sourceSchedule) return;
+    if (!canManageSchedule || isSaving || !sourceSchedule) return;
 
-    const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
-    const previousMonthlySchedules = monthlySchedules.map(item => ({ ...item }));
-    const deletingScheduleId = sourceSchedule.id;
+    const originalSchedule = pendingScheduleOps[sourceSchedule.id]?.schedule || sourceSchedule;
 
-    const optimisticWeekSchedule = cloneWeekSchedule(weekSchedule);
-    if (optimisticWeekSchedule) {
-      optimisticWeekSchedule.users = optimisticWeekSchedule.users.map(user => ({
-        ...user,
-        schedules: user.schedules.filter(schedule => schedule.id !== deletingScheduleId),
-      }));
-    }
-    setWeekSchedule(optimisticWeekSchedule);
-    setMonthlySchedules(current => current.filter(schedule => schedule.id !== deletingScheduleId));
-    setIsSaving(true);
-
-    try {
-      await scheduleService.deleteWorkSchedule(deletingScheduleId);
-      toast.success('Đã xóa ca.');
-      await reload();
-    } catch (err: any) {
-      setWeekSchedule(previousWeekSchedule);
-      setMonthlySchedules(previousMonthlySchedules);
-      toast.error(err.message || 'Không thể xóa ca.');
-    } finally {
-      setIsSaving(false);
-    }
+    setWeekSchedule(removeScheduleFromWeek(weekSchedule, sourceSchedule.id));
+    setMonthlySchedules(current => current.filter(schedule => schedule.id !== sourceSchedule.id));
+    setPendingScheduleOps(current => ({
+      ...current,
+      [sourceSchedule.id]: { type: 'delete', schedule: originalSchedule },
+    }));
   };
 
-  const discardCellDrafts = () => {
+  const discardPendingChanges = async () => {
+    const hadScheduleOps = Object.keys(pendingScheduleOps).length > 0;
     setCellDrafts({});
+    setPendingScheduleOps({});
     setOpenShiftSelectKey(null);
     setDraggedSchedule(null);
     setDragOverScheduleCell(null);
+
+    if (!hadScheduleOps) return;
+
+    // Kéo thả/xóa đã cập nhật thẳng weekSchedule nên phải tải lại để khôi phục hiển thị
+    try {
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể tải lại lịch làm việc.');
+    }
   };
 
-  const submitCellDrafts = async () => {
+  const submitPendingChanges = async () => {
+    if (isSaving) return;
+
     const drafts = Object.values(cellDrafts);
-    if (drafts.length === 0) return;
+    const scheduleOps = Object.values(pendingScheduleOps);
+    const totalChanges = drafts.length + scheduleOps.length;
+    if (totalChanges === 0) return;
 
     setIsSaving(true);
+    let savedCount = 0;
+    let savedScheduleOpsCount = 0;
+    let hasError = false;
+
     try {
-      await Promise.all(drafts.map(draft => {
-        if (!draft.shiftId && draft.originalSchedule) {
-          return scheduleService.deleteWorkSchedule(draft.originalSchedule.id);
+      for (const op of scheduleOps) {
+        if (op.type === 'delete') {
+          await scheduleService.deleteWorkSchedule(op.schedule.id);
+        } else {
+          await scheduleService.updateWorkSchedule(op.schedule.id, {
+            workDate: op.targetDate,
+            shiftId: op.schedule.shiftId ?? null,
+            shiftCode: op.schedule.shiftCode,
+            shiftName: op.schedule.shiftName,
+            startTime: op.schedule.startTime,
+            endTime: op.schedule.endTime,
+            endDayOffset: op.schedule.endDayOffset || 0,
+            paidWorkingHours: op.schedule.paidWorkingHours || op.schedule.workingHours || 0,
+            userId: op.targetUserId,
+            status: op.schedule.status,
+            note: op.schedule.note || null,
+          });
         }
 
-        if (draft.shiftId && draft.originalSchedule) {
-          return scheduleService.updateWorkSchedule(draft.originalSchedule.id, {
+        savedCount += 1;
+        savedScheduleOpsCount += 1;
+        setPendingScheduleOps(current => {
+          const next = { ...current };
+          delete next[op.schedule.id];
+          return next;
+        });
+      }
+
+      for (const draft of drafts) {
+        if (!draft.shiftId && draft.originalSchedule) {
+          await scheduleService.deleteWorkSchedule(draft.originalSchedule.id);
+        } else if (draft.shiftId && draft.originalSchedule) {
+          await scheduleService.updateWorkSchedule(draft.originalSchedule.id, {
             workDate: draft.workDate,
             shiftId: Number(draft.shiftId),
             userId: draft.userId,
             status: draft.originalSchedule.status,
             note: draft.originalSchedule.note || null,
           });
-        }
-
-        if (draft.shiftId) {
-          return scheduleService.createWorkSchedule({
+        } else if (draft.shiftId) {
+          await scheduleService.createWorkSchedule({
             workDate: draft.workDate,
             shiftId: Number(draft.shiftId),
             userId: draft.userId,
@@ -982,23 +1047,41 @@ export default function ScheduleTab() {
           });
         }
 
-        return Promise.resolve();
-      }));
+        savedCount += 1;
+        setCellDrafts(current => {
+          const next = { ...current };
+          delete next[getCellKey(draft.userId, draft.workDate)];
+          return next;
+        });
+      }
 
-      toast.success(`Đã lưu ${drafts.length} thay đổi lịch.`);
-      setCellDrafts({});
+      toast.success(`Đã lưu ${totalChanges} thay đổi lịch.`);
       setOpenShiftSelectKey(null);
-      await reload();
     } catch (err: unknown) {
+      hasError = true;
       const message = err instanceof Error ? err.message : 'Không thể lưu thay đổi lịch.';
-      toast.error(message);
+      toast.error(savedCount > 0 ? `Đã lưu ${savedCount}/${totalChanges} thay đổi. ${message}` : message);
     } finally {
       setIsSaving(false);
+    }
+
+    try {
+      await reload();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể tải lại lịch làm việc.');
+    }
+
+    // Neu con thao tac keo tha/xoa chua luu duoc, hien lai trang thai cho luu tren tuan vua tai
+    if (hasError) {
+      const remainingOps = scheduleOps.slice(savedScheduleOpsCount);
+      if (remainingOps.length > 0) {
+        setWeekSchedule(applyPendingOpsToWeek(useScheduleStore.getState().weekSchedule, remainingOps));
+      }
     }
   };
 
   const savePanel = async () => {
-    if (!panel) return;
+    if (!panel || isSaving) return;
     if (!panel.workDate) {
       toast.error('Vui lòng chọn ngày.');
       return;
@@ -1105,7 +1188,7 @@ export default function ScheduleTab() {
   };
 
   const deleteSchedule = async () => {
-    if (!panel?.schedule) return;
+    if (!panel?.schedule || isSaving) return;
 
     const previousWeekSchedule = cloneWeekSchedule(weekSchedule);
     const previousMonthlySchedules = monthlySchedules.map(item => ({ ...item }));
@@ -1158,6 +1241,7 @@ export default function ScheduleTab() {
             toast.success(`Đã xóa ${scheduleIds.length} lịch trong tuần.`);
             setPanel(null);
             setCellDrafts({});
+            setPendingScheduleOps({});
             await reload();
           } catch (err: any) {
             toast.error(err.message || 'Không thể xóa toàn bộ lịch.');
@@ -1242,7 +1326,7 @@ export default function ScheduleTab() {
   };
 
   const saveOvertime = async () => {
-    if (!overtimeDraft) return;
+    if (!overtimeDraft || isSaving) return;
     const overtimeUserId = isEmployee ? currentUserId : overtimeDraft.userId;
     if (!overtimeUserId) {
       toast.error('Vui lòng chọn nhân viên OT.');
@@ -1614,7 +1698,7 @@ export default function ScheduleTab() {
     const draft = cellDrafts[cellKey];
     const effectiveShiftId = draft ? draft.shiftId : schedule?.shiftId ? String(schedule.shiftId) : '';
     const effectiveShift = activeShifts.find(shift => String(shift.id) === effectiveShiftId);
-    const hasDraft = Boolean(draft);
+    const hasDraft = Boolean(draft) || pendingOpCellKeys.has(cellKey);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
     const isDragOver = dragOverScheduleCell === cellKey;
 
@@ -1632,7 +1716,7 @@ export default function ScheduleTab() {
         onDragLeave={() => setDragOverScheduleCell(current => (current === cellKey ? null : current))}
         onDrop={event => {
           event.preventDefault();
-          void handleDropSchedule(row, date);
+          handleDropSchedule(row, date);
         }}
       >
         {canManageSchedule ? (
@@ -1702,7 +1786,7 @@ export default function ScheduleTab() {
     const schedules = getSchedulesForDate(row, date);
     const cellKey = getCellKey(row.userId, date);
     const draft = cellDrafts[cellKey];
-    const hasDraft = Boolean(draft);
+    const hasDraft = Boolean(draft) || pendingOpCellKeys.has(cellKey);
     const cellOvertimeRequests = overtimeByCell.get(cellKey) || [];
     const isDragOver = dragOverScheduleCell === cellKey;
 
@@ -1725,7 +1809,7 @@ export default function ScheduleTab() {
           onDragLeave={() => setDragOverScheduleCell(current => (current === cellKey ? null : current))}
           onDrop={event => {
             event.preventDefault();
-            void handleDropSchedule(row, date);
+            handleDropSchedule(row, date);
           }}
           onContextMenu={event => openScheduleContextMenu(event, undefined, row, date, schedules)}
         >
@@ -2332,14 +2416,14 @@ export default function ScheduleTab() {
                 </button>
               </div>
 
-              {hasCellDrafts && (
+              {hasPendingChanges && (
                 <div className="flex flex-col gap-2 rounded-md border border-primary/20 bg-primary/10 p-3 sm:flex-row sm:items-center">
                   <span className="text-xs font-semibold text-primary">
-                    {Object.keys(cellDrafts).length} thay đổi chưa lưu
+                    {pendingChangesCount} thay đổi chưa lưu
                   </span>
                   <button
                     type="button"
-                    onClick={discardCellDrafts}
+                    onClick={discardPendingChanges}
                     disabled={isSaving}
                     className="h-10 px-4 rounded-md border border-outline-variant text-sm font-semibold hover:bg-surface-2 cursor-pointer disabled:opacity-60"
                   >
@@ -2347,7 +2431,7 @@ export default function ScheduleTab() {
                   </button>
                   <button
                     type="button"
-                    onClick={submitCellDrafts}
+                    onClick={submitPendingChanges}
                     disabled={isSaving}
                     className="btn-primary h-10"
                   >
@@ -2367,7 +2451,7 @@ export default function ScheduleTab() {
 
             <p className="px-4 pb-5 text-sm text-on-surface-variant">
               {canManageSchedule
-                ? 'Click vào ca để chỉnh sửa, hoặc kéo-thả từng ca sang ô khác để đổi nhanh. Một nhân viên có thể có nhiều ca trong ngày nếu không vượt giới hạn giờ.'
+                ? 'Click vào ca để chỉnh sửa, hoặc kéo-thả từng ca sang ô khác/thùng rác. Các thay đổi kéo-thả chỉ được áp dụng khi bấm "Lưu thay đổi". Một nhân viên có thể có nhiều ca trong ngày nếu không vượt giới hạn giờ.'
                 : 'Bạn chỉ có quyền xem, tìm kiếm và lọc lịch làm việc.'}
             </p>
             </>
@@ -2510,7 +2594,7 @@ export default function ScheduleTab() {
           onDragLeave={() => setIsDragOverTrash(false)}
           onDrop={event => {
             event.preventDefault();
-            void handleDeleteViaDrag();
+            handleDeleteViaDrag();
           }}
           className={`fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2 rounded-xl border-2 border-dashed px-6 py-4 shadow-xl transition-colors ${
             isDragOverTrash
