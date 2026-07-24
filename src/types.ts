@@ -491,6 +491,7 @@ export type TabType =
   | 'roles'
   | 'booths'
   | 'remote_booth'
+  | 'print_image'
   | 'shifts'
   | 'notifications'
   | 'schedule'

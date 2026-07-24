@@ -12,6 +12,7 @@ import UsersTab from './features/users/components/UsersTab';
 import RolesTab from './features/users/components/RolesTab';
 import BoothsTab from './features/booths/components/BoothsTab';
 import RemoteBoothTab from './features/remote-booth/components/RemoteBoothTab';
+import PrintImageTab from './features/print-image/components/PrintImageTab';
 import ShiftsTab from './features/shifts/components/ShiftsTab';
 import NotificationsTab from './features/notifications/components/NotificationsTab';
 import ScheduleTab from './features/schedule/components/ScheduleTab';
@@ -88,6 +89,7 @@ export default function App() {
         />
         <Route path="booths" element={<BoothsTab />} />
         <Route path="remote-booth" element={<RemoteBoothTab />} />
+        <Route path="print-image" element={<PrintImageTab />} />
         <Route
           path="shifts"
           element={(
