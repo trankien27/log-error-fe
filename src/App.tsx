@@ -19,12 +19,21 @@ import NotificationsTab from './features/notifications/components/NotificationsT
 import ScheduleTab from './features/schedule/components/ScheduleTab';
 import OvertimeApprovalTab from './features/overtime/components/OvertimeApprovalTab';
 import SettingsTab from './features/settings/components/SettingsTab';
+import BoothGuestLayout from './features/booth-guest/components/BoothGuestLayout';
+import BoothPinPage from './features/booth-guest/components/BoothPinPage';
 import { useAuthStore } from './stores/useAuthStore';
+import { useBoothGuestStore } from './stores/useBoothGuestStore';
 
 // ProtectedRoute helper to guard routes
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn } = useAuthStore();
   return isLoggedIn ? <>{children}</> : <Navigate to="/auth" replace />;
+}
+
+// Phien booth bang ma PIN: chua xac thuc thi quay ve man nhap PIN.
+function BoothGuestRoute({ children }: { children: React.ReactNode }) {
+  const { isBoothGuest } = useBoothGuestStore();
+  return isBoothGuest ? <>{children}</> : <Navigate to="/booth/pin" replace />;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -47,6 +56,21 @@ export default function App() {
     <Routes>
       {/* Public Route */}
       <Route path="/auth" element={<AuthPage />} />
+
+      {/* Che do booth: xac thuc bang ma PIN, chi vao 2 man in anh / tao lai anh */}
+      <Route path="/booth/pin" element={<BoothPinPage />} />
+      <Route
+        path="/booth"
+        element={(
+          <BoothGuestRoute>
+            <BoothGuestLayout />
+          </BoothGuestRoute>
+        )}
+      >
+        <Route index element={<Navigate to="/booth/print-image" replace />} />
+        <Route path="print-image" element={<PrintImageTab />} />
+        <Route path="recreate-image" element={<RecreateImageTab />} />
+      </Route>
 
       {/* Protected Dashboard Layout Routes */}
       <Route

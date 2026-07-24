@@ -200,6 +200,60 @@ const getTransactions = async (
   }
 };
 
+// PaymentMethod co dinh 5 theo yeu cau nghiep vu.
+const PIN_PAYMENT_METHOD = 5;
+
+export interface BoothPinResult {
+  ok: boolean;
+  message: string;
+  code: string;
+}
+
+// POST /api/booth/valid-pin: dung 200 + message "Success" (code 003) la hop le,
+// sai pin tra 400 kem message tieng Viet de hien thi thang cho user.
+const validatePin = async (pinCode: string, timeoutMs = 15000): Promise<BoothPinResult> => {
+  const { signal, clear } = createTimeoutSignal(timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(`${BOOTH_LOCAL_BASE_URL}/api/booth/valid-pin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ PinCode: pinCode, PaymentMethod: PIN_PAYMENT_METHOD }),
+      cache: 'no-store',
+      signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error(`Booth không phản hồi sau ${Math.round(timeoutMs / 1000)} giây.`);
+    }
+    throw new NotBoothDeviceError();
+  } finally {
+    clear();
+  }
+
+  const text = await response.text();
+  let payload: { message?: unknown; code?: unknown } = {};
+  try {
+    payload = JSON.parse(text) as typeof payload;
+  } catch {
+    payload = {};
+  }
+
+  const message = typeof payload.message === 'string' ? payload.message : '';
+  const code = typeof payload.code === 'string' ? payload.code : '';
+  const ok = response.ok && (message === 'Success' || code === '003');
+
+  return {
+    ok,
+    code,
+    message: ok ? message : (message || `Mã PIN không hợp lệ (HTTP ${response.status}).`),
+  };
+};
+
 export interface ProcessImageListItem {
   fileName: string;
   rotate: number;
@@ -379,6 +433,7 @@ export const localBoothPrintService = {
   getQrImageUrl,
   checkBoothAvailable,
   getBoothInfo,
+  validatePin,
   getTransactions,
   buildProcessImagePayload,
   processImage,

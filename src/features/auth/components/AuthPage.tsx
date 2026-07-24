@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, KeyRound, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
@@ -108,6 +108,17 @@ export default function AuthPage() {
             className="btn-primary w-full h-12"
           >
             {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
+          </button>
+
+          {/* Danh cho nhan vien dung truc tiep tren may booth: xac thuc bang ma PIN,
+              chi vao duoc 2 man in anh / tao lai anh. */}
+          <button
+            type="button"
+            onClick={() => navigate('/booth/pin')}
+            className="w-full h-12 rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface hover:bg-surface-2 inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+          >
+            <KeyRound className="h-4 w-4" />
+            Sử dụng mà không cần đăng nhập
           </button>
         </form>
       </div>
