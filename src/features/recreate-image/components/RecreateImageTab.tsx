@@ -317,11 +317,12 @@ export default function RecreateImageTab() {
                         type="button"
                         key={fileName}
                         onClick={() => assignImage(fileName)}
-                        disabled={pictures.length === 0}
-                        className={`text-left rounded-xl border overflow-hidden transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 ${
+                        // Anh da gan vao mot o thi khong cho chon lai
+                        disabled={pictures.length === 0 || usedAt >= 0}
+                        className={`text-left rounded-xl border overflow-hidden transition-colors disabled:cursor-not-allowed ${
                           usedAt >= 0
                             ? 'border-primary ring-2 ring-primary/40 bg-secondary-container'
-                            : 'border-outline-variant bg-surface hover:bg-surface-2'
+                            : 'border-outline-variant bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-60'
                         }`}
                       >
                         <div className="relative aspect-square bg-surface-2 flex items-center justify-center overflow-hidden">
@@ -329,11 +330,11 @@ export default function RecreateImageTab() {
                             src={localBoothPrintService.getImageUrl(transactionId, fileName)}
                             alt={fileName}
                             loading="lazy"
-                            className="w-full h-full object-contain"
+                            className={`w-full h-full object-contain ${usedAt >= 0 ? 'opacity-45' : ''}`}
                           />
                           {usedAt >= 0 && (
-                            <span className="absolute top-1.5 right-1.5 rounded-full bg-primary text-on-primary px-2 py-0.5 text-[10px] font-bold">
-                              Ô {usedAt + 1}
+                            <span className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-primary text-on-primary text-[11px] font-bold inline-flex items-center justify-center">
+                              {usedAt + 1}
                             </span>
                           )}
                         </div>
