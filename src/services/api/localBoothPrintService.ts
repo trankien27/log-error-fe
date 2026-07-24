@@ -24,7 +24,7 @@ export interface LocalPrintImageRequest {
   numberOfImage: number;
 }
 
-export interface LocalPrintImageResult {
+export interface LocalBoothApiResult {
   status: number;
   raw: unknown;
 }
@@ -200,25 +200,132 @@ const getTransactions = async (
   }
 };
 
-const printImage = async (
-  body: LocalPrintImageRequest,
-  timeoutMs = 20000,
-): Promise<LocalPrintImageResult> => {
+export interface ProcessImageListItem {
+  fileName: string;
+  rotate: number;
+  flip: unknown;
+  isDigitalBackground: boolean;
+  digitalBackgroundId: number;
+}
+
+export interface ProcessImageRequest {
+  frameId: number;
+  layoutId: number;
+  themeId: number;
+  themeDetailId: number;
+  transactionId: string;
+  filterId: number;
+  listImages: ProcessImageListItem[];
+  isFile: boolean;
+  isVideo: boolean;
+  voucherCode: string;
+  purchaseDuration: number;
+  captureDuration: number;
+  editDuration: number;
+  captureMode: number;
+  printNumber: number;
+  layoutAmount: number;
+  printAmount: number;
+  discount: number;
+  deposit: number;
+  listSticker: unknown[];
+  isDigitalBackground: boolean;
+  digitalBackgroundId: number;
+  isConfirmPolicy: boolean;
+  isSelfBooth: boolean;
+  paymentMethod: number;
+}
+
+const toInt = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
+};
+
+const toBool = (value: unknown) => value === true || value === 1 || value === '1';
+
+// Cot Images luu san JSON dung dang listImages cua API processimage.
+const parseListImages = (value: unknown): ProcessImageListItem[] => {
+  if (typeof value !== 'string' || !value.trim()) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object')
+    .map(entry => ({
+      fileName: String(entry.fileName ?? ''),
+      rotate: toInt(entry.rotate, 0),
+      flip: entry.flip ?? null,
+      isDigitalBackground: toBool(entry.isDigitalBackground),
+      digitalBackgroundId: toInt(entry.digitalBackgroundId, 0),
+    }))
+    .filter(entry => Boolean(entry.fileName));
+};
+
+// Cot ImageTheme co dang "/LayoutTheme/4444.png" -> themeDetailId = 4444.
+const parseThemeDetailId = (value: unknown) => {
+  if (typeof value !== 'string') return 0;
+  const matched = value.match(/(\d+)(?:\.[a-z0-9]+)?$/i);
+  return matched ? toInt(matched[1], 0) : 0;
+};
+
+// Dung payload processimage tu dung mot dong trong bang Transactions.
+const buildProcessImagePayload = (item: LocalTransactionItem): ProcessImageRequest => {
+  const values = item.values ?? {};
+  const listImages = parseListImages(values.Images);
+  const digitalImage = listImages.find(entry => entry.isDigitalBackground && entry.digitalBackgroundId > 0);
+
+  return {
+    frameId: toInt(values.FrameId, 0),
+    layoutId: toInt(values.LayoutId, 0),
+    themeId: toInt(values.ThemeId, 0),
+    themeDetailId: parseThemeDetailId(values.ImageTheme),
+    transactionId: item.transactionId,
+    filterId: toInt(values.FilterId, 0),
+    listImages,
+    isFile: toBool(values.IsFile),
+    isVideo: false,
+    voucherCode: typeof values.VoucherCode === 'string' ? values.VoucherCode : '',
+    purchaseDuration: toInt(values.PurchaseDuration, 0),
+    captureDuration: toInt(values.CaptureDuration, 0),
+    editDuration: toInt(values.EditDuration, 0),
+    captureMode: toInt(values.CaptureMode, 0),
+    printNumber: toInt(values.PrintNumber, 0),
+    layoutAmount: toInt(values.LayoutAmount, 0),
+    printAmount: toInt(values.PrintAmount, 0),
+    discount: toInt(values.Discount, 0),
+    deposit: toInt(values.Deposit, 0),
+    listSticker: [],
+    isDigitalBackground: Boolean(digitalImage),
+    digitalBackgroundId: digitalImage?.digitalBackgroundId ?? toInt(values.BackgroundId, 0),
+    isConfirmPolicy: toBool(values.IsConfirmPolicy),
+    isSelfBooth: toBool(values.IsSelfBooth),
+    paymentMethod: toInt(values.PaymentMethod, 0),
+  };
+};
+
+const postToBooth = async (
+  path: string,
+  body: unknown,
+  timeoutMs: number,
+  failureLabel: string,
+): Promise<LocalBoothApiResult> => {
   const { signal, clear } = createTimeoutSignal(timeoutMs);
 
   let response: Response;
   try {
-    response = await fetch(`${BOOTH_LOCAL_BASE_URL}/api/print/printimage`, {
+    response = await fetch(`${BOOTH_LOCAL_BASE_URL}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({
-        transactionId: body.transactionId,
-        layoutId: body.layoutId,
-        numberOfImage: body.numberOfImage,
-      }),
+      body: JSON.stringify(body),
       cache: 'no-store',
       signal,
     });
@@ -243,11 +350,28 @@ const printImage = async (
 
   if (!response.ok) {
     const detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
-    throw new Error(`In ảnh thất bại (HTTP ${response.status})${detail ? `: ${detail}` : ''}`);
+    throw new Error(`${failureLabel} (HTTP ${response.status})${detail ? `: ${detail}` : ''}`);
   }
 
   return { status: response.status, raw };
 };
+
+const processImage = (payload: ProcessImageRequest, timeoutMs = 120000) => (
+  postToBooth('/api/file/processimage', payload, timeoutMs, 'Tạo ảnh thất bại')
+);
+
+const printImage = (body: LocalPrintImageRequest, timeoutMs = 20000) => (
+  postToBooth(
+    '/api/print/printimage',
+    {
+      transactionId: body.transactionId,
+      layoutId: body.layoutId,
+      numberOfImage: body.numberOfImage,
+    },
+    timeoutMs,
+    'In ảnh thất bại',
+  )
+);
 
 export const localBoothPrintService = {
   baseUrl: BOOTH_LOCAL_BASE_URL,
@@ -256,5 +380,7 @@ export const localBoothPrintService = {
   checkBoothAvailable,
   getBoothInfo,
   getTransactions,
+  buildProcessImagePayload,
+  processImage,
   printImage,
 };

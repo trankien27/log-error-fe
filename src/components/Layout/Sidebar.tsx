@@ -15,6 +15,7 @@ import {
   Store,
   TimerReset,
   Users,
+  Wand2,
   X,
 } from 'lucide-react';
 import { useLogsStore } from '../../stores/useLogsStore';
@@ -65,6 +66,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/booths') return 'booths';
     if (path === '/remote-booth') return 'remote_booth';
     if (path === '/print-image') return 'print_image';
+    if (path === '/recreate-image') return 'recreate_image';
     if (path === '/shifts') return 'shifts';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
@@ -96,6 +98,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'booths': navigate('/booths'); break;
       case 'remote_booth': navigate('/remote-booth'); break;
       case 'print_image': navigate('/print-image'); break;
+      case 'recreate_image': navigate('/recreate-image'); break;
       case 'shifts': navigate('/shifts'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
@@ -228,6 +231,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               <button onClick={() => navigateTo('print_image')} className={navButtonClass(activeTab === 'print_image')}>
                 <Printer className="w-4 h-4" />
                 <span>In ảnh</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigateTo('recreate_image')} className={navButtonClass(activeTab === 'recreate_image')}>
+                <Wand2 className="w-4 h-4" />
+                <span>Tạo lại ảnh</span>
               </button>
             </li>
             {canViewShifts && (
