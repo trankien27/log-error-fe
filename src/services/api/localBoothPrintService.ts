@@ -45,6 +45,16 @@ const getPreviewImageUrl = (transactionId: string) => {
   return `${BOOTH_LOCAL_BASE_URL}/api/file/image/${id}/${id}.png`;
 };
 
+// File bat ky trong D:\Work\PhotoBooth\Image\{transactionId}
+const getImageUrl = (transactionId: string, fileName: string) => (
+  `${BOOTH_LOCAL_BASE_URL}/api/file/image/${encodeURIComponent(transactionId)}/${encodeURIComponent(fileName)}`
+);
+
+// D:\Work\PhotoBooth\LayoutTheme\{themeDetailId}.png
+const getLayoutThemeUrl = (themeDetailId: number | string) => (
+  `${BOOTH_LOCAL_BASE_URL}/api/file/image/resource/LayoutTheme/${encodeURIComponent(String(themeDetailId))}.png`
+);
+
 const getQrImageUrl = (transactionId: string) => {
   const id = encodeURIComponent(transactionId);
   return `${BOOTH_LOCAL_BASE_URL}/api/file/image/${id}/${id}_QR.png`;
@@ -254,6 +264,96 @@ const validatePin = async (pinCode: string, timeoutMs = 15000): Promise<BoothPin
   };
 };
 
+export interface LayoutPicture {
+  id: number;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  orderNo: number;
+  isMiniPicture: boolean | null;
+  pictureTarget: number;
+}
+
+export interface BoothLayout {
+  id: number;
+  code: string;
+  name: string;
+  width: number;
+  height: number;
+  numberOfPicture: number;
+  pictures: LayoutPicture[];
+}
+
+const readBoothEnvelope = async (url: string, timeoutMs: number): Promise<unknown> => {
+  const { signal, clear } = createTimeoutSignal(timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store', signal });
+  } catch {
+    throw new NotBoothDeviceError();
+  } finally {
+    clear();
+  }
+
+  if (!response.ok) {
+    throw new Error(`Gọi ${url} thất bại (HTTP ${response.status}).`);
+  }
+
+  const payload = await response.json() as { response?: unknown };
+  return payload?.response ?? payload;
+};
+
+// Danh sach file anh cua giao dich (thu muc Image\{transactionId} tren may booth).
+const getTransactionImages = async (
+  transactionId: string,
+  timeoutMs = 15000,
+): Promise<string[]> => {
+  const data = await readBoothEnvelope(
+    `${BOOTH_LOCAL_BASE_URL}/api/file/images/${encodeURIComponent(transactionId)}`,
+    timeoutMs,
+  ) as { data?: unknown };
+
+  const files = Array.isArray(data?.data) ? data.data : [];
+  return files.map(file => String(file)).filter(Boolean);
+};
+
+// Toa do/kich thuoc cac o anh cua layout, dung de dat anh len layout theme.
+const getLayout = async (layoutId: number, timeoutMs = 15000): Promise<BoothLayout> => {
+  const layout = await readBoothEnvelope(
+    `${BOOTH_LOCAL_BASE_URL}/api/layout/getbyid?id=${encodeURIComponent(String(layoutId))}`,
+    timeoutMs,
+  ) as Partial<BoothLayout> | null;
+
+  if (!layout || typeof layout !== 'object' || !layout.width || !layout.height) {
+    throw new Error(`Không đọc được thông tin layout ${layoutId}.`);
+  }
+
+  const pictures = Array.isArray(layout.pictures) ? layout.pictures : [];
+
+  return {
+    id: Number(layout.id ?? layoutId),
+    code: String(layout.code ?? ''),
+    name: String(layout.name ?? ''),
+    width: Number(layout.width),
+    height: Number(layout.height),
+    numberOfPicture: Number(layout.numberOfPicture ?? pictures.length),
+    pictures: [...pictures]
+      .map(picture => ({
+        id: Number(picture.id ?? 0),
+        width: Number(picture.width ?? 0),
+        height: Number(picture.height ?? 0),
+        x: Number(picture.x ?? 0),
+        y: Number(picture.y ?? 0),
+        orderNo: Number(picture.orderNo ?? 0),
+        isMiniPicture: picture.isMiniPicture ?? null,
+        pictureTarget: Number(picture.pictureTarget ?? 0),
+      }))
+      .sort((left, right) => left.orderNo - right.orderNo),
+  };
+};
+
 export interface ProcessImageListItem {
   fileName: string;
   rotate: number;
@@ -329,9 +429,13 @@ const parseThemeDetailId = (value: unknown) => {
 };
 
 // Dung payload processimage tu dung mot dong trong bang Transactions.
-const buildProcessImagePayload = (item: LocalTransactionItem): ProcessImageRequest => {
+// listImagesOverride: dung khi user tu chon anh gan vao cac o cua layout.
+const buildProcessImagePayload = (
+  item: LocalTransactionItem,
+  listImagesOverride?: ProcessImageListItem[],
+): ProcessImageRequest => {
   const values = item.values ?? {};
-  const listImages = parseListImages(values.Images);
+  const listImages = listImagesOverride ?? parseListImages(values.Images);
   const digitalImage = listImages.find(entry => entry.isDigitalBackground && entry.digitalBackgroundId > 0);
 
   return {
@@ -430,6 +534,10 @@ const printImage = (body: LocalPrintImageRequest, timeoutMs = 20000) => (
 export const localBoothPrintService = {
   baseUrl: BOOTH_LOCAL_BASE_URL,
   getPreviewImageUrl,
+  getImageUrl,
+  getLayoutThemeUrl,
+  getTransactionImages,
+  getLayout,
   getQrImageUrl,
   checkBoothAvailable,
   getBoothInfo,
