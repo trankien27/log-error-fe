@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -86,6 +86,15 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 48 * 1024 * 1024;
+
 function getStatusClass(status: ErrorLogStatus) {
   if (status === 1) return 'badge-info';
   if (status === 2) return 'badge-warning';
@@ -161,6 +170,8 @@ export default function ErrorLogsTab() {
   const [uploadImages, setUploadImages] = useState<File[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
 
   const filteredLogs = getFilteredLogs();
   const selectedLogIdSet = new Set(selectedLogIds);
@@ -207,6 +218,7 @@ export default function ErrorLogsTab() {
   }, [storeId]);
 
   const handleOpenModal = (log: ErrorLog | null = null) => {
+    setAttachmentFiles([]);
     if (log) {
       setCurrentEditingLog(log);
       setReceivedDate(toDateTimeInputValue(log.receivedDate));
@@ -270,17 +282,64 @@ export default function ErrorLogsTab() {
     };
 
     try {
+      let savedLog: ErrorLog;
       if (currentEditingLog) {
-        await updateLog(currentEditingLog.id, payload);
-        toast.success('Cập nhật log lỗi thành công.');
+        savedLog = await updateLog(currentEditingLog.id, payload);
       } else {
-        await addLog(payload);
-        toast.success('Tạo log lỗi thành công.');
+        savedLog = await addLog(payload);
       }
+
+      if (attachmentFiles.length > 0) {
+        setIsUploadingAttachments(true);
+        try {
+          await logsService.uploadAttachments(savedLog.id, attachmentFiles);
+        } catch (uploadError: any) {
+          if (!currentEditingLog) {
+            setCurrentEditingLog(savedLog);
+          }
+          toast.error(
+            `${currentEditingLog ? 'Log lỗi đã được cập nhật' : 'Log lỗi đã được tạo'}, nhưng upload tệp thất bại: ${uploadError.message || 'Lỗi không xác định'}`,
+          );
+          return;
+        } finally {
+          setIsUploadingAttachments(false);
+        }
+      }
+
+      await fetchLogs(getActiveQuery());
+      toast.success(
+        `${currentEditingLog ? 'Cập nhật' : 'Tạo'} log lỗi thành công${attachmentFiles.length > 0 ? ` và đã tải ${attachmentFiles.length} tệp lên Telegram` : ''}.`,
+      );
       setIsModalOpen(false);
     } catch (err: any) {
       toast.error(err.message || 'Không thể lưu log lỗi.');
     }
+  };
+
+  const handleAttachmentFilesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const oversizedFile = files.find(file => file.size > MAX_ATTACHMENT_BYTES);
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+
+    if (files.length > 10) {
+      toast.error('Mỗi lần chỉ được chọn tối đa 10 tệp.');
+      event.target.value = '';
+      return;
+    }
+
+    if (oversizedFile) {
+      toast.error(`Tệp ${oversizedFile.name} vượt quá giới hạn 20 MB.`);
+      event.target.value = '';
+      return;
+    }
+
+    if (totalSize > MAX_TOTAL_ATTACHMENT_BYTES) {
+      toast.error('Tổng dung lượng tệp trong một lần upload không được vượt quá 48 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setAttachmentFiles(files);
   };
 
   const handleSaveShortcut = (event: React.KeyboardEvent<HTMLFormElement>) => {
@@ -677,19 +736,20 @@ export default function ErrorLogsTab() {
                 <th className="py-4 px-5 font-bold">Nhóm lỗi</th>
                 <th className="py-4 px-5 font-bold">Trạng thái</th>
                 <th className="py-4 px-5 font-bold">Mức độ</th>
+                <th className="py-4 px-5 font-bold text-center">Tệp</th>
                 <th className="py-4 px-5 font-bold text-right">Tùy biến</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-bold text-on-surface-variant">
+                  <td colSpan={9} className="py-10 text-center font-bold text-on-surface-variant">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-bold text-on-surface-variant">
+                  <td colSpan={9} className="py-10 text-center font-bold text-on-surface-variant">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
@@ -720,6 +780,21 @@ export default function ErrorLogsTab() {
                       <span className={getSeverityClass(log.severity)}>
                         {severityLabels[log.severity]}
                       </span>
+                    </td>
+                    <td className="py-4 px-5 text-center">
+                      {(log.attachments?.length ?? 0) > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLogDetails(log)}
+                          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 font-bold text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          title="Xem tệp đính kèm"
+                        >
+                          <Paperclip className="h-3.5 w-3.5" />
+                          {log.attachments.length}
+                        </button>
+                      ) : (
+                        <span className="text-on-surface-variant/60">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-5 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-1.5">
@@ -993,6 +1068,55 @@ export default function ErrorLogsTab() {
                 />
               </div>
 
+              <div className="lg:col-span-2 rounded-xl border border-outline-variant bg-surface-2 p-4">
+                <label className="flex items-center gap-2 font-semibold text-on-surface">
+                  <Paperclip className="h-4 w-4 text-primary" />
+                  Tệp đính kèm qua Telegram
+                </label>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  Tối đa 10 tệp, 20 MB mỗi tệp và 48 MB cho một lần upload. Backend không lưu file lâu dài.
+                </p>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleAttachmentFilesChange}
+                  className="mt-3 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-surface p-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+
+                {attachmentFiles.length > 0 && (
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {attachmentFiles.map(file => (
+                      <div key={`${file.name}_${file.size}_${file.lastModified}`} className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs">
+                        <FileText className="h-4 w-4 shrink-0 text-primary" />
+                        <span className="min-w-0 flex-1 truncate font-semibold" title={file.name}>{file.name}</span>
+                        <span className="shrink-0 text-on-surface-variant">{formatFileSize(file.size)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(currentEditingLog?.attachments?.length ?? 0) > 0 && (
+                  <div className="mt-4 border-t border-outline-variant pt-3">
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tệp đã lưu trên Telegram</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {currentEditingLog!.attachments.map(attachment => (
+                        <a
+                          key={attachment.id}
+                          href={attachment.downloadUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs transition-colors hover:border-primary/40 hover:text-primary"
+                        >
+                          <Download className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0 flex-1 truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
+                          <span className="shrink-0 text-on-surface-variant">{formatFileSize(attachment.fileSize)}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
@@ -1003,10 +1127,10 @@ export default function ErrorLogsTab() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isUploadingAttachments}
                   className="btn-primary"
                 >
-                  {isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  {isUploadingAttachments ? 'Đang tải tệp lên Telegram...' : isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
@@ -1076,6 +1200,33 @@ export default function ErrorLogsTab() {
               <div>
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Ghi chú</span>
                 <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
+              </div>
+              <div>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tệp đính kèm trên Telegram</span>
+                {(selectedLogDetails.attachments?.length ?? 0) === 0 ? (
+                  <p className="rounded-lg border border-dashed border-outline-variant bg-surface-2 p-3 text-on-surface-variant">Chưa có tệp đính kèm.</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {selectedLogDetails.attachments.map(attachment => (
+                      <a
+                        key={attachment.id}
+                        href={attachment.downloadUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                        title="Mở và tải trực tiếp từ Telegram"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Download className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
+                          <span className="block text-xs text-on-surface-variant">{formatFileSize(attachment.fileSize)} · Telegram</span>
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

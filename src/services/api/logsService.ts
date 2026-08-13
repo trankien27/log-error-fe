@@ -1,4 +1,4 @@
-import { ErrorGroup, ErrorLog, ErrorLogStatus, PagedResult, ProcessingFlow, Severity } from '../../types';
+import { ErrorGroup, ErrorLog, ErrorLogAttachment, ErrorLogStatus, PagedResult, ProcessingFlow, Severity } from '../../types';
 import { apiClient, API_BASE_URL, AUTH_TOKEN_KEY } from './apiClient';
 
 export type ErrorLogQuery = {
@@ -227,6 +227,34 @@ export const logsService = {
     }
 
     const payload = await response.json();
+    return payload?.data ?? payload;
+  },
+
+  uploadAttachments: async (id: string, files: File[]): Promise<ErrorLogAttachment[]> => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
+    const headers = new Headers();
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/api/error-logs/${encodeURIComponent(id)}/attachments`,
+      {
+        method: 'POST',
+        headers,
+        body: formData,
+      },
+    );
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.message || `Không thể tải tệp lên Telegram. Status: ${response.status}`);
+    }
+
     return payload?.data ?? payload;
   },
 };

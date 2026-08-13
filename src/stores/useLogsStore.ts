@@ -39,8 +39,8 @@ interface LogsState {
   setCurrentEditingLog: (log: ErrorLog | null) => void;
 
   fetchLogs: (query?: ErrorLogQuery) => Promise<void>;
-  addLog: (log: ErrorLogPayload) => Promise<void>;
-  updateLog: (id: string, log: ErrorLogPayload) => Promise<void>;
+  addLog: (log: ErrorLogPayload) => Promise<ErrorLog>;
+  updateLog: (id: string, log: ErrorLogPayload) => Promise<ErrorLog>;
   updateLogStatus: (id: string, status: ErrorLogStatus) => Promise<void>;
   deleteLog: (id: string) => Promise<void>;
   syncGoogleSheet: () => Promise<void>;
@@ -107,6 +107,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
     try {
       const newLog = await logsService.create(logData);
       set((state) => ({ logs: [newLog, ...state.logs], isLoading: false }));
+      return newLog;
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;
@@ -121,6 +122,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
         logs: state.logs.map(log => log.id === id ? updatedLog : log),
         isLoading: false,
       }));
+      return updatedLog;
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;

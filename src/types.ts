@@ -3,6 +3,16 @@ export type ProcessingFlow = 1 | 2 | 3;
 export type ErrorLogStatus = 1 | 2 | 3;
 export type Severity = 1 | 2 | 3;
 
+export interface ErrorLogAttachment {
+  id: string;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  telegramFilePath: string;
+  downloadUrl: string;
+  createdTime: string;
+}
+
 export interface ErrorLog {
   id: string;
   errorCode: string;
@@ -22,6 +32,7 @@ export interface ErrorLog {
   note?: string | null;
   createdTime: string;
   lastUpdatedTime?: string | null;
+  attachments: ErrorLogAttachment[];
 }
 
 export type TransactionErrorQueueStatus = 1 | 2 | 3;
