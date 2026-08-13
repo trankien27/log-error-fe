@@ -1103,6 +1103,7 @@ export default function ErrorLogsTab() {
                         <a
                           key={attachment.id}
                           href={attachment.downloadUrl}
+                          download={attachment.fileName}
                           target="_blank"
                           rel="noreferrer"
                           className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs transition-colors hover:border-primary/40 hover:text-primary"
@@ -1211,6 +1212,7 @@ export default function ErrorLogsTab() {
                       <a
                         key={attachment.id}
                         href={attachment.downloadUrl}
+                        download={attachment.fileName}
                         target="_blank"
                         rel="noreferrer"
                         className="flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
