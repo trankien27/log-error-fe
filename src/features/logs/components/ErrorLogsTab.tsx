@@ -1071,7 +1071,7 @@ export default function ErrorLogsTab() {
               <div className="lg:col-span-2 rounded-xl border border-outline-variant bg-surface-2 p-4">
                 <label className="flex items-center gap-2 font-semibold text-on-surface">
                   <Paperclip className="h-4 w-4 text-primary" />
-                  Tệp đính kèm qua Telegram
+                  Tệp đính kèm
                 </label>
                 <p className="mt-1 text-xs text-on-surface-variant">
                   Tối đa 10 tệp, 20 MB mỗi tệp và 48 MB cho một lần upload. Backend không lưu file lâu dài.
@@ -1097,7 +1097,7 @@ export default function ErrorLogsTab() {
 
                 {(currentEditingLog?.attachments?.length ?? 0) > 0 && (
                   <div className="mt-4 border-t border-outline-variant pt-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tệp đã lưu trên Telegram</p>
+                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tệp đã lưu</p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {currentEditingLog!.attachments.map(attachment => (
                         <a
@@ -1203,7 +1203,7 @@ export default function ErrorLogsTab() {
                 <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tệp đính kèm trên Telegram</span>
+                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tệp đính kèm</span>
                 {(selectedLogDetails.attachments?.length ?? 0) === 0 ? (
                   <p className="rounded-lg border border-dashed border-outline-variant bg-surface-2 p-3 text-on-surface-variant">Chưa có tệp đính kèm.</p>
                 ) : (
@@ -1216,7 +1216,7 @@ export default function ErrorLogsTab() {
                         target="_blank"
                         rel="noreferrer"
                         className="flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                        title="Mở và tải trực tiếp từ Telegram"
+                        title="Mở và tải trực tiếp"
                       >
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                           <Download className="h-4 w-4" />
