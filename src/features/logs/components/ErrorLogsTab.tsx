@@ -801,7 +801,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-surface-2 hover:text-on-surface transition-colors hover:border-outline-variant cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary/25 bg-secondary-container text-primary shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Xem chi tiết"
                           aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
                         >
@@ -810,7 +810,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => handleOpenModal(log)}
-                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-primary/10 hover:text-primary transition-colors hover:border-primary/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary bg-primary text-on-primary shadow-sm transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa log lỗi ${log.errorCode || log.id}`}
                         >
@@ -819,7 +819,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => handleDelete(log)}
-                          className="min-h-8 min-w-8 p-1 px-2 border rounded hover:bg-error-container hover:text-error transition-colors hover:border-error/30 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error/30 bg-error-container text-on-error-container shadow-sm transition-colors hover:border-error/50 hover:bg-error hover:text-white focus:outline-none focus:ring-2 focus:ring-error/30"
                           title="Xóa lỗi"
                           aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
                         >
