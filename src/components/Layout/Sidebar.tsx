@@ -8,6 +8,7 @@ import {
   ClipboardList,
   History,
   LayoutDashboard,
+  LibraryBig,
   MessageSquare,
   Printer,
   RadioTower,
@@ -68,6 +69,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/print-image') return 'print_image';
     if (path === '/recreate-image') return 'recreate_image';
     if (path === '/shifts') return 'shifts';
+    if (path === '/list-dictionaries') return 'list_dictionaries';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
     if (path === '/overtime-approval') return 'overtime_approval';
@@ -100,6 +102,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'print_image': navigate('/print-image'); break;
       case 'recreate_image': navigate('/recreate-image'); break;
       case 'shifts': navigate('/shifts'); break;
+      case 'list_dictionaries': navigate('/list-dictionaries'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
       case 'overtime_approval': navigate('/overtime-approval'); break;
@@ -247,6 +250,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 </button>
               </li>
             )}
+            <li>
+              <button onClick={() => navigateTo('list_dictionaries')} className={navButtonClass(activeTab === 'list_dictionaries')}>
+                <LibraryBig className="w-4 h-4" />
+                <span>Danh mục custom</span>
+              </button>
+            </li>
             <li>
               <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
                 <Bell className="w-4 h-4" />
