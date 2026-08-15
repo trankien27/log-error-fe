@@ -3,6 +3,7 @@ import { Camera, Eye, EyeOff, Loader2, Lock, Save, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { accountService } from '../../../services/api/accountService';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import ThemeSettingsSection from './ThemeSettingsSection';
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
 
@@ -26,7 +27,10 @@ export default function SettingsTab() {
     setSettingsPasswordConfirm,
     resetSecurityForm,
     updateCurrentUser,
+    hasAnyRole,
   } = useAuthStore();
+
+  const isAdmin = hasAnyRole([1, 'Admin']);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -92,9 +96,17 @@ export default function SettingsTab() {
   return (
     <div className="space-y-6 text-left text-on-surface animate-fadeIn">
       <div>
-        <h2 className="text-xl font-bold text-on-surface font-sans">Thiết lập tài khoản</h2>
-        <p className="mt-1 text-xs text-on-surface-variant">Đổi mật khẩu đăng nhập và cập nhật ảnh đại diện.</p>
+        <h2 className="text-xl font-bold text-on-surface font-sans">
+          {isAdmin ? 'Thiết lập hệ thống và tài khoản' : 'Thiết lập tài khoản'}
+        </h2>
+        <p className="mt-1 text-xs text-on-surface-variant">
+          {isAdmin
+            ? 'Quản lý màu giao diện, mật khẩu đăng nhập và ảnh đại diện.'
+            : 'Đổi mật khẩu đăng nhập và cập nhật ảnh đại diện.'}
+        </p>
       </div>
+
+      {isAdmin && <ThemeSettingsSection />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         <section className="card-surface p-5 shadow-sm lg:col-span-4">
