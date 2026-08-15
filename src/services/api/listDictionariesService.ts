@@ -2,6 +2,7 @@ import {
   CreateListDictionaryRequest,
   ListDictionaryDto,
   ListDictionaryItemDto,
+  ListDictionarySidebarDto,
   SaveListDictionaryItemRequest,
   UpdateListDictionaryDisplayRequest,
 } from '../../types';
@@ -26,6 +27,9 @@ export const listDictionariesService = {
 
   getByCode: (code: string) =>
     apiClient.get<ListDictionaryDto>(`/api/list-dictionaries/${encodeCode(code)}`),
+
+  getSidebar: () =>
+    apiClient.get<ListDictionarySidebarDto[]>('/api/list-dictionaries/navigation/sidebar'),
 
   create: (request: CreateListDictionaryRequest) =>
     apiClient.post<ListDictionaryDto>('/api/list-dictionaries', request),

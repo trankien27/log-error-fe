@@ -1,8 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
   BookOpen,
   CheckCircle2,
   ChevronRight,
@@ -116,16 +114,15 @@ export default function ListDictionariesTab() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemValues, setItemValues] = useState<Record<string, string>>({});
   const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
-  const [displayFields, setDisplayFields] = useState<ListDictionaryFieldDto[]>([]);
+  const [displayInSidebar, setDisplayInSidebar] = useState(false);
 
   const selectedDictionary = useMemo(
     () => dictionaries.find(item => item.code === routeCode) || null,
     [dictionaries, routeCode],
   );
 
-  const visibleFields = useMemo(
+  const dataFields = useMemo(
     () => (selectedDictionary?.fields || [])
-      .filter(field => field.isVisible)
       .sort((left, right) => left.sortOrder - right.sortOrder),
     [selectedDictionary],
   );
@@ -133,10 +130,10 @@ export default function ListDictionariesTab() {
   const filteredItems = useMemo(() => {
     const keyword = itemFilter.trim().toLocaleLowerCase('vi');
     if (!keyword) return items;
-    return items.filter(item => visibleFields.some(field =>
+    return items.filter(item => dataFields.some(field =>
       String(item.values[field.code] ?? '').toLocaleLowerCase('vi').includes(keyword),
     ));
-  }, [itemFilter, items, visibleFields]);
+  }, [itemFilter, items, dataFields]);
 
   const filteredDictionaries = useMemo(() => {
     const keyword = dictionaryFilter.trim().toLocaleLowerCase('vi');
@@ -250,7 +247,7 @@ export default function ListDictionariesTab() {
       setIsDefinitionModalOpen(false);
       await loadDictionaries();
       navigate(`/list-dictionaries/${encodeURIComponent(created.code)}`);
-      setDisplayFields([...created.fields].sort((left, right) => left.sortOrder - right.sortOrder));
+      setDisplayInSidebar(created.isVisibleInSidebar);
       setIsDisplayModalOpen(true);
       toast.success('Đã tạo danh mục custom.');
     } catch (error: any) {
@@ -343,40 +340,23 @@ export default function ListDictionariesTab() {
 
   const openDisplayModal = (dictionary = selectedDictionary) => {
     if (!dictionary || !isAdmin) return;
-    setDisplayFields([...dictionary.fields].sort((left, right) => left.sortOrder - right.sortOrder));
+    setDisplayInSidebar(dictionary.isVisibleInSidebar);
     setIsDisplayModalOpen(true);
-  };
-
-  const moveDisplayField = (index: number, direction: -1 | 1) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= displayFields.length) return;
-    setDisplayFields(current => {
-      const next = [...current];
-      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
-      return next;
-    });
   };
 
   const submitDisplayConfiguration = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedDictionary) return;
-    if (!displayFields.some(field => field.isVisible)) {
-      toast.error('Phải có ít nhất một trường được hiển thị.');
-      return;
-    }
 
     try {
       setIsSaving(true);
       const updated = await listDictionariesService.updateDisplay(selectedDictionary.code, {
-        fields: displayFields.map((field, index) => ({
-          fieldId: field.id,
-          isVisible: field.isVisible,
-          sortOrder: index,
-        })),
+        isVisibleInSidebar: displayInSidebar,
       });
       setDictionaries(current => current.map(item => item.code === updated.code ? updated : item));
       setIsDisplayModalOpen(false);
-      toast.success('Đã lưu cấu hình hiển thị.');
+      window.dispatchEvent(new Event('list-dictionaries:sidebar-updated'));
+      toast.success('Đã lưu cấu hình hiển thị trên sidebar.');
     } catch (error: any) {
       toast.error(error?.message || 'Không thể lưu cấu hình hiển thị.');
     } finally {
@@ -392,7 +372,7 @@ export default function ListDictionariesTab() {
             <div>
               <h2 className="text-xl font-bold font-sans">Danh mục custom</h2>
               <p className="mt-1 text-xs text-on-surface-variant">
-                Chọn một danh mục để xem dữ liệu. Admin có thể tạo danh mục và cấu hình các cột hiển thị.
+                Chọn một danh mục để xem dữ liệu. Admin có thể cấu hình danh mục xuất hiện trong “Danh mục khác”.
               </p>
             </div>
             {isAdmin && (
@@ -456,6 +436,15 @@ export default function ListDictionariesTab() {
                     <span className="block truncate text-base font-black">{dictionary.name}</span>
                     <span className="mt-1 block truncate font-mono text-[11px] font-bold text-primary">{dictionary.code}</span>
                     <span className="mt-2 block text-xs text-on-surface-variant">{dictionary.itemCount} bản ghi</span>
+                    {isAdmin && (
+                      <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black ${
+                        dictionary.isVisibleInSidebar
+                          ? 'bg-success-container text-success'
+                          : 'bg-surface-2 text-on-surface-variant'
+                      }`}>
+                        {dictionary.isVisibleInSidebar ? 'Đang hiện ở sidebar' : 'Đang ẩn ở sidebar'}
+                      </span>
+                    )}
                   </span>
                   <ChevronRight className="h-5 w-5 text-on-surface-variant transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                 </button>
@@ -502,7 +491,7 @@ export default function ListDictionariesTab() {
             <div className="flex flex-wrap gap-2">
               {isAdmin && (
                 <button type="button" onClick={() => openDisplayModal()} className="btn-secondary h-10 px-4">
-                  <Settings2 className="h-4 w-4" /> Cấu hình hiển thị
+                  <Settings2 className="h-4 w-4" /> Hiển thị sidebar
                 </button>
               )}
               <button type="button" onClick={() => openItemModal()} className="btn-primary h-10 px-4">
@@ -527,11 +516,11 @@ export default function ListDictionariesTab() {
             <div className="overflow-x-auto">
               <table
                 className="w-full border-collapse text-left text-xs"
-                style={{ minWidth: Math.max(680, 260 + visibleFields.length * 180) }}
+                style={{ minWidth: Math.max(680, 260 + dataFields.length * 180) }}
               >
                 <thead>
                   <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
-                    {visibleFields.map(field => (
+                    {dataFields.map(field => (
                       <th key={field.id} className="px-4 py-3">{field.name}</th>
                     ))}
                     <th className="px-4 py-3">Audit</th>
@@ -541,19 +530,19 @@ export default function ListDictionariesTab() {
                 <tbody className="divide-y divide-outline-variant/40">
                   {isLoadingItems ? (
                     <tr>
-                      <td colSpan={visibleFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
+                      <td colSpan={dataFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
                         <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Đang tải dữ liệu...
                       </td>
                     </tr>
                   ) : filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={visibleFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
+                      <td colSpan={dataFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
                         {items.length === 0 ? 'Chưa có dữ liệu trong danh mục này.' : 'Không có dữ liệu phù hợp.'}
                       </td>
                     </tr>
                   ) : filteredItems.map(item => (
                     <tr key={item.id} className="transition-colors hover:bg-surface-2/60">
-                      {visibleFields.map(field => (
+                      {dataFields.map(field => (
                         <td key={field.id} className="max-w-[280px] truncate px-4 py-3 font-semibold" title={String(item.values[field.code] ?? '')}>
                           {formatValue(field, item.values[field.code])}
                         </td>
@@ -746,60 +735,31 @@ export default function ListDictionariesTab() {
           <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-outline-variant bg-surface shadow-elevated">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div>
-                <h3 className="text-lg font-black">Cấu hình hiển thị</h3>
-                <p className="mt-1 text-xs text-on-surface-variant">Chọn và sắp xếp các cột xuất hiện trong bảng dữ liệu.</p>
+                <h3 className="text-lg font-black">Cấu hình hiển thị trên sidebar</h3>
+                <p className="mt-1 text-xs text-on-surface-variant">Quy định danh mục có xuất hiện trong nhóm “Danh mục khác” hay không.</p>
               </div>
               <button type="button" onClick={() => setIsDisplayModalOpen(false)} className="inline-flex h-8 w-8 items-center justify-center rounded hover:bg-surface-2">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <form onSubmit={submitDisplayConfiguration} className="space-y-4 p-5">
-              <div className="space-y-2">
-                {displayFields.map((field, index) => (
-                  <div key={field.id} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-2 p-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface font-mono text-xs font-black text-on-surface-variant">
-                      {index + 1}
-                    </span>
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={field.isVisible}
-                        onChange={event => setDisplayFields(current => current.map(item =>
-                          item.id === field.id ? { ...item, isVisible: event.target.checked } : item,
-                        ))}
-                        className="h-4 w-4 accent-primary"
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-black">{field.name}</span>
-                        <span className="block truncate font-mono text-[10px] text-on-surface-variant">{field.code}</span>
-                      </span>
-                    </label>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        disabled={index === 0}
-                        onClick={() => moveDisplayField(index, -1)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-outline-variant bg-surface hover:bg-primary/10 hover:text-primary disabled:opacity-30"
-                        title="Đưa lên"
-                      >
-                        <ArrowUp className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={index === displayFields.length - 1}
-                        onClick={() => moveDisplayField(index, 1)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-outline-variant bg-surface hover:bg-primary/10 hover:text-primary disabled:opacity-30"
-                        title="Đưa xuống"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-outline-variant bg-surface-2 p-4">
+                <input
+                  type="checkbox"
+                  checked={displayInSidebar}
+                  onChange={event => setDisplayInSidebar(event.target.checked)}
+                  className="mt-0.5 h-5 w-5 accent-primary"
+                />
+                <span>
+                  <span className="block text-sm font-black">Hiển thị trong “Danh mục khác”</span>
+                  <span className="mt-1 block text-xs leading-5 text-on-surface-variant">
+                    Khi bật, người dùng có thể xổ nhóm “Danh mục khác” trên sidebar và chọn {selectedDictionary.name}.
+                  </span>
+                </span>
+              </label>
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-on-surface-variant">
-                Mã bản ghi không hiển thị trên giao diện và được hệ thống tự động cấp theo số thứ tự.
+                Mã bản ghi vẫn được hệ thống tự động cấp theo số thứ tự và không hiển thị trên giao diện.
               </div>
 
               <div className="flex flex-col-reverse gap-2 border-t border-outline-variant pt-4 sm:flex-row sm:justify-end">

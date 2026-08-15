@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Bell,
   Calendar,
+  ChevronDown,
   Clock3,
   ClipboardList,
   History,
@@ -24,12 +25,20 @@ import { useTasksStore } from '../../stores/useTasksStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useUsersStore } from '../../stores/useUsersStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { TabType } from '../../types';
+import { listDictionariesService } from '../../services/api/listDictionariesService';
+import { ListDictionarySidebarDto, TabType } from '../../types';
 
 const navButtonClass = (isActive: boolean) =>
   `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
     isActive
       ? 'bg-secondary-container text-primary border-l-4 border-primary font-bold'
+      : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
+  }`;
+
+const dictionaryNavButtonClass = (isActive: boolean) =>
+  `w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold transition-colors ${
+    isActive
+      ? 'bg-primary/10 text-primary'
       : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
   }`;
 
@@ -43,6 +52,10 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = variant === 'mobile';
+  const [sidebarDictionaries, setSidebarDictionaries] = useState<ListDictionarySidebarDto[]>([]);
+  const [isOtherDictionariesOpen, setIsOtherDictionariesOpen] = useState(
+    location.pathname.startsWith('/list-dictionaries'),
+  );
 
   // Zustand State subscriptions
   const { logs } = useLogsStore();
@@ -53,6 +66,32 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const isAdmin = hasAnyRole([1, 'Admin']);
   const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
   const canViewShifts = getCurrentRoleNumber() !== 2;
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadSidebarDictionaries = async () => {
+      try {
+        const data = await listDictionariesService.getSidebar();
+        if (isMounted) setSidebarDictionaries(data);
+      } catch {
+        if (isMounted) setSidebarDictionaries([]);
+      }
+    };
+
+    const handleSidebarUpdated = () => void loadSidebarDictionaries();
+    void loadSidebarDictionaries();
+    window.addEventListener('list-dictionaries:sidebar-updated', handleSidebarUpdated);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('list-dictionaries:sidebar-updated', handleSidebarUpdated);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/list-dictionaries')) {
+      setIsOtherDictionariesOpen(true);
+    }
+  }, [location.pathname]);
 
   const getActiveTab = (): TabType => {
     const path = location.pathname;
@@ -113,6 +152,11 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (isMobile) {
       onClose?.();
     }
+  };
+
+  const navigateToDictionary = (code: string) => {
+    navigate(`/list-dictionaries/${encodeURIComponent(code)}`);
+    if (isMobile) onClose?.();
   };
 
   return (
@@ -251,10 +295,48 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               </li>
             )}
             <li>
-              <button onClick={() => navigateTo('list_dictionaries')} className={navButtonClass(activeTab === 'list_dictionaries')}>
+              <button
+                type="button"
+                onClick={() => setIsOtherDictionariesOpen(current => !current)}
+                className={navButtonClass(activeTab === 'list_dictionaries')}
+                aria-expanded={isOtherDictionariesOpen}
+              >
                 <LibraryBig className="w-4 h-4" />
-                <span>Danh mục custom</span>
+                <span>Danh mục khác</span>
+                <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOtherDictionariesOpen ? 'rotate-180' : ''}`} />
               </button>
+              {isOtherDictionariesOpen && (
+                <div className="ml-5 mt-1 space-y-1 border-l border-outline-variant pl-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => navigateTo('list_dictionaries')}
+                      className={dictionaryNavButtonClass(location.pathname === '/list-dictionaries')}
+                    >
+                      Quản lý danh mục
+                    </button>
+                  )}
+                  {sidebarDictionaries.map(dictionary => (
+                    <button
+                      key={dictionary.id}
+                      type="button"
+                      onClick={() => navigateToDictionary(dictionary.code)}
+                      className={dictionaryNavButtonClass(
+                        location.pathname === `/list-dictionaries/${encodeURIComponent(dictionary.code)}`,
+                      )}
+                      title={dictionary.name}
+                    >
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      <span className="truncate">{dictionary.name}</span>
+                    </button>
+                  ))}
+                  {sidebarDictionaries.length === 0 && !isAdmin && (
+                    <p className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant">
+                      Chưa có danh mục hiển thị
+                    </p>
+                  )}
+                </div>
+              )}
             </li>
             <li>
               <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
