@@ -41,6 +41,9 @@ export const listDictionariesService = {
   updateSidebarDisplay: (request: UpdateListDictionarySidebarRequest) =>
     apiClient.put<string[]>('/api/list-dictionaries/display', request),
 
+  deleteDictionary: (code: string) =>
+    apiClient.delete<boolean>(`/api/list-dictionaries/${encodeCode(code)}`),
+
   getItems: (code: string, keyword = '') =>
     apiClient.get<ListDictionaryItemDto[]>(
       `/api/list-dictionaries/${encodeCode(code)}/items${queryString({ keyword })}`,

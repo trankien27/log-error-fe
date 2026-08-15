@@ -124,6 +124,7 @@ export default function ListDictionariesTab() {
   const [isLoadingDictionaries, setIsLoadingDictionaries] = useState(true);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingDictionaryCode, setDeletingDictionaryCode] = useState<string | null>(null);
   const [isDefinitionModalOpen, setIsDefinitionModalOpen] = useState(false);
   const [definitionDraft, setDefinitionDraft] = useState<DefinitionDraft>(newDefinition);
   const [editingItem, setEditingItem] = useState<ListDictionaryItemDto | null>(null);
@@ -484,6 +485,28 @@ export default function ListDictionariesTab() {
     }
   };
 
+  const deleteDictionary = async (dictionary: ListDictionaryDto) => {
+    if (!isAdmin) return;
+
+    const confirmed = window.confirm(
+      `Xoá danh mục “${dictionary.name}”?\n\nToàn bộ ${dictionary.itemCount} bản ghi và các trường custom bên trong sẽ bị xoá khỏi hệ thống.`,
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingDictionaryCode(dictionary.code);
+      await listDictionariesService.deleteDictionary(dictionary.code);
+      setDictionaries(current => current.filter(item => item.code !== dictionary.code));
+      setDisplayDictionaryCodes(current => current.filter(code => code !== dictionary.code));
+      window.dispatchEvent(new Event('list-dictionaries:sidebar-updated'));
+      toast.success(`Đã xoá danh mục ${dictionary.name}.`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể xoá danh mục.');
+    } finally {
+      setDeletingDictionaryCode(null);
+    }
+  };
+
   const openDisplayModal = () => {
     if (!isAdmin) return;
     setDisplayDictionaryCodes(
@@ -604,31 +627,49 @@ export default function ListDictionariesTab() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredDictionaries.map(dictionary => (
-                <button
+                <div
                   key={dictionary.id}
-                  type="button"
-                  onClick={() => navigate(`/list-dictionaries/${encodeURIComponent(dictionary.code)}`)}
-                  className="card-surface group flex min-h-32 items-center gap-4 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                  className="card-surface group relative min-h-32 overflow-hidden transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-primary">
-                    <Database className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-base font-black">{dictionary.name}</span>
-                    <span className="mt-1 block truncate font-mono text-[11px] font-bold text-primary">{dictionary.code}</span>
-                    <span className="mt-2 block text-xs text-on-surface-variant">{dictionary.itemCount} bản ghi</span>
-                    {isAdmin && (
-                      <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black ${
-                        dictionary.isVisibleInSidebar
-                          ? 'bg-success-container text-success'
-                          : 'bg-surface-2 text-on-surface-variant'
-                      }`}>
-                        {dictionary.isVisibleInSidebar ? 'Đang hiện ở sidebar' : 'Đang ẩn ở sidebar'}
-                      </span>
-                    )}
-                  </span>
-                  <ChevronRight className="h-5 w-5 text-on-surface-variant transition-transform group-hover:translate-x-1 group-hover:text-primary" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/list-dictionaries/${encodeURIComponent(dictionary.code)}`)}
+                    className="flex min-h-32 w-full items-center gap-4 p-5 pr-14 text-left"
+                  >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-primary">
+                      <Database className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-base font-black">{dictionary.name}</span>
+                      <span className="mt-1 block truncate font-mono text-[11px] font-bold text-primary">{dictionary.code}</span>
+                      <span className="mt-2 block text-xs text-on-surface-variant">{dictionary.itemCount} bản ghi</span>
+                      {isAdmin && (
+                        <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black ${
+                          dictionary.isVisibleInSidebar
+                            ? 'bg-success-container text-success'
+                            : 'bg-surface-2 text-on-surface-variant'
+                        }`}>
+                          {dictionary.isVisibleInSidebar ? 'Đang hiện ở sidebar' : 'Đang ẩn ở sidebar'}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-on-surface-variant transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                  </button>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => void deleteDictionary(dictionary)}
+                      disabled={deletingDictionaryCode !== null}
+                      className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-error/20 bg-surface text-error shadow-sm transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-50"
+                      title={`Xoá danh mục ${dictionary.name}`}
+                      aria-label={`Xoá danh mục ${dictionary.name}`}
+                    >
+                      {deletingDictionaryCode === dictionary.code
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Trash2 className="h-4 w-4" />}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}
