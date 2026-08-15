@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useMemo, useState } from 'react';
+import React, { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BookOpen,
@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Database,
   Edit3,
+  FileSpreadsheet,
   Loader2,
   Plus,
   Search,
@@ -25,6 +26,13 @@ import {
   ListDictionaryItemDto,
   SaveListDictionaryItemRequest,
 } from '../../../types';
+import {
+  buildImportItems,
+  ExcelDictionaryDraft,
+  ExcelImportFieldDraft,
+  formatExcelPreviewValue,
+  parseExcelDictionaryFile,
+} from '../utils/excelDictionaryImport';
 
 const FIELD_TYPES: Array<{ value: ListDictionaryFieldType; label: string }> = [
   { value: 1, label: 'Văn bản' },
@@ -34,6 +42,8 @@ const FIELD_TYPES: Array<{ value: ListDictionaryFieldType; label: string }> = [
   { value: 5, label: 'Ngày giờ' },
   { value: 6, label: 'Một lựa chọn' },
 ];
+
+const IMPORT_FIELD_TYPES = FIELD_TYPES.filter(type => type.value !== 6);
 
 type FieldDraft = {
   key: string;
@@ -49,6 +59,13 @@ type DefinitionDraft = {
   name: string;
   description: string;
   fields: FieldDraft[];
+};
+
+type ImportDefinitionDraft = {
+  code: string;
+  name: string;
+  description: string;
+  isVisibleInSidebar: boolean;
 };
 
 function newField(): FieldDraft {
@@ -115,6 +132,16 @@ export default function ListDictionariesTab() {
   const [itemValues, setItemValues] = useState<Record<string, string>>({});
   const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
   const [displayInSidebar, setDisplayInSidebar] = useState(false);
+  const excelFileInputRef = useRef<HTMLInputElement>(null);
+  const [isParsingExcel, setIsParsingExcel] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [excelImportDraft, setExcelImportDraft] = useState<ExcelDictionaryDraft | null>(null);
+  const [importDefinition, setImportDefinition] = useState<ImportDefinitionDraft>({
+    code: '',
+    name: '',
+    description: '',
+    isVisibleInSidebar: true,
+  });
 
   const selectedDictionary = useMemo(
     () => dictionaries.find(item => item.code === routeCode) || null,
@@ -257,6 +284,108 @@ export default function ListDictionariesTab() {
     }
   };
 
+  const handleExcelFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    try {
+      setIsParsingExcel(true);
+      const draft = await parseExcelDictionaryFile(file);
+      const baseName = file.name.replace(/\.xlsx$/i, '').replace(/[_-]+/g, ' ').trim();
+      setExcelImportDraft(draft);
+      setImportDefinition({
+        code: toCode(baseName).slice(0, 50).replace(/_+$/g, ''),
+        name: (baseName || 'Danh mục import').slice(0, 150),
+        description: `Import từ file ${file.name}`,
+        isVisibleInSidebar: true,
+      });
+      setIsImportModalOpen(true);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể đọc file Excel.');
+    } finally {
+      setIsParsingExcel(false);
+    }
+  };
+
+  const updateExcelImportField = (key: string, patch: Partial<ExcelImportFieldDraft>) => {
+    setExcelImportDraft(current => current ? {
+      ...current,
+      fields: current.fields.map(field => field.key === key ? { ...field, ...patch } : field),
+    } : current);
+  };
+
+  const submitExcelImport = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!excelImportDraft) return;
+
+    const dictionaryCode = toCode(importDefinition.code);
+    if (!importDefinition.name.trim()) {
+      toast.error('Vui lòng nhập tên danh mục.');
+      return;
+    }
+    if (!/^[A-Z][A-Z0-9_]*$/.test(dictionaryCode)) {
+      toast.error('Mã danh mục không hợp lệ.');
+      return;
+    }
+
+    const fieldCodes = new Set<string>();
+    for (const field of excelImportDraft.fields) {
+      const fieldCode = toCode(field.code);
+      if (!field.name.trim() || !/^[A-Z][A-Z0-9_]*$/.test(fieldCode)) {
+        toast.error(`Mapping của header “${field.sourceHeader}” chưa hợp lệ.`);
+        return;
+      }
+      if (fieldCodes.has(fieldCode)) {
+        toast.error(`Mã trường ${fieldCode} đang bị trùng.`);
+        return;
+      }
+      fieldCodes.add(fieldCode);
+    }
+
+    const normalizedFields = excelImportDraft.fields.map(field => ({
+      ...field,
+      code: toCode(field.code),
+      name: field.name.trim(),
+    }));
+    let items: Array<Record<string, string | number | boolean>>;
+    try {
+      items = buildImportItems(normalizedFields, excelImportDraft.rows);
+    } catch (error: any) {
+      toast.error(error?.message || 'Dữ liệu Excel không hợp lệ.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const created = await listDictionariesService.importExcel({
+        code: dictionaryCode,
+        name: importDefinition.name.trim(),
+        description: importDefinition.description.trim() || undefined,
+        isVisibleInSidebar: importDefinition.isVisibleInSidebar,
+        fields: normalizedFields.map(field => ({
+          code: field.code,
+          name: field.name,
+          dataType: field.dataType,
+          isRequired: field.isRequired,
+          options: [],
+        })),
+        items,
+      });
+
+      setIsImportModalOpen(false);
+      setExcelImportDraft(null);
+      await loadDictionaries();
+      window.dispatchEvent(new Event('list-dictionaries:sidebar-updated'));
+      navigate(`/list-dictionaries/${encodeURIComponent(created.code)}`);
+      toast.success(`Đã tạo danh mục và import ${created.itemCount} bản ghi.`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể import danh mục từ Excel.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const openItemModal = (item?: ListDictionaryItemDto) => {
     if (!selectedDictionary) return;
     setEditingItem(item || null);
@@ -376,9 +505,29 @@ export default function ListDictionariesTab() {
               </p>
             </div>
             {isAdmin && (
-              <button type="button" onClick={openDefinitionModal} className="btn-primary">
-                <Plus className="h-4 w-4" /> Tạo danh mục
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={excelFileInputRef}
+                  type="file"
+                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  onChange={handleExcelFile}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  disabled={isParsingExcel}
+                  onClick={() => excelFileInputRef.current?.click()}
+                  className="btn-secondary"
+                >
+                  {isParsingExcel
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <FileSpreadsheet className="h-4 w-4" />}
+                  {isParsingExcel ? 'Đang đọc file...' : 'Import Excel'}
+                </button>
+                <button type="button" onClick={openDefinitionModal} className="btn-primary">
+                  <Plus className="h-4 w-4" /> Tạo danh mục
+                </button>
+              </div>
             )}
           </div>
 
@@ -578,6 +727,206 @@ export default function ListDictionariesTab() {
             </div>
           </div>
         </>
+      )}
+
+      {isImportModalOpen && excelImportDraft && (
+        <div className="modal-overlay">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-6xl overflow-y-auto rounded-2xl border border-outline-variant bg-surface shadow-elevated">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-outline-variant bg-surface px-5 py-4">
+              <div>
+                <h3 className="text-lg font-black">Xác nhận import Excel</h3>
+                <p className="mt-1 text-xs text-on-surface-variant">
+                  {excelImportDraft.fileName} · Header dòng {excelImportDraft.headerRowNumber}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setExcelImportDraft(null);
+                }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded hover:bg-surface-2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={submitExcelImport} className="space-y-6 p-5">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-xl border border-outline-variant bg-surface-2 p-3">
+                  <p className="text-[10px] font-black uppercase text-on-surface-variant">Số cột</p>
+                  <p className="mt-1 text-xl font-black text-primary">{excelImportDraft.fields.length}</p>
+                </div>
+                <div className="rounded-xl border border-outline-variant bg-surface-2 p-3">
+                  <p className="text-[10px] font-black uppercase text-on-surface-variant">Dòng dữ liệu</p>
+                  <p className="mt-1 text-xl font-black text-success">{excelImportDraft.rows.length}</p>
+                </div>
+                <div className="rounded-xl border border-outline-variant bg-surface-2 p-3">
+                  <p className="text-[10px] font-black uppercase text-on-surface-variant">Trường bắt buộc</p>
+                  <p className="mt-1 text-xl font-black">{excelImportDraft.fields.filter(field => field.isRequired).length}</p>
+                </div>
+                <div className="rounded-xl border border-outline-variant bg-surface-2 p-3">
+                  <p className="text-[10px] font-black uppercase text-on-surface-variant">Sheet sử dụng</p>
+                  <p className="mt-1 text-sm font-black">Sheet đầu tiên</p>
+                </div>
+              </div>
+
+              <section className="space-y-4">
+                <p className="text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Thông tin danh mục sẽ tạo</p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="text-sm font-bold">
+                    Tên danh mục *
+                    <input
+                      value={importDefinition.name}
+                      maxLength={150}
+                      onChange={event => setImportDefinition(current => ({ ...current, name: event.target.value }))}
+                      className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-primary"
+                    />
+                  </label>
+                  <label className="text-sm font-bold">
+                    Mã danh mục *
+                    <input
+                      value={importDefinition.code}
+                      maxLength={50}
+                      onChange={event => setImportDefinition(current => ({ ...current, code: toCode(event.target.value) }))}
+                      className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 font-mono text-sm uppercase focus:outline-primary"
+                    />
+                  </label>
+                </div>
+                <label className="block text-sm font-bold">
+                  Mô tả
+                  <textarea
+                    rows={2}
+                    value={importDefinition.description}
+                    onChange={event => setImportDefinition(current => ({ ...current, description: event.target.value }))}
+                    className="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm focus:outline-primary"
+                  />
+                </label>
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-2 p-3 text-sm font-bold">
+                  <input
+                    type="checkbox"
+                    checked={importDefinition.isVisibleInSidebar}
+                    onChange={event => setImportDefinition(current => ({ ...current, isVisibleInSidebar: event.target.checked }))}
+                    className="h-4 w-4 accent-primary"
+                  />
+                  Hiển thị danh mục này trong “Danh mục khác” trên sidebar
+                </label>
+              </section>
+
+              <section className="space-y-3 border-t border-outline-variant pt-5">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Mapping header thành field</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">Hệ thống đã tự suy luận kiểu dữ liệu; bạn có thể chỉnh trước khi xác nhận.</p>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-outline-variant">
+                  <table className="w-full min-w-[920px] text-left text-xs">
+                    <thead className="bg-surface-2 text-[10px] font-black uppercase text-on-surface-variant">
+                      <tr>
+                        <th className="px-3 py-3">Header Excel</th>
+                        <th className="px-3 py-3">Tên field</th>
+                        <th className="px-3 py-3">Mã field</th>
+                        <th className="px-3 py-3">Kiểu dữ liệu</th>
+                        <th className="px-3 py-3 text-center">Bắt buộc</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/50">
+                      {excelImportDraft.fields.map(field => (
+                        <tr key={field.key}>
+                          <td className="max-w-48 px-3 py-2 font-bold" title={field.sourceHeader}>{field.sourceHeader}</td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={field.name}
+                              maxLength={150}
+                              onChange={event => updateExcelImportField(field.key, { name: event.target.value })}
+                              className="h-9 w-full rounded border border-outline-variant px-2 text-xs focus:outline-primary"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <input
+                              value={field.code}
+                              maxLength={50}
+                              onChange={event => updateExcelImportField(field.key, { code: toCode(event.target.value) })}
+                              className="h-9 w-full rounded border border-outline-variant px-2 font-mono text-xs uppercase focus:outline-primary"
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <select
+                              value={field.dataType}
+                              onChange={event => updateExcelImportField(field.key, {
+                                dataType: Number(event.target.value) as ListDictionaryFieldType,
+                              })}
+                              className="h-9 w-full rounded border border-outline-variant bg-surface px-2 text-xs focus:outline-primary"
+                            >
+                              {IMPORT_FIELD_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+                            </select>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={field.isRequired}
+                              onChange={event => updateExcelImportField(field.key, { isRequired: event.target.checked })}
+                              className="h-4 w-4 accent-primary"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="space-y-3 border-t border-outline-variant pt-5">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Xem trước dữ liệu</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">Hiển thị tối đa 10 dòng đầu tiên sau header.</p>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-outline-variant">
+                  <table className="w-full min-w-[720px] text-left text-xs">
+                    <thead className="bg-surface-2 text-[10px] font-black uppercase text-on-surface-variant">
+                      <tr>
+                        <th className="px-3 py-3">Dòng</th>
+                        {excelImportDraft.fields.map(field => <th key={field.key} className="px-3 py-3">{field.name}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/50">
+                      {excelImportDraft.rows.slice(0, 10).map(row => (
+                        <tr key={row.sourceRowNumber}>
+                          <td className="px-3 py-2 font-mono text-on-surface-variant">{row.sourceRowNumber}</td>
+                          {excelImportDraft.fields.map(field => (
+                            <td key={field.key} className="max-w-60 truncate px-3 py-2" title={formatExcelPreviewValue(row.values[field.sourceIndex])}>
+                              {formatExcelPreviewValue(row.values[field.sourceIndex])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-5 text-on-surface-variant">
+                Chưa có dữ liệu nào được tạo. Khi bấm xác nhận, backend sẽ kiểm tra lại toàn bộ và tạo danh mục cùng dữ liệu trong một lần.
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-outline-variant pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setExcelImportDraft(null);
+                  }}
+                  className="btn-secondary h-10 px-4"
+                >
+                  Hủy
+                </button>
+                <button type="submit" disabled={isSaving} className="btn-primary h-10 px-5">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {isSaving ? 'Đang import...' : `Xác nhận import ${excelImportDraft.rows.length} dòng`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {isDefinitionModalOpen && (

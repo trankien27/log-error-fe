@@ -1,5 +1,6 @@
 import {
   CreateListDictionaryRequest,
+  ImportListDictionaryRequest,
   ListDictionaryDto,
   ListDictionaryItemDto,
   ListDictionarySidebarDto,
@@ -33,6 +34,9 @@ export const listDictionariesService = {
 
   create: (request: CreateListDictionaryRequest) =>
     apiClient.post<ListDictionaryDto>('/api/list-dictionaries', request),
+
+  importExcel: (request: ImportListDictionaryRequest) =>
+    apiClient.post<ListDictionaryDto>('/api/list-dictionaries/import', request),
 
   updateDisplay: (code: string, request: UpdateListDictionaryDisplayRequest) =>
     apiClient.patch<ListDictionaryDto>(
