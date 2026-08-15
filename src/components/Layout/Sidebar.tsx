@@ -300,43 +300,61 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 onClick={() => setIsOtherDictionariesOpen(current => !current)}
                 className={navButtonClass(activeTab === 'list_dictionaries')}
                 aria-expanded={isOtherDictionariesOpen}
+                aria-controls="other-dictionaries-menu"
+                title={isOtherDictionariesOpen ? 'Thu gọn danh mục khác' : 'Mở rộng danh mục khác'}
               >
                 <LibraryBig className="w-4 h-4" />
                 <span>Danh mục khác</span>
-                <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${isOtherDictionariesOpen ? 'rotate-180' : ''}`} />
+                {sidebarDictionaries.length > 0 && (
+                  <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary">
+                    {sidebarDictionaries.length}
+                  </span>
+                )}
+                <ChevronDown className={`${sidebarDictionaries.length === 0 ? 'ml-auto' : ''} h-4 w-4 transition-transform duration-200 ${isOtherDictionariesOpen ? 'rotate-180' : ''}`} />
               </button>
-              {isOtherDictionariesOpen && (
-                <div className="ml-5 mt-1 space-y-1 border-l border-outline-variant pl-2">
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => navigateTo('list_dictionaries')}
-                      className={dictionaryNavButtonClass(location.pathname === '/list-dictionaries')}
-                    >
-                      Quản lý danh mục
-                    </button>
-                  )}
-                  {sidebarDictionaries.map(dictionary => (
-                    <button
-                      key={dictionary.id}
-                      type="button"
-                      onClick={() => navigateToDictionary(dictionary.code)}
-                      className={dictionaryNavButtonClass(
-                        location.pathname === `/list-dictionaries/${encodeURIComponent(dictionary.code)}`,
-                      )}
-                      title={dictionary.name}
-                    >
-                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                      <span className="truncate">{dictionary.name}</span>
-                    </button>
-                  ))}
-                  {sidebarDictionaries.length === 0 && !isAdmin && (
-                    <p className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant">
-                      Chưa có danh mục hiển thị
-                    </p>
-                  )}
+              <div
+                id="other-dictionaries-menu"
+                aria-hidden={!isOtherDictionariesOpen}
+                inert={!isOtherDictionariesOpen}
+                className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                  isOtherDictionariesOpen
+                    ? 'grid-rows-[1fr] opacity-100'
+                    : 'grid-rows-[0fr] opacity-0'
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <div className="ml-5 mt-1 space-y-1 border-l border-outline-variant pl-2">
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => navigateTo('list_dictionaries')}
+                        className={dictionaryNavButtonClass(location.pathname === '/list-dictionaries')}
+                      >
+                        Quản lý danh mục
+                      </button>
+                    )}
+                    {sidebarDictionaries.map(dictionary => (
+                      <button
+                        key={dictionary.id}
+                        type="button"
+                        onClick={() => navigateToDictionary(dictionary.code)}
+                        className={dictionaryNavButtonClass(
+                          location.pathname === `/list-dictionaries/${encodeURIComponent(dictionary.code)}`,
+                        )}
+                        title={dictionary.name}
+                      >
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                        <span className="truncate">{dictionary.name}</span>
+                      </button>
+                    ))}
+                    {sidebarDictionaries.length === 0 && !isAdmin && (
+                      <p className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant">
+                        Chưa có danh mục hiển thị
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </li>
             <li>
               <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
