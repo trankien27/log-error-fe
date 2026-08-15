@@ -1,4 +1,4 @@
-import { ThemeColors } from './theme.types';
+import { ThemeSettings } from './theme.types';
 
 export const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
@@ -33,17 +33,45 @@ export function getContrastColor(backgroundColor: string) {
   return luminance > 0.58 ? '#181B29' : '#FFFFFF';
 }
 
-export function applyThemeColors(theme: ThemeColors) {
+export function applyThemeSettings(theme: ThemeSettings) {
   const root = document.documentElement;
+  const cssVariables: Record<keyof ThemeSettings, string> = {
+    fontSans: '--font-sans',
+    fontMono: '--font-mono',
+    primaryColor: '--color-primary',
+    primaryHoverColor: '--color-primary-hover',
+    primaryActiveColor: '--color-primary-active',
+    primaryDisabledColor: '--color-primary-disabled',
+    primarySubtleColor: '--color-primary-subtle',
+    onPrimaryColor: '--color-on-primary',
+    primaryContainerColor: '--color-primary-container',
+    onPrimaryContainerColor: '--color-on-primary-container',
+    secondaryColor: '--color-secondary',
+    secondaryContainerColor: '--color-secondary-container',
+    onSecondaryContainerColor: '--color-on-secondary-container',
+    primaryButtonColor: '--color-button-primary',
+    secondaryButtonColor: '--color-button-secondary',
+    backgroundColor: '--color-background',
+    surfaceColor: '--color-surface',
+    surface2Color: '--color-surface-2',
+    primaryTextColor: '--color-on-surface',
+    secondaryTextColor: '--color-on-surface-variant',
+    outlineVariantColor: '--color-outline-variant',
+    errorColor: '--color-error',
+    errorContainerColor: '--color-error-container',
+    onErrorContainerColor: '--color-on-error-container',
+    successColor: '--color-success',
+    successContainerColor: '--color-success-container',
+    onSuccessContainerColor: '--color-on-success-container',
+    warningColor: '--color-warning',
+    warningContainerColor: '--color-warning-container',
+    onWarningContainerColor: '--color-on-warning-container',
+  };
 
-  root.style.setProperty('--color-primary', theme.primaryColor);
-  root.style.setProperty('--color-secondary', theme.secondaryColor);
-  root.style.setProperty('--color-on-primary', getContrastColor(theme.primaryColor));
+  Object.entries(cssVariables).forEach(([key, variable]) => {
+    root.style.setProperty(variable, theme[key as keyof ThemeSettings]);
+  });
   root.style.setProperty('--color-on-secondary', getContrastColor(theme.secondaryColor));
-  root.style.setProperty('--color-button-primary', theme.primaryButtonColor);
-  root.style.setProperty('--color-on-button-primary', getContrastColor(theme.primaryButtonColor));
-  root.style.setProperty('--color-button-secondary', theme.secondaryButtonColor);
+  root.style.setProperty('--color-on-button-primary', theme.onPrimaryColor);
   root.style.setProperty('--color-on-button-secondary', getContrastColor(theme.secondaryButtonColor));
-  root.style.setProperty('--color-on-surface', theme.primaryTextColor);
-  root.style.setProperty('--color-on-surface-variant', theme.secondaryTextColor);
 }

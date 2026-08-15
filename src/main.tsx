@@ -20,7 +20,7 @@ function ApplicationRoot() {
     void loadTheme();
   }, [loadTheme]);
 
-  const primaryButtonText = getContrastColor(theme.primaryButtonColor);
+  const primaryButtonText = theme.onPrimaryColor;
   const secondaryButtonText = getContrastColor(theme.secondaryButtonColor);
 
   return (
@@ -28,18 +28,36 @@ function ApplicationRoot() {
       theme={{
         token: {
           colorPrimary: theme.primaryColor,
-          colorPrimaryHover: mixHexColors(theme.primaryColor, '#000000', 0.12),
-          colorPrimaryActive: mixHexColors(theme.primaryColor, '#000000', 0.24),
+          colorPrimaryHover: theme.primaryHoverColor,
+          colorPrimaryActive: theme.primaryActiveColor,
           colorText: theme.primaryTextColor,
           colorTextSecondary: theme.secondaryTextColor,
-          fontFamily: '"Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif',
+          colorTextDisabled: theme.secondaryTextColor,
+          colorBgBase: theme.backgroundColor,
+          colorBgLayout: theme.backgroundColor,
+          colorBgContainer: theme.surfaceColor,
+          colorBgElevated: theme.surfaceColor,
+          colorBgContainerDisabled: theme.surface2Color,
+          colorFillSecondary: theme.surface2Color,
+          colorBorder: theme.outlineVariantColor,
+          colorBorderSecondary: theme.outlineVariantColor,
+          colorError: theme.errorColor,
+          colorErrorBg: theme.errorContainerColor,
+          colorSuccess: theme.successColor,
+          colorSuccessBg: theme.successContainerColor,
+          colorWarning: theme.warningColor,
+          colorWarningBg: theme.warningContainerColor,
+          fontFamily: theme.fontSans,
+          fontFamilyCode: theme.fontMono,
           borderRadius: 8,
         },
         components: {
           Button: {
             colorPrimary: theme.primaryButtonColor,
-            colorPrimaryHover: mixHexColors(theme.primaryButtonColor, '#000000', 0.12),
-            colorPrimaryActive: mixHexColors(theme.primaryButtonColor, '#000000', 0.24),
+            colorPrimaryHover: theme.primaryHoverColor,
+            colorPrimaryActive: theme.primaryActiveColor,
+            colorBgContainerDisabled: theme.primaryDisabledColor,
+            colorTextDisabled: getContrastColor(theme.primaryDisabledColor),
             primaryColor: primaryButtonText,
             defaultBg: theme.secondaryButtonColor,
             defaultColor: secondaryButtonText,

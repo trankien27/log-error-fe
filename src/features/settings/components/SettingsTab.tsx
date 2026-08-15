@@ -101,7 +101,7 @@ export default function SettingsTab() {
         </h2>
         <p className="mt-1 text-xs text-on-surface-variant">
           {isAdmin
-            ? 'Quản lý màu giao diện, mật khẩu đăng nhập và ảnh đại diện.'
+            ? 'Quản lý theme giao diện, mật khẩu đăng nhập và ảnh đại diện.'
             : 'Đổi mật khẩu đăng nhập và cập nhật ảnh đại diện.'}
         </p>
       </div>

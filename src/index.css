@@ -7,18 +7,18 @@
 
   /* Brand */
   --color-primary: #1b55bf;
-  --color-primary-hover: color-mix(in srgb, var(--color-primary) 88%, #000000);
-  --color-primary-active: color-mix(in srgb, var(--color-primary) 76%, #000000);
-  --color-primary-disabled: color-mix(in srgb, var(--color-primary) 38%, var(--color-surface));
-  --color-primary-subtle: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  --color-primary-hover: #0958d9;
+  --color-primary-active: #003eb3;
+  --color-primary-disabled: #91caff;
+  --color-primary-subtle: #e6f4ff;
   --color-on-primary: #ffffff;
-  --color-primary-container: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
-  --color-on-primary-container: var(--color-primary);
+  --color-primary-container: #0958d9;
+  --color-on-primary-container: #003eb3;
 
   --color-secondary: #3c4a68;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: color-mix(in srgb, var(--color-secondary) 12%, var(--color-surface));
-  --color-on-secondary-container: var(--color-secondary);
+  --color-secondary-container: #e4e9fb;
+  --color-on-secondary-container: #3c4a68;
 
   /* Buttons */
   --color-button-primary: #1b55bf;
@@ -97,13 +97,13 @@
       0 8px 20px -6px color-mix(in srgb, var(--color-button-primary) 35%, transparent);
   }
   .btn-primary:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--color-button-primary) 88%, #000000);
+    background-color: var(--color-primary-hover);
   }
   .btn-primary:active:not(:disabled) {
-    background-color: color-mix(in srgb, var(--color-button-primary) 76%, #000000);
+    background-color: var(--color-primary-active);
   }
   .btn-primary:disabled {
-    background-color: color-mix(in srgb, var(--color-button-primary) 38%, var(--color-surface));
+    background-color: var(--color-primary-disabled);
     box-shadow: none;
   }
   .btn-secondary {
