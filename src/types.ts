@@ -270,8 +270,8 @@ export interface SaveListDictionaryItemRequest {
   values: Record<string, string | number | boolean>;
 }
 
-export interface UpdateListDictionaryDisplayRequest {
-  isVisibleInSidebar: boolean;
+export interface UpdateListDictionarySidebarRequest {
+  visibleDictionaryCodes: string[];
 }
 
 export interface ImportListDictionaryRequest extends CreateListDictionaryRequest {

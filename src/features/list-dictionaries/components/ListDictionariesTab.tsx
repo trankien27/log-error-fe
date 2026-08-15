@@ -65,7 +65,6 @@ type ImportDefinitionDraft = {
   code: string;
   name: string;
   description: string;
-  isVisibleInSidebar: boolean;
 };
 
 function newField(): FieldDraft {
@@ -131,7 +130,8 @@ export default function ListDictionariesTab() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemValues, setItemValues] = useState<Record<string, string>>({});
   const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
-  const [displayInSidebar, setDisplayInSidebar] = useState(false);
+  const [displayDictionaryCodes, setDisplayDictionaryCodes] = useState<string[]>([]);
+  const [displayFilter, setDisplayFilter] = useState('');
   const excelFileInputRef = useRef<HTMLInputElement>(null);
   const [isParsingExcel, setIsParsingExcel] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -140,7 +140,6 @@ export default function ListDictionariesTab() {
     code: '',
     name: '',
     description: '',
-    isVisibleInSidebar: true,
   });
 
   const selectedDictionary = useMemo(
@@ -170,6 +169,27 @@ export default function ListDictionariesTab() {
       item.name.toLocaleLowerCase('vi').includes(keyword),
     );
   }, [dictionaries, dictionaryFilter]);
+
+  const filteredDisplayDictionaries = useMemo(() => {
+    const keyword = displayFilter.trim().toLocaleLowerCase('vi');
+    if (!keyword) return dictionaries;
+    return dictionaries.filter(item =>
+      item.code.toLocaleLowerCase('vi').includes(keyword) ||
+      item.name.toLocaleLowerCase('vi').includes(keyword),
+    );
+  }, [dictionaries, displayFilter]);
+
+  const displayCodeSet = useMemo(
+    () => new Set(displayDictionaryCodes),
+    [displayDictionaryCodes],
+  );
+
+  const isDisplayConfigurationDirty = useMemo(
+    () => dictionaries.some(dictionary =>
+      dictionary.isVisibleInSidebar !== displayCodeSet.has(dictionary.code),
+    ),
+    [dictionaries, displayCodeSet],
+  );
 
   const totalFields = useMemo(
     () => dictionaries.reduce((total, item) => total + item.fields.length, 0),
@@ -274,8 +294,6 @@ export default function ListDictionariesTab() {
       setIsDefinitionModalOpen(false);
       await loadDictionaries();
       navigate(`/list-dictionaries/${encodeURIComponent(created.code)}`);
-      setDisplayInSidebar(created.isVisibleInSidebar);
-      setIsDisplayModalOpen(true);
       toast.success('Đã tạo danh mục custom.');
     } catch (error: any) {
       toast.error(error?.message || 'Không thể tạo danh mục.');
@@ -298,7 +316,6 @@ export default function ListDictionariesTab() {
         code: toCode(baseName).slice(0, 50).replace(/_+$/g, ''),
         name: (baseName || 'Danh mục import').slice(0, 150),
         description: `Import từ file ${file.name}`,
-        isVisibleInSidebar: true,
       });
       setIsImportModalOpen(true);
     } catch (error: any) {
@@ -362,7 +379,7 @@ export default function ListDictionariesTab() {
         code: dictionaryCode,
         name: importDefinition.name.trim(),
         description: importDefinition.description.trim() || undefined,
-        isVisibleInSidebar: importDefinition.isVisibleInSidebar,
+        isVisibleInSidebar: false,
         fields: normalizedFields.map(field => ({
           code: field.code,
           name: field.name,
@@ -467,25 +484,37 @@ export default function ListDictionariesTab() {
     }
   };
 
-  const openDisplayModal = (dictionary = selectedDictionary) => {
-    if (!dictionary || !isAdmin) return;
-    setDisplayInSidebar(dictionary.isVisibleInSidebar);
+  const openDisplayModal = () => {
+    if (!isAdmin) return;
+    setDisplayDictionaryCodes(
+      dictionaries.filter(dictionary => dictionary.isVisibleInSidebar).map(dictionary => dictionary.code),
+    );
+    setDisplayFilter('');
     setIsDisplayModalOpen(true);
+  };
+
+  const toggleDisplayDictionary = (code: string) => {
+    setDisplayDictionaryCodes(current => current.includes(code)
+      ? current.filter(item => item !== code)
+      : [...current, code]);
   };
 
   const submitDisplayConfiguration = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedDictionary) return;
 
     try {
       setIsSaving(true);
-      const updated = await listDictionariesService.updateDisplay(selectedDictionary.code, {
-        isVisibleInSidebar: displayInSidebar,
+      const savedCodes = await listDictionariesService.updateSidebarDisplay({
+        visibleDictionaryCodes: displayDictionaryCodes,
       });
-      setDictionaries(current => current.map(item => item.code === updated.code ? updated : item));
+      const savedCodeSet = new Set(savedCodes);
+      setDictionaries(current => current.map(item => ({
+        ...item,
+        isVisibleInSidebar: savedCodeSet.has(item.code),
+      })));
       setIsDisplayModalOpen(false);
       window.dispatchEvent(new Event('list-dictionaries:sidebar-updated'));
-      toast.success('Đã lưu cấu hình hiển thị trên sidebar.');
+      toast.success(`Đã cấu hình ${savedCodes.length} danh mục hiển thị trên sidebar.`);
     } catch (error: any) {
       toast.error(error?.message || 'Không thể lưu cấu hình hiển thị.');
     } finally {
@@ -499,7 +528,7 @@ export default function ListDictionariesTab() {
         <>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 className="text-xl font-bold font-sans">Danh mục custom</h2>
+              <h2 className="text-xl font-bold font-sans">Quản lý danh mục</h2>
               <p className="mt-1 text-xs text-on-surface-variant">
                 Chọn một danh mục để xem dữ liệu. Admin có thể cấu hình danh mục xuất hiện trong “Danh mục khác”.
               </p>
@@ -513,6 +542,9 @@ export default function ListDictionariesTab() {
                   onChange={handleExcelFile}
                   className="hidden"
                 />
+                <button type="button" onClick={openDisplayModal} className="btn-secondary">
+                  <Settings2 className="h-4 w-4" /> Cấu hình hiển thị
+                </button>
                 <button
                   type="button"
                   disabled={isParsingExcel}
@@ -638,11 +670,6 @@ export default function ListDictionariesTab() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {isAdmin && (
-                <button type="button" onClick={() => openDisplayModal()} className="btn-secondary h-10 px-4">
-                  <Settings2 className="h-4 w-4" /> Hiển thị sidebar
-                </button>
-              )}
               <button type="button" onClick={() => openItemModal()} className="btn-primary h-10 px-4">
                 <Plus className="h-4 w-4" /> Thêm dữ liệu
               </button>
@@ -801,15 +828,6 @@ export default function ListDictionariesTab() {
                     onChange={event => setImportDefinition(current => ({ ...current, description: event.target.value }))}
                     className="mt-1 w-full rounded-lg border border-outline-variant px-3 py-2 text-sm focus:outline-primary"
                   />
-                </label>
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-outline-variant bg-surface-2 p-3 text-sm font-bold">
-                  <input
-                    type="checkbox"
-                    checked={importDefinition.isVisibleInSidebar}
-                    onChange={event => setImportDefinition(current => ({ ...current, isVisibleInSidebar: event.target.checked }))}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  Hiển thị danh mục này trong “Danh mục khác” trên sidebar
                 </label>
               </section>
 
@@ -1079,41 +1097,90 @@ export default function ListDictionariesTab() {
         </div>
       )}
 
-      {isDisplayModalOpen && selectedDictionary && (
+      {isDisplayModalOpen && isAdmin && (
         <div className="modal-overlay">
-          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-outline-variant bg-surface shadow-elevated">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-outline-variant bg-surface shadow-elevated">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
               <div>
                 <h3 className="text-lg font-black">Cấu hình hiển thị trên sidebar</h3>
-                <p className="mt-1 text-xs text-on-surface-variant">Quy định danh mục có xuất hiện trong nhóm “Danh mục khác” hay không.</p>
+                <p className="mt-1 text-xs text-on-surface-variant">Tích các danh mục sẽ xuất hiện trong nhóm “Danh mục khác”.</p>
               </div>
               <button type="button" onClick={() => setIsDisplayModalOpen(false)} className="inline-flex h-8 w-8 items-center justify-center rounded hover:bg-surface-2">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <form onSubmit={submitDisplayConfiguration} className="space-y-4 p-5">
-              <label className="flex cursor-pointer items-start gap-4 rounded-xl border border-outline-variant bg-surface-2 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-black">
+                  Đã chọn <span className="text-primary">{displayDictionaryCodes.length}/{dictionaries.length}</span> danh mục
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDisplayDictionaryCodes(dictionaries.map(dictionary => dictionary.code))}
+                    className="btn-ghost h-9 px-3 text-xs"
+                  >
+                    Chọn tất cả
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDisplayDictionaryCodes([])}
+                    className="btn-ghost h-9 px-3 text-xs"
+                  >
+                    Bỏ chọn tất cả
+                  </button>
+                </div>
+              </div>
+
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
                 <input
-                  type="checkbox"
-                  checked={displayInSidebar}
-                  onChange={event => setDisplayInSidebar(event.target.checked)}
-                  className="mt-0.5 h-5 w-5 accent-primary"
+                  value={displayFilter}
+                  onChange={event => setDisplayFilter(event.target.value)}
+                  placeholder="Tìm theo tên hoặc mã danh mục..."
+                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm focus:outline-primary"
                 />
-                <span>
-                  <span className="block text-sm font-black">Hiển thị trong “Danh mục khác”</span>
-                  <span className="mt-1 block text-xs leading-5 text-on-surface-variant">
-                    Khi bật, người dùng có thể xổ nhóm “Danh mục khác” trên sidebar và chọn {selectedDictionary.name}.
-                  </span>
-                </span>
-              </label>
+              </div>
+
+              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                {filteredDisplayDictionaries.map(dictionary => (
+                  <label
+                    key={dictionary.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors ${
+                      displayCodeSet.has(dictionary.code)
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-outline-variant bg-surface hover:bg-surface-2'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={displayCodeSet.has(dictionary.code)}
+                      onChange={() => toggleDisplayDictionary(dictionary.code)}
+                      className="h-5 w-5 shrink-0 accent-primary"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-black">{dictionary.name}</span>
+                      <span className="mt-0.5 block truncate font-mono text-[11px] font-bold text-on-surface-variant">
+                        {dictionary.code}
+                      </span>
+                    </span>
+                    <span className="text-xs font-bold text-on-surface-variant">{dictionary.itemCount} bản ghi</span>
+                  </label>
+                ))}
+                {filteredDisplayDictionaries.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-outline-variant py-8 text-center text-sm font-bold text-on-surface-variant">
+                    Không tìm thấy danh mục phù hợp.
+                  </div>
+                )}
+              </div>
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-on-surface-variant">
-                Mã bản ghi vẫn được hệ thống tự động cấp theo số thứ tự và không hiển thị trên giao diện.
+                Các thay đổi chỉ được áp dụng sau khi bấm “Lưu cấu hình”.
               </div>
 
               <div className="flex flex-col-reverse gap-2 border-t border-outline-variant pt-4 sm:flex-row sm:justify-end">
                 <button type="button" onClick={() => setIsDisplayModalOpen(false)} className="btn-secondary h-10 px-4">Hủy</button>
-                <button type="submit" disabled={isSaving} className="btn-primary h-10 px-5">
+                <button type="submit" disabled={isSaving || !isDisplayConfigurationDirty} className="btn-primary h-10 px-5">
                   {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
                   {isSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
                 </button>

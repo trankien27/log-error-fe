@@ -5,7 +5,7 @@ import {
   ListDictionaryItemDto,
   ListDictionarySidebarDto,
   SaveListDictionaryItemRequest,
-  UpdateListDictionaryDisplayRequest,
+  UpdateListDictionarySidebarRequest,
 } from '../../types';
 import { apiClient } from './apiClient';
 
@@ -38,11 +38,8 @@ export const listDictionariesService = {
   importExcel: (request: ImportListDictionaryRequest) =>
     apiClient.post<ListDictionaryDto>('/api/list-dictionaries/import', request),
 
-  updateDisplay: (code: string, request: UpdateListDictionaryDisplayRequest) =>
-    apiClient.patch<ListDictionaryDto>(
-      `/api/list-dictionaries/${encodeCode(code)}/display`,
-      request,
-    ),
+  updateSidebarDisplay: (request: UpdateListDictionarySidebarRequest) =>
+    apiClient.put<string[]>('/api/list-dictionaries/display', request),
 
   getItems: (code: string, keyword = '') =>
     apiClient.get<ListDictionaryItemDto[]>(
