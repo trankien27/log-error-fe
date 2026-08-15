@@ -289,6 +289,37 @@ export interface ListDictionarySidebarDto {
   name: string;
 }
 
+export type KnowledgeDocumentVisibility = 1 | 2;
+
+export interface KnowledgeDocumentSummaryDto {
+  id: number;
+  title: string;
+  preview: string;
+  visibility: KnowledgeDocumentVisibility;
+  canEdit: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface KnowledgeDocumentDto {
+  id: number;
+  title: string;
+  contentMarkdown: string;
+  visibility: KnowledgeDocumentVisibility;
+  canEdit: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedBy?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface SaveKnowledgeDocumentRequest {
+  title: string;
+  contentMarkdown: string;
+  visibility: KnowledgeDocumentVisibility;
+}
+
 export interface WorkScheduleDto {
   id: number;
   workDate: string;
@@ -583,6 +614,7 @@ export type TabType =
   | 'recreate_image'
   | 'shifts'
   | 'list_dictionaries'
+  | 'documents'
   | 'notifications'
   | 'schedule'
   | 'overtime_approval'

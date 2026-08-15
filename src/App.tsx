@@ -20,6 +20,7 @@ import NotificationsTab from './features/notifications/components/NotificationsT
 import ScheduleTab from './features/schedule/components/ScheduleTab';
 import OvertimeApprovalTab from './features/overtime/components/OvertimeApprovalTab';
 import SettingsTab from './features/settings/components/SettingsTab';
+import DocumentsTab from './features/documents/components/DocumentsTab';
 import BoothGuestLayout from './features/booth-guest/components/BoothGuestLayout';
 import BoothPinPage from './features/booth-guest/components/BoothPinPage';
 import { useAuthStore } from './stores/useAuthStore';
@@ -127,6 +128,7 @@ export default function App() {
         />
         <Route path="list-dictionaries" element={<ListDictionariesTab />} />
         <Route path="list-dictionaries/:code" element={<ListDictionariesTab />} />
+        <Route path="documents" element={<DocumentsTab />} />
         <Route path="notifications" element={<NotificationsTab />} />
         <Route path="schedule" element={<ScheduleTab />} />
         <Route

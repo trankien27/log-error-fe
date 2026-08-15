@@ -10,6 +10,7 @@ import {
   History,
   LayoutDashboard,
   LibraryBig,
+  NotebookTabs,
   MessageSquare,
   Printer,
   RadioTower,
@@ -109,6 +110,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/recreate-image') return 'recreate_image';
     if (path === '/shifts') return 'shifts';
     if (path.startsWith('/list-dictionaries')) return 'list_dictionaries';
+    if (path === '/documents') return 'documents';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
     if (path === '/overtime-approval') return 'overtime_approval';
@@ -142,6 +144,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'recreate_image': navigate('/recreate-image'); break;
       case 'shifts': navigate('/shifts'); break;
       case 'list_dictionaries': navigate('/list-dictionaries'); break;
+      case 'documents': navigate('/documents'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
       case 'overtime_approval': navigate('/overtime-approval'); break;
@@ -355,6 +358,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                   </div>
                 </div>
               </div>
+            </li>
+            <li>
+              <button onClick={() => navigateTo('documents')} className={navButtonClass(activeTab === 'documents')}>
+                <NotebookTabs className="w-4 h-4" />
+                <span>Tài liệu</span>
+              </button>
             </li>
             <li>
               <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
