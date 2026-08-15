@@ -286,7 +286,7 @@ export default function DocumentsTab() {
                   className="w-full border-none bg-transparent py-2 text-3xl font-black tracking-tight text-on-surface outline-none placeholder:text-on-surface-variant/40 sm:text-4xl"
                 />
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  Nội dung được lưu dưới dạng Markdown. {draft.visibility === 1 ? 'Tất cả tài khoản có thể xem.' : 'Chỉ tài khoản của bạn có thể xem.'}
+                  Soạn thảo trực quan; hệ thống tự lưu dưới dạng Markdown. {draft.visibility === 1 ? 'Tất cả tài khoản có thể xem.' : 'Chỉ tài khoản của bạn có thể xem.'}
                 </p>
               </div>
             </div>

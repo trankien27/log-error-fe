@@ -15,6 +15,10 @@ const markdownSchema: Options = {
     ...defaultSchema.attributes,
     div: [...(defaultSchema.attributes?.div || []), ['align', 'left', 'center', 'right']],
     p: [...(defaultSchema.attributes?.p || []), ['align', 'left', 'center', 'right']],
+    h1: [...(defaultSchema.attributes?.h1 || []), ['align', 'left', 'center', 'right']],
+    h2: [...(defaultSchema.attributes?.h2 || []), ['align', 'left', 'center', 'right']],
+    h3: [...(defaultSchema.attributes?.h3 || []), ['align', 'left', 'center', 'right']],
+    h4: [...(defaultSchema.attributes?.h4 || []), ['align', 'left', 'center', 'right']],
   },
 };
 
