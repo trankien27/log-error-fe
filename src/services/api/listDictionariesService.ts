@@ -4,6 +4,7 @@ import {
   ListDictionaryDto,
   ListDictionaryItemDto,
   ListDictionarySidebarDto,
+  RenameListDictionaryRequest,
   SaveListDictionaryItemRequest,
   UpdateListDictionarySidebarRequest,
 } from '../../types';
@@ -40,6 +41,12 @@ export const listDictionariesService = {
 
   updateSidebarDisplay: (request: UpdateListDictionarySidebarRequest) =>
     apiClient.put<string[]>('/api/list-dictionaries/display', request),
+
+  rename: (code: string, request: RenameListDictionaryRequest) =>
+    apiClient.patch<ListDictionaryDto>(
+      `/api/list-dictionaries/${encodeCode(code)}/name`,
+      request,
+    ),
 
   deleteDictionary: (code: string) =>
     apiClient.delete<boolean>(`/api/list-dictionaries/${encodeCode(code)}`),

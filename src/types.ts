@@ -274,6 +274,10 @@ export interface UpdateListDictionarySidebarRequest {
   visibleDictionaryCodes: string[];
 }
 
+export interface RenameListDictionaryRequest {
+  name: string;
+}
+
 export interface ImportListDictionaryRequest extends CreateListDictionaryRequest {
   isVisibleInSidebar: boolean;
   items: Array<Record<string, string | number | boolean>>;

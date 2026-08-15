@@ -125,6 +125,9 @@ export default function ListDictionariesTab() {
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingDictionaryCode, setDeletingDictionaryCode] = useState<string | null>(null);
+  const [renamingDictionary, setRenamingDictionary] = useState<ListDictionaryDto | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
   const [isDefinitionModalOpen, setIsDefinitionModalOpen] = useState(false);
   const [definitionDraft, setDefinitionDraft] = useState<DefinitionDraft>(newDefinition);
   const [editingItem, setEditingItem] = useState<ListDictionaryItemDto | null>(null);
@@ -507,6 +510,40 @@ export default function ListDictionariesTab() {
     }
   };
 
+  const openRenameModal = (dictionary: ListDictionaryDto) => {
+    if (!isAdmin) return;
+    setRenamingDictionary(dictionary);
+    setRenameDraft(dictionary.name);
+  };
+
+  const submitRename = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!renamingDictionary) return;
+
+    const name = renameDraft.trim();
+    if (!name) {
+      toast.error('Vui lòng nhập tên danh mục.');
+      return;
+    }
+    if (name.length > 150) {
+      toast.error('Tên danh mục không được vượt quá 150 ký tự.');
+      return;
+    }
+
+    try {
+      setIsRenaming(true);
+      const updated = await listDictionariesService.rename(renamingDictionary.code, { name });
+      setDictionaries(current => current.map(item => item.code === updated.code ? updated : item));
+      setRenamingDictionary(null);
+      window.dispatchEvent(new Event('list-dictionaries:sidebar-updated'));
+      toast.success('Đã đổi tên danh mục.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể đổi tên danh mục.');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
   const openDisplayModal = () => {
     if (!isAdmin) return;
     setDisplayDictionaryCodes(
@@ -634,7 +671,7 @@ export default function ListDictionariesTab() {
                   <button
                     type="button"
                     onClick={() => navigate(`/list-dictionaries/${encodeURIComponent(dictionary.code)}`)}
-                    className="flex min-h-32 w-full items-center gap-4 p-5 pr-14 text-left"
+                    className="flex min-h-32 w-full items-center gap-4 p-5 pr-24 text-left"
                   >
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-primary">
                       <Database className="h-5 w-5" />
@@ -656,18 +693,30 @@ export default function ListDictionariesTab() {
                     <ChevronRight className="h-5 w-5 shrink-0 text-on-surface-variant transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                   </button>
                   {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => void deleteDictionary(dictionary)}
-                      disabled={deletingDictionaryCode !== null}
-                      className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-error/20 bg-surface text-error shadow-sm transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-50"
-                      title={`Xoá danh mục ${dictionary.name}`}
-                      aria-label={`Xoá danh mục ${dictionary.name}`}
-                    >
-                      {deletingDictionaryCode === dictionary.code
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <Trash2 className="h-4 w-4" />}
-                    </button>
+                    <div className="absolute right-3 top-3 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openRenameModal(dictionary)}
+                        disabled={deletingDictionaryCode !== null}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-surface text-primary shadow-sm transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        title={`Đổi tên danh mục ${dictionary.name}`}
+                        aria-label={`Đổi tên danh mục ${dictionary.name}`}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void deleteDictionary(dictionary)}
+                        disabled={deletingDictionaryCode !== null}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-error/20 bg-surface text-error shadow-sm transition-colors hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-50"
+                        title={`Xoá danh mục ${dictionary.name}`}
+                        aria-label={`Xoá danh mục ${dictionary.name}`}
+                      >
+                        {deletingDictionaryCode === dictionary.code
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <Trash2 className="h-4 w-4" />}
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -1131,6 +1180,60 @@ export default function ListDictionariesTab() {
                 <button type="submit" disabled={isSaving} className="btn-primary h-10 px-5">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {isSaving ? 'Đang tạo...' : 'Tạo danh mục'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {renamingDictionary && isAdmin && (
+        <div className="modal-overlay">
+          <div className="w-full max-w-lg rounded-2xl border border-outline-variant bg-surface shadow-elevated">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div>
+                <h3 className="text-lg font-black">Đổi tên danh mục</h3>
+                <p className="mt-1 text-xs text-on-surface-variant">Mã danh mục và dữ liệu bên trong không thay đổi.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRenamingDictionary(null)}
+                disabled={isRenaming}
+                className="inline-flex h-8 w-8 items-center justify-center rounded hover:bg-surface-2 disabled:opacity-50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={submitRename} className="space-y-4 p-5">
+              <label className="block text-sm font-bold">
+                Tên danh mục mới *
+                <input
+                  autoFocus
+                  value={renameDraft}
+                  onChange={event => setRenameDraft(event.target.value)}
+                  maxLength={150}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm focus:outline-primary"
+                />
+              </label>
+              <div className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-2 text-xs text-on-surface-variant">
+                Mã giữ nguyên: <span className="font-mono font-black text-primary">{renamingDictionary.code}</span>
+              </div>
+              <div className="flex flex-col-reverse gap-2 border-t border-outline-variant pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setRenamingDictionary(null)}
+                  disabled={isRenaming}
+                  className="btn-secondary h-10 px-4"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRenaming || !renameDraft.trim() || renameDraft.trim() === renamingDictionary.name}
+                  className="btn-primary h-10 px-5"
+                >
+                  {isRenaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
+                  {isRenaming ? 'Đang lưu...' : 'Lưu tên mới'}
                 </button>
               </div>
             </form>
