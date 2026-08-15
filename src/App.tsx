@@ -126,6 +126,7 @@ export default function App() {
           )}
         />
         <Route path="list-dictionaries" element={<ListDictionariesTab />} />
+        <Route path="list-dictionaries/:code" element={<ListDictionariesTab />} />
         <Route path="notifications" element={<NotificationsTab />} />
         <Route path="schedule" element={<ScheduleTab />} />
         <Route

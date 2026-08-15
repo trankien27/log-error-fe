@@ -69,7 +69,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/print-image') return 'print_image';
     if (path === '/recreate-image') return 'recreate_image';
     if (path === '/shifts') return 'shifts';
-    if (path === '/list-dictionaries') return 'list_dictionaries';
+    if (path.startsWith('/list-dictionaries')) return 'list_dictionaries';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
     if (path === '/overtime-approval') return 'overtime_approval';

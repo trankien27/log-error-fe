@@ -220,6 +220,7 @@ export interface ListDictionaryFieldDto {
   name: string;
   dataType: ListDictionaryFieldType;
   isRequired: boolean;
+  isVisible: boolean;
   sortOrder: number;
   options: string[];
   createdBy: string;
@@ -266,8 +267,15 @@ export interface CreateListDictionaryRequest {
 }
 
 export interface SaveListDictionaryItemRequest {
-  code: string;
   values: Record<string, string | number | boolean>;
+}
+
+export interface UpdateListDictionaryDisplayRequest {
+  fields: Array<{
+    fieldId: number;
+    isVisible: boolean;
+    sortOrder: number;
+  }>;
 }
 
 export interface WorkScheduleDto {

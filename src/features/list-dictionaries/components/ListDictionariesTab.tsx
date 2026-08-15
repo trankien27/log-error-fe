@@ -1,22 +1,24 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowUp,
   BookOpen,
-  Braces,
-  CalendarDays,
   CheckCircle2,
   ChevronRight,
   Database,
   Edit3,
-  Hash,
   Loader2,
   Plus,
   Search,
+  Settings2,
   Trash2,
-  Type,
   X,
 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { listDictionariesService } from '../../../services/api/listDictionariesService';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import {
   CreateListDictionaryRequest,
   ListDictionaryDto,
@@ -77,10 +79,6 @@ function toCode(value: string) {
   return /^[A-Z]/.test(code) ? code : code ? `F_${code}` : '';
 }
 
-function fieldTypeLabel(type: ListDictionaryFieldType) {
-  return FIELD_TYPES.find(item => item.value === type)?.label || 'Không xác định';
-}
-
 function formatDateTime(value?: string | null) {
   if (!value) return '—';
   const date = new Date(value);
@@ -100,11 +98,15 @@ function formatValue(field: ListDictionaryFieldDto, value: unknown) {
 }
 
 export default function ListDictionariesTab() {
+  const navigate = useNavigate();
+  const { code: routeCodeParam } = useParams<{ code?: string }>();
+  const routeCode = (routeCodeParam || '').toUpperCase();
+  const { hasAnyRole } = useAuthStore();
+  const isAdmin = hasAnyRole([1, 'Admin']);
   const [dictionaries, setDictionaries] = useState<ListDictionaryDto[]>([]);
-  const [selectedCode, setSelectedCode] = useState('');
   const [items, setItems] = useState<ListDictionaryItemDto[]>([]);
   const [dictionaryFilter, setDictionaryFilter] = useState('');
-  const [itemKeyword, setItemKeyword] = useState('');
+  const [itemFilter, setItemFilter] = useState('');
   const [isLoadingDictionaries, setIsLoadingDictionaries] = useState(true);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -112,13 +114,29 @@ export default function ListDictionariesTab() {
   const [definitionDraft, setDefinitionDraft] = useState<DefinitionDraft>(newDefinition);
   const [editingItem, setEditingItem] = useState<ListDictionaryItemDto | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
-  const [itemCode, setItemCode] = useState('');
   const [itemValues, setItemValues] = useState<Record<string, string>>({});
+  const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
+  const [displayFields, setDisplayFields] = useState<ListDictionaryFieldDto[]>([]);
 
   const selectedDictionary = useMemo(
-    () => dictionaries.find(item => item.code === selectedCode) || null,
-    [dictionaries, selectedCode],
+    () => dictionaries.find(item => item.code === routeCode) || null,
+    [dictionaries, routeCode],
   );
+
+  const visibleFields = useMemo(
+    () => (selectedDictionary?.fields || [])
+      .filter(field => field.isVisible)
+      .sort((left, right) => left.sortOrder - right.sortOrder),
+    [selectedDictionary],
+  );
+
+  const filteredItems = useMemo(() => {
+    const keyword = itemFilter.trim().toLocaleLowerCase('vi');
+    if (!keyword) return items;
+    return items.filter(item => visibleFields.some(field =>
+      String(item.values[field.code] ?? '').toLocaleLowerCase('vi').includes(keyword),
+    ));
+  }, [itemFilter, items, visibleFields]);
 
   const filteredDictionaries = useMemo(() => {
     const keyword = dictionaryFilter.trim().toLocaleLowerCase('vi');
@@ -134,15 +152,11 @@ export default function ListDictionariesTab() {
     [dictionaries],
   );
 
-  const loadDictionaries = async (preferredCode?: string) => {
+  const loadDictionaries = async () => {
     try {
       setIsLoadingDictionaries(true);
       const data = await listDictionariesService.getAll();
       setDictionaries(data);
-      setSelectedCode(current => {
-        const next = preferredCode || current;
-        return data.some(item => item.code === next) ? next : (data[0]?.code || '');
-      });
     } catch (error: any) {
       toast.error(error?.message || 'Không thể tải danh sách danh mục.');
     } finally {
@@ -150,14 +164,14 @@ export default function ListDictionariesTab() {
     }
   };
 
-  const loadItems = async (code: string, keyword = '') => {
+  const loadItems = async (code: string) => {
     if (!code) {
       setItems([]);
       return;
     }
     try {
       setIsLoadingItems(true);
-      setItems(await listDictionariesService.getItems(code, keyword));
+      setItems(await listDictionariesService.getItems(code));
     } catch (error: any) {
       toast.error(error?.message || 'Không thể tải dữ liệu danh mục.');
     } finally {
@@ -170,9 +184,9 @@ export default function ListDictionariesTab() {
   }, []);
 
   useEffect(() => {
-    setItemKeyword('');
-    void loadItems(selectedCode);
-  }, [selectedCode]);
+    setItemFilter('');
+    void loadItems(routeCode);
+  }, [routeCode]);
 
   const openDefinitionModal = () => {
     setDefinitionDraft(newDefinition());
@@ -234,7 +248,10 @@ export default function ListDictionariesTab() {
       setIsSaving(true);
       const created = await listDictionariesService.create(request);
       setIsDefinitionModalOpen(false);
-      await loadDictionaries(created.code);
+      await loadDictionaries();
+      navigate(`/list-dictionaries/${encodeURIComponent(created.code)}`);
+      setDisplayFields([...created.fields].sort((left, right) => left.sortOrder - right.sortOrder));
+      setIsDisplayModalOpen(true);
       toast.success('Đã tạo danh mục custom.');
     } catch (error: any) {
       toast.error(error?.message || 'Không thể tạo danh mục.');
@@ -246,7 +263,6 @@ export default function ListDictionariesTab() {
   const openItemModal = (item?: ListDictionaryItemDto) => {
     if (!selectedDictionary) return;
     setEditingItem(item || null);
-    setItemCode(item?.code || '');
     const values: Record<string, string> = {};
     selectedDictionary.fields.forEach(field => {
       const value = item?.values[field.code];
@@ -258,11 +274,6 @@ export default function ListDictionariesTab() {
 
   const buildItemRequest = (): SaveListDictionaryItemRequest | null => {
     if (!selectedDictionary) return null;
-    const normalizedCode = toCode(itemCode);
-    if (!/^[A-Z][A-Z0-9_]*$/.test(normalizedCode)) {
-      toast.error('Mã bản ghi không hợp lệ.');
-      return null;
-    }
 
     const values: Record<string, string | number | boolean> = {};
     for (const field of selectedDictionary.fields) {
@@ -286,7 +297,7 @@ export default function ListDictionariesTab() {
         values[field.code] = rawValue;
       }
     }
-    return { code: normalizedCode, values };
+    return { values };
   };
 
   const submitItem = async (event: FormEvent) => {
@@ -306,8 +317,8 @@ export default function ListDictionariesTab() {
       }
       setIsItemModalOpen(false);
       await Promise.all([
-        loadDictionaries(selectedDictionary.code),
-        loadItems(selectedDictionary.code, itemKeyword),
+        loadDictionaries(),
+        loadItems(selectedDictionary.code),
       ]);
     } catch (error: any) {
       toast.error(error?.message || 'Không thể lưu bản ghi.');
@@ -317,12 +328,12 @@ export default function ListDictionariesTab() {
   };
 
   const deleteItem = async (item: ListDictionaryItemDto) => {
-    if (!selectedDictionary || !window.confirm(`Xóa bản ghi ${item.code}?`)) return;
+    if (!selectedDictionary || !window.confirm('Xóa bản ghi này?')) return;
     try {
       await listDictionariesService.deleteItem(selectedDictionary.code, item.id);
       await Promise.all([
-        loadDictionaries(selectedDictionary.code),
-        loadItems(selectedDictionary.code, itemKeyword),
+        loadDictionaries(),
+        loadItems(selectedDictionary.code),
       ]);
       toast.success('Đã xóa bản ghi.');
     } catch (error: any) {
@@ -330,227 +341,255 @@ export default function ListDictionariesTab() {
     }
   };
 
+  const openDisplayModal = (dictionary = selectedDictionary) => {
+    if (!dictionary || !isAdmin) return;
+    setDisplayFields([...dictionary.fields].sort((left, right) => left.sortOrder - right.sortOrder));
+    setIsDisplayModalOpen(true);
+  };
+
+  const moveDisplayField = (index: number, direction: -1 | 1) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= displayFields.length) return;
+    setDisplayFields(current => {
+      const next = [...current];
+      [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+      return next;
+    });
+  };
+
+  const submitDisplayConfiguration = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedDictionary) return;
+    if (!displayFields.some(field => field.isVisible)) {
+      toast.error('Phải có ít nhất một trường được hiển thị.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const updated = await listDictionariesService.updateDisplay(selectedDictionary.code, {
+        fields: displayFields.map((field, index) => ({
+          fieldId: field.id,
+          isVisible: field.isVisible,
+          sortOrder: index,
+        })),
+      });
+      setDictionaries(current => current.map(item => item.code === updated.code ? updated : item));
+      setIsDisplayModalOpen(false);
+      toast.success('Đã lưu cấu hình hiển thị.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể lưu cấu hình hiển thị.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6 text-left text-on-surface animate-fadeIn">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h2 className="text-xl font-bold font-sans">Danh mục custom</h2>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            Tự định nghĩa mã, tên và schema trường dữ liệu; mọi bản ghi đều có thông tin audit.
-          </p>
-        </div>
-        <button type="button" onClick={openDefinitionModal} className="btn-primary">
-          <Plus className="h-4 w-4" /> Tạo danh mục
-        </button>
-      </div>
+      {!routeCode ? (
+        <>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-xl font-bold font-sans">Danh mục custom</h2>
+              <p className="mt-1 text-xs text-on-surface-variant">
+                Chọn một danh mục để xem dữ liệu. Admin có thể tạo danh mục và cấu hình các cột hiển thị.
+              </p>
+            </div>
+            {isAdmin && (
+              <button type="button" onClick={openDefinitionModal} className="btn-primary">
+                <Plus className="h-4 w-4" /> Tạo danh mục
+              </button>
+            )}
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="card-surface p-4">
-          <p className="text-xs font-semibold text-on-surface-variant">Tổng danh mục</p>
-          <p className="mt-2 text-2xl font-black tabular-nums">{dictionaries.length}</p>
-        </div>
-        <div className="card-surface p-4">
-          <p className="text-xs font-semibold text-on-surface-variant">Trường custom</p>
-          <p className="mt-2 text-2xl font-black text-primary tabular-nums">{totalFields}</p>
-        </div>
-        <div className="card-surface p-4">
-          <p className="text-xs font-semibold text-on-surface-variant">Tổng bản ghi</p>
-          <p className="mt-2 text-2xl font-black text-success tabular-nums">
-            {dictionaries.reduce((total, item) => total + item.itemCount, 0)}
-          </p>
-        </div>
-      </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="card-surface p-4">
+              <p className="text-xs font-semibold text-on-surface-variant">Tổng danh mục</p>
+              <p className="mt-2 text-2xl font-black tabular-nums">{dictionaries.length}</p>
+            </div>
+            <div className="card-surface p-4">
+              <p className="text-xs font-semibold text-on-surface-variant">Trường custom</p>
+              <p className="mt-2 text-2xl font-black text-primary tabular-nums">{totalFields}</p>
+            </div>
+            <div className="card-surface p-4">
+              <p className="text-xs font-semibold text-on-surface-variant">Tổng bản ghi</p>
+              <p className="mt-2 text-2xl font-black text-success tabular-nums">
+                {dictionaries.reduce((total, item) => total + item.itemCount, 0)}
+              </p>
+            </div>
+          </div>
 
-      <div className="grid min-h-[560px] grid-cols-1 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="card-surface overflow-hidden">
-          <div className="border-b border-outline-variant p-4">
+          <div className="card-surface p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
               <input
                 value={dictionaryFilter}
                 onChange={event => setDictionaryFilter(event.target.value)}
-                placeholder="Tìm danh mục..."
+                placeholder="Tìm theo tên hoặc mã danh mục..."
                 className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm focus:outline-primary"
               />
             </div>
           </div>
-          <div className="max-h-[650px] overflow-y-auto p-2">
-            {isLoadingDictionaries ? (
-              <div className="py-12 text-center text-xs font-bold text-on-surface-variant">
-                <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Đang tải...
-              </div>
-            ) : filteredDictionaries.length === 0 ? (
-              <div className="empty-state min-h-[240px] border-none bg-transparent">
-                <BookOpen className="mb-3 h-8 w-8 text-on-surface-variant/50" />
-                <p className="text-xs font-semibold text-on-surface-variant">Chưa có danh mục phù hợp.</p>
-              </div>
-            ) : filteredDictionaries.map(dictionary => (
-              <button
-                key={dictionary.id}
-                type="button"
-                onClick={() => setSelectedCode(dictionary.code)}
-                className={`mb-1 flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
-                  selectedCode === dictionary.code
-                    ? 'border-primary/40 bg-primary/10'
-                    : 'border-transparent hover:bg-surface-2'
-                }`}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary-container text-primary">
-                  <Database className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-black">{dictionary.name}</span>
-                  <span className="block truncate font-mono text-[10px] font-bold text-on-surface-variant">
-                    {dictionary.code} · {dictionary.itemCount} bản ghi
-                  </span>
-                </span>
-                <ChevronRight className="h-4 w-4 text-on-surface-variant" />
-              </button>
-            ))}
-          </div>
-        </aside>
 
-        <section className="min-w-0 space-y-5">
-          {!selectedDictionary ? (
-            <div className="card-surface empty-state min-h-[560px]">
-              <Braces className="mb-3 h-10 w-10 text-on-surface-variant/50" />
-              <p className="font-bold text-on-surface-variant">Tạo hoặc chọn một danh mục để bắt đầu.</p>
+          {isLoadingDictionaries ? (
+            <div className="card-surface py-16 text-center text-sm font-bold text-on-surface-variant">
+              <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" /> Đang tải danh mục...
+            </div>
+          ) : filteredDictionaries.length === 0 ? (
+            <div className="card-surface empty-state min-h-[320px]">
+              <BookOpen className="mb-3 h-10 w-10 text-on-surface-variant/50" />
+              <p className="font-bold text-on-surface-variant">Chưa có danh mục phù hợp.</p>
             </div>
           ) : (
-            <>
-              <div className="card-surface p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-black">{selectedDictionary.name}</h3>
-                      <span className={selectedDictionary.isActive ? 'badge-success' : 'badge-error'}>
-                        {selectedDictionary.isActive ? 'Đang hoạt động' : 'Đã tắt'}
-                      </span>
-                    </div>
-                    <p className="mt-1 font-mono text-xs font-bold text-primary">{selectedDictionary.code}</p>
-                    {selectedDictionary.description && (
-                      <p className="mt-2 max-w-3xl text-xs leading-5 text-on-surface-variant">
-                        {selectedDictionary.description}
-                      </p>
-                    )}
-                    <p className="mt-3 text-[11px] text-on-surface-variant" title={selectedDictionary.createdBy}>
-                      Tạo lúc {formatDateTime(selectedDictionary.createdAt)} · Người tạo {selectedDictionary.createdBy.slice(0, 8)}… · {selectedDictionary.fields.length} trường custom
-                    </p>
-                  </div>
-                  <button type="button" onClick={() => openItemModal()} className="btn-primary shrink-0">
-                    <Plus className="h-4 w-4" /> Thêm bản ghi
-                  </button>
-                </div>
-
-                <div className="mt-5 border-t border-outline-variant pt-4">
-                  <p className="mb-3 text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Schema dữ liệu</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedDictionary.fields.map(field => (
-                      <span key={field.id} className="inline-flex items-center gap-2 rounded-lg border border-outline-variant bg-surface-2 px-3 py-2 text-xs">
-                        {field.dataType === 2 ? <Hash className="h-3.5 w-3.5 text-primary" /> :
-                          field.dataType === 4 || field.dataType === 5 ? <CalendarDays className="h-3.5 w-3.5 text-primary" /> :
-                          <Type className="h-3.5 w-3.5 text-primary" />}
-                        <strong>{field.name}</strong>
-                        <span className="font-mono text-[10px] text-on-surface-variant">{field.code}</span>
-                        <span className="text-[10px] text-on-surface-variant">{fieldTypeLabel(field.dataType)}</span>
-                        {field.isRequired && <span className="text-error">*</span>}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="card-surface overflow-hidden">
-                <form
-                  onSubmit={event => {
-                    event.preventDefault();
-                    void loadItems(selectedDictionary.code, itemKeyword);
-                  }}
-                  className="flex flex-col gap-3 border-b border-outline-variant p-4 sm:flex-row"
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {filteredDictionaries.map(dictionary => (
+                <button
+                  key={dictionary.id}
+                  type="button"
+                  onClick={() => navigate(`/list-dictionaries/${encodeURIComponent(dictionary.code)}`)}
+                  className="card-surface group flex min-h-32 items-center gap-4 p-5 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
                 >
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-                    <input
-                      value={itemKeyword}
-                      onChange={event => setItemKeyword(event.target.value)}
-                      placeholder="Tìm theo mã bản ghi..."
-                      className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm focus:outline-primary"
-                    />
-                  </div>
-                  <button type="submit" className="btn-secondary h-10 px-5">Tìm kiếm</button>
-                </form>
-
-                <div className="overflow-x-auto">
-                  <table
-                    className="w-full border-collapse text-left text-xs"
-                    style={{ minWidth: Math.max(760, 340 + selectedDictionary.fields.length * 170) }}
-                  >
-                    <thead>
-                      <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
-                        <th className="px-4 py-3">Mã bản ghi</th>
-                        {selectedDictionary.fields.map(field => (
-                          <th key={field.id} className="px-4 py-3">{field.name}</th>
-                        ))}
-                        <th className="px-4 py-3">Audit</th>
-                        <th className="px-4 py-3 text-right">Tác vụ</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-outline-variant/40">
-                      {isLoadingItems ? (
-                        <tr>
-                          <td colSpan={selectedDictionary.fields.length + 3} className="py-12 text-center font-bold text-on-surface-variant">
-                            <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Đang tải dữ liệu...
-                          </td>
-                        </tr>
-                      ) : items.length === 0 ? (
-                        <tr>
-                          <td colSpan={selectedDictionary.fields.length + 3} className="py-12 text-center font-bold text-on-surface-variant">
-                            Chưa có bản ghi trong danh mục này.
-                          </td>
-                        </tr>
-                      ) : items.map(item => (
-                        <tr key={item.id} className="transition-colors hover:bg-surface-2/60">
-                          <td className="px-4 py-3 font-mono text-sm font-black text-primary">{item.code}</td>
-                          {selectedDictionary.fields.map(field => (
-                            <td key={field.id} className="max-w-[260px] truncate px-4 py-3 font-semibold" title={String(item.values[field.code] ?? '')}>
-                              {formatValue(field, item.values[field.code])}
-                            </td>
-                          ))}
-                          <td className="px-4 py-3 text-[11px] text-on-surface-variant">
-                            <span className="block">Tạo: {formatDateTime(item.createdAt)}</span>
-                            <span className="mt-1 block font-mono" title={item.createdBy}>Bởi: {item.createdBy.slice(0, 8)}…</span>
-                            {item.updatedAt && <span className="mt-1 block">Sửa: {formatDateTime(item.updatedAt)}</span>}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => openItemModal(item)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded border border-outline-variant hover:bg-primary/10 hover:text-primary"
-                                title="Chỉnh sửa"
-                              >
-                                <Edit3 className="h-4 w-4" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => void deleteItem(item)}
-                                className="inline-flex h-8 w-8 items-center justify-center rounded border border-error/30 text-error hover:bg-error-container"
-                                title="Xóa"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-primary">
+                    <Database className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-black">{dictionary.name}</span>
+                    <span className="mt-1 block truncate font-mono text-[11px] font-bold text-primary">{dictionary.code}</span>
+                    <span className="mt-2 block text-xs text-on-surface-variant">{dictionary.itemCount} bản ghi</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-on-surface-variant transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+                </button>
+              ))}
+            </div>
           )}
-        </section>
-      </div>
+        </>
+      ) : isLoadingDictionaries ? (
+        <div className="card-surface py-16 text-center text-sm font-bold text-on-surface-variant">
+          <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin" /> Đang tải dữ liệu...
+        </div>
+      ) : !selectedDictionary ? (
+        <div className="card-surface empty-state min-h-[420px]">
+          <BookOpen className="mb-3 h-10 w-10 text-on-surface-variant/50" />
+          <p className="font-bold text-on-surface-variant">Không tìm thấy danh mục.</p>
+          <button type="button" onClick={() => navigate('/list-dictionaries')} className="btn-secondary mt-4">
+            <ArrowLeft className="h-4 w-4" /> Quay lại
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/list-dictionaries')}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
+                title="Quay lại danh sách"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="truncate text-xl font-black">{selectedDictionary.name}</h2>
+                  <span className={selectedDictionary.isActive ? 'badge-success' : 'badge-error'}>
+                    {selectedDictionary.isActive ? 'Đang hoạt động' : 'Đã tắt'}
+                  </span>
+                </div>
+                {selectedDictionary.description && (
+                  <p className="mt-1 text-xs leading-5 text-on-surface-variant">{selectedDictionary.description}</p>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {isAdmin && (
+                <button type="button" onClick={() => openDisplayModal()} className="btn-secondary h-10 px-4">
+                  <Settings2 className="h-4 w-4" /> Cấu hình hiển thị
+                </button>
+              )}
+              <button type="button" onClick={() => openItemModal()} className="btn-primary h-10 px-4">
+                <Plus className="h-4 w-4" /> Thêm dữ liệu
+              </button>
+            </div>
+          </div>
+
+          <div className="card-surface overflow-hidden">
+            <div className="border-b border-outline-variant p-4">
+              <div className="relative max-w-xl">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+                <input
+                  value={itemFilter}
+                  onChange={event => setItemFilter(event.target.value)}
+                  placeholder="Tìm trong dữ liệu đang hiển thị..."
+                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm focus:outline-primary"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table
+                className="w-full border-collapse text-left text-xs"
+                style={{ minWidth: Math.max(680, 260 + visibleFields.length * 180) }}
+              >
+                <thead>
+                  <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
+                    {visibleFields.map(field => (
+                      <th key={field.id} className="px-4 py-3">{field.name}</th>
+                    ))}
+                    <th className="px-4 py-3">Audit</th>
+                    <th className="px-4 py-3 text-right">Tác vụ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/40">
+                  {isLoadingItems ? (
+                    <tr>
+                      <td colSpan={visibleFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
+                        <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Đang tải dữ liệu...
+                      </td>
+                    </tr>
+                  ) : filteredItems.length === 0 ? (
+                    <tr>
+                      <td colSpan={visibleFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
+                        {items.length === 0 ? 'Chưa có dữ liệu trong danh mục này.' : 'Không có dữ liệu phù hợp.'}
+                      </td>
+                    </tr>
+                  ) : filteredItems.map(item => (
+                    <tr key={item.id} className="transition-colors hover:bg-surface-2/60">
+                      {visibleFields.map(field => (
+                        <td key={field.id} className="max-w-[280px] truncate px-4 py-3 font-semibold" title={String(item.values[field.code] ?? '')}>
+                          {formatValue(field, item.values[field.code])}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-[11px] text-on-surface-variant">
+                        <span className="block">Tạo: {formatDateTime(item.createdAt)}</span>
+                        {item.updatedAt && <span className="mt-1 block">Sửa: {formatDateTime(item.updatedAt)}</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openItemModal(item)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded border border-outline-variant hover:bg-primary/10 hover:text-primary"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void deleteItem(item)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded border border-error/30 text-error hover:bg-error-container"
+                            title="Xóa"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {isDefinitionModalOpen && (
         <div className="modal-overlay">
@@ -702,6 +741,79 @@ export default function ListDictionariesTab() {
         </div>
       )}
 
+      {isDisplayModalOpen && selectedDictionary && (
+        <div className="modal-overlay">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-outline-variant bg-surface shadow-elevated">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
+              <div>
+                <h3 className="text-lg font-black">Cấu hình hiển thị</h3>
+                <p className="mt-1 text-xs text-on-surface-variant">Chọn và sắp xếp các cột xuất hiện trong bảng dữ liệu.</p>
+              </div>
+              <button type="button" onClick={() => setIsDisplayModalOpen(false)} className="inline-flex h-8 w-8 items-center justify-center rounded hover:bg-surface-2">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form onSubmit={submitDisplayConfiguration} className="space-y-4 p-5">
+              <div className="space-y-2">
+                {displayFields.map((field, index) => (
+                  <div key={field.id} className="flex items-center gap-3 rounded-xl border border-outline-variant bg-surface-2 p-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface font-mono text-xs font-black text-on-surface-variant">
+                      {index + 1}
+                    </span>
+                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={field.isVisible}
+                        onChange={event => setDisplayFields(current => current.map(item =>
+                          item.id === field.id ? { ...item, isVisible: event.target.checked } : item,
+                        ))}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-black">{field.name}</span>
+                        <span className="block truncate font-mono text-[10px] text-on-surface-variant">{field.code}</span>
+                      </span>
+                    </label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => moveDisplayField(index, -1)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-outline-variant bg-surface hover:bg-primary/10 hover:text-primary disabled:opacity-30"
+                        title="Đưa lên"
+                      >
+                        <ArrowUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === displayFields.length - 1}
+                        onClick={() => moveDisplayField(index, 1)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded border border-outline-variant bg-surface hover:bg-primary/10 hover:text-primary disabled:opacity-30"
+                        title="Đưa xuống"
+                      >
+                        <ArrowDown className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-on-surface-variant">
+                Mã bản ghi không hiển thị trên giao diện và được hệ thống tự động cấp theo số thứ tự.
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 border-t border-outline-variant pt-4 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setIsDisplayModalOpen(false)} className="btn-secondary h-10 px-4">Hủy</button>
+                <button type="submit" disabled={isSaving} className="btn-primary h-10 px-5">
+                  {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isSaving ? 'Đang lưu...' : 'Lưu cấu hình'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isItemModalOpen && selectedDictionary && (
         <div className="modal-overlay">
           <div className="max-h-[calc(100dvh-2rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-outline-variant bg-surface shadow-elevated">
@@ -715,17 +827,7 @@ export default function ListDictionariesTab() {
               </button>
             </div>
             <form onSubmit={submitItem} className="space-y-4 p-5">
-              <label className="block text-sm font-bold">
-                Mã bản ghi *
-                <input
-                  value={itemCode}
-                  onChange={event => setItemCode(toCode(event.target.value))}
-                  placeholder="DEVICE_001"
-                  className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 font-mono text-sm focus:outline-primary"
-                />
-              </label>
-
-              <div className="border-t border-outline-variant pt-4">
+              <div>
                 <p className="mb-4 text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Dữ liệu custom</p>
                 <div className="space-y-4">
                   {selectedDictionary.fields.map(field => (

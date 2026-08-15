@@ -3,6 +3,7 @@ import {
   ListDictionaryDto,
   ListDictionaryItemDto,
   SaveListDictionaryItemRequest,
+  UpdateListDictionaryDisplayRequest,
 } from '../../types';
 import { apiClient } from './apiClient';
 
@@ -28,6 +29,12 @@ export const listDictionariesService = {
 
   create: (request: CreateListDictionaryRequest) =>
     apiClient.post<ListDictionaryDto>('/api/list-dictionaries', request),
+
+  updateDisplay: (code: string, request: UpdateListDictionaryDisplayRequest) =>
+    apiClient.patch<ListDictionaryDto>(
+      `/api/list-dictionaries/${encodeCode(code)}/display`,
+      request,
+    ),
 
   getItems: (code: string, keyword = '') =>
     apiClient.get<ListDictionaryItemDto[]>(
