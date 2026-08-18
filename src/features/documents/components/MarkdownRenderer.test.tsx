@@ -18,6 +18,13 @@ describe('MarkdownRenderer image sources', () => {
     expect(image?.getAttribute('alt')).toBe('anh');
   });
 
+  it('applies persisted width percentage for resized images', () => {
+    const image = renderMarkdown(`<img src="${PNG_DATA_URI}" alt="anh" width="65%" />`).querySelector('img');
+
+    expect(image).not.toBeNull();
+    expect(image?.style.width).toBe('65%');
+  });
+
   it('renders a remote https image', () => {
     const image = renderMarkdown('![anh](https://example.com/a.png)').querySelector('img');
     expect(image?.getAttribute('src')).toBe('https://example.com/a.png');

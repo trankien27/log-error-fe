@@ -1,4 +1,4 @@
-import type { JSONContent } from '@tiptap/core';
+import { mergeAttributes, type JSONContent } from '@tiptap/core';
 import Heading from '@tiptap/extension-heading';
 import Image from '@tiptap/extension-image';
 import Paragraph from '@tiptap/extension-paragraph';
@@ -8,6 +8,8 @@ import { Markdown } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 
 const ALLOWED_ALIGNMENTS = ['left', 'center', 'right', 'justify'];
+const MIN_IMAGE_WIDTH_PERCENT = 20;
+const MAX_IMAGE_WIDTH_PERCENT = 100;
 
 function escapeHtml(value: string) {
   return value
@@ -56,6 +58,73 @@ function getAlignment(node: JSONContent) {
   const alignment = String(node.attrs?.textAlign || '');
   return ALLOWED_ALIGNMENTS.includes(alignment) ? alignment : '';
 }
+
+function normalizeImageWidthPercent(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return MAX_IMAGE_WIDTH_PERCENT;
+  return Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(numeric)));
+}
+
+function escapeMarkdownImageSrc(value: string) {
+  return value.replace(/\)/g, '\\)');
+}
+
+export const KnowledgeDocumentImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      widthPercent: {
+        default: MAX_IMAGE_WIDTH_PERCENT,
+        parseHTML: element => {
+          const dataWidth = element.getAttribute('data-width-percent');
+          if (dataWidth) return normalizeImageWidthPercent(dataWidth);
+
+          const widthAttribute = element.getAttribute('width');
+          if (widthAttribute?.endsWith('%')) {
+            return normalizeImageWidthPercent(widthAttribute.slice(0, -1));
+          }
+
+          const styleWidth = element.style.width;
+          if (styleWidth?.endsWith('%')) {
+            return normalizeImageWidthPercent(styleWidth.slice(0, -1));
+          }
+
+          return MAX_IMAGE_WIDTH_PERCENT;
+        },
+        renderHTML: attributes => {
+          const widthPercent = normalizeImageWidthPercent(attributes.widthPercent);
+          if (widthPercent >= MAX_IMAGE_WIDTH_PERCENT) return {};
+
+          return {
+            width: `${widthPercent}%`,
+            style: `width: ${widthPercent}%;`,
+          };
+        },
+      },
+    };
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ['img', mergeAttributes(HTMLAttributes)];
+  },
+  renderMarkdown: (node, helpers) => {
+    const src = String(node.attrs.src || '');
+    if (!src) return '';
+
+    const widthPercent = normalizeImageWidthPercent(node.attrs.widthPercent);
+    const altText = escapeHtml(String(node.attrs.alt || ''));
+    const escapedSrc = escapeMarkdownImageSrc(src);
+
+    if (widthPercent >= MAX_IMAGE_WIDTH_PERCENT) {
+      return `![${altText}](${escapedSrc})`;
+    }
+
+    const title = node.attrs.title
+      ? ` title="${escapeHtml(String(node.attrs.title))}"`
+      : '';
+
+    return `<img src="${escapeHtml(src)}" alt="${altText}" width="${widthPercent}%"${title} />`;
+  },
+});
 
 export const MarkdownParagraph = Paragraph.extend({
   renderMarkdown: (node, helpers, context) => {
@@ -153,7 +222,7 @@ export function createKnowledgeDocumentExtensions() {
     //
     // The extension ships its own `renderMarkdown` (`![alt](src)`), so no `.extend()` is
     // needed here — locked by the round-trip tests in richTextMarkdown.test.ts.
-    Image.configure({ inline: false, allowBase64: true }),
+    KnowledgeDocumentImage.configure({ inline: false, allowBase64: true }),
     Markdown.configure({
       markedOptions: { gfm: true, breaks: true },
     }),

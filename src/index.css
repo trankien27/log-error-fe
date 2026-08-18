@@ -203,6 +203,17 @@
   .document-rich-editor .tiptap pre { margin: 1rem 0; overflow-x: auto; border-radius: 0.75rem; padding: 1rem; background: var(--color-on-surface); color: var(--color-surface); }
   .document-rich-editor .tiptap pre code { padding: 0; background: transparent; color: inherit; }
   .document-rich-editor .tiptap hr { margin: 1.5rem 0; border: 0; border-top: 1px solid var(--color-outline-variant); }
+  .document-rich-editor .tiptap img {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    margin: 1rem 0;
+    border-radius: 0.75rem;
+  }
+  .document-rich-editor .tiptap img.ProseMirror-selectednode {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
   .document-rich-editor .tiptap .tableWrapper { margin: 1.25rem 0; overflow-x: auto; }
   .document-rich-editor .tiptap table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .document-rich-editor .tiptap th,

@@ -68,6 +68,28 @@ describe('rich text markdown serialization', () => {
     reopenedEditor.destroy();
   });
 
+  it('persists resized image width through save and reopen', () => {
+    const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+    const editor = new Editor({
+      extensions: createKnowledgeDocumentExtensions(),
+      content: `![anh](${dataUri})`,
+      contentType: 'markdown',
+    });
+
+    editor.chain().focus().setNodeSelection(0).updateAttributes('image', { widthPercent: 60 }).run();
+    const storedMarkdown = editor.getMarkdown();
+    expect(storedMarkdown).toContain('width="60%"');
+    editor.destroy();
+
+    const reopenedEditor = new Editor({
+      extensions: createKnowledgeDocumentExtensions(),
+      content: storedMarkdown,
+      contentType: 'markdown',
+    });
+    expect(reopenedEditor.getAttributes('image').widthPercent).toBe(60);
+    reopenedEditor.destroy();
+  });
+
   it('keeps a reopened document containing an image editable', () => {
     // The markdown parser hoists a standalone image to a direct child of `doc`. If the
     // image node were configured as inline that would be an invalid document, and the

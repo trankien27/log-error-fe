@@ -10,6 +10,15 @@ type MarkdownRendererProps = {
   className?: string;
 };
 
+const MIN_IMAGE_WIDTH_PERCENT = 20;
+const MAX_IMAGE_WIDTH_PERCENT = 100;
+
+function normalizeImageWidthPercent(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return MAX_IMAGE_WIDTH_PERCENT;
+  return Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(numeric)));
+}
+
 const markdownSchema: Options = {
   ...defaultSchema,
   protocols: {
@@ -23,7 +32,7 @@ const markdownSchema: Options = {
   },
   attributes: {
     ...defaultSchema.attributes,
-    img: [...(defaultSchema.attributes?.img || []), 'alt', 'title', 'width', 'height'],
+    img: [...(defaultSchema.attributes?.img || []), 'alt', 'title', 'width', 'height', 'data-width-percent'],
     div: [...(defaultSchema.attributes?.div || []), ['align', 'left', 'center', 'right']],
     p: [...(defaultSchema.attributes?.p || []), ['align', 'left', 'center', 'right']],
     h1: [...(defaultSchema.attributes?.h1 || []), ['align', 'left', 'center', 'right']],
@@ -90,17 +99,25 @@ export default function MarkdownRenderer({ content, className = '' }: MarkdownRe
           // ones the upload path never vetted (a `data:` URI without `;base64,` is never
           // uploaded, so it reaches stored content verbatim). Re-check the exact shape here,
           // at the render boundary, so this holds whatever is already in the database.
-          img: ({ src, alt, title }) => isSafeImageSrc(src)
-            ? (
+          img: ({ src, alt, title, node, width }) => {
+            if (!isSafeImageSrc(src)) return null;
+
+            const widthPercent = normalizeImageWidthPercent(
+              String(width || (node?.properties as Record<string, unknown> | undefined)?.width || '')
+                .replace('%', ''),
+            );
+
+            return (
               <img
                 src={src}
                 alt={alt || ''}
                 title={title}
                 loading="lazy"
+                style={widthPercent < MAX_IMAGE_WIDTH_PERCENT ? { width: `${widthPercent}%` } : undefined}
                 className="my-4 h-auto max-w-full rounded-lg border border-outline-variant"
               />
-            )
-            : null,
+            );
+          },
           hr: () => <hr className="my-7 border-outline-variant" />,
         }}
       >

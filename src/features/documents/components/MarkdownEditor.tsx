@@ -21,6 +21,8 @@ import {
   Table2,
   Trash2,
   Undo2,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -44,6 +46,16 @@ type ToolbarButtonProps = {
   disabled?: boolean;
   onClick: () => void;
 };
+
+const MIN_IMAGE_WIDTH_PERCENT = 20;
+const MAX_IMAGE_WIDTH_PERCENT = 100;
+const IMAGE_ZOOM_STEP = 10;
+
+function normalizeImageWidthPercent(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return MAX_IMAGE_WIDTH_PERCENT;
+  return Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(numeric)));
+}
 
 function ToolbarButton({ children, title, active = false, disabled = false, onClick }: ToolbarButtonProps) {
   return (
@@ -196,6 +208,17 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
   };
 
   const isInTable = editor.isActive('table');
+  const isImageSelected = editor.isActive('image');
+  const selectedImageWidthPercent = normalizeImageWidthPercent(editor.getAttributes('image').widthPercent);
+
+  const updateSelectedImageWidth = (nextWidthPercent: number) => {
+    const normalizedWidth = normalizeImageWidthPercent(nextWidthPercent);
+    editor
+      .chain()
+      .focus()
+      .updateAttributes('image', { widthPercent: normalizedWidth })
+      .run();
+  };
 
   return (
     <div className="document-rich-editor overflow-hidden rounded-xl border border-outline-variant bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
@@ -247,6 +270,36 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
           aria-hidden="true"
           onChange={handleImageInputChange}
         />
+        {isImageSelected && (
+          <>
+            <ToolbarSeparator />
+            <ToolbarButton
+              title="Thu nhỏ ảnh"
+              onClick={() => updateSelectedImageWidth(selectedImageWidthPercent - IMAGE_ZOOM_STEP)}
+            >
+              <ZoomOut className="h-4 w-4" />
+            </ToolbarButton>
+            <ToolbarButton
+              title="Phóng to ảnh"
+              onClick={() => updateSelectedImageWidth(selectedImageWidthPercent + IMAGE_ZOOM_STEP)}
+            >
+              <ZoomIn className="h-4 w-4" />
+            </ToolbarButton>
+            <input
+              type="range"
+              min={MIN_IMAGE_WIDTH_PERCENT}
+              max={MAX_IMAGE_WIDTH_PERCENT}
+              step={5}
+              value={selectedImageWidthPercent}
+              onChange={event => updateSelectedImageWidth(Number(event.target.value))}
+              className="mx-1 h-2 w-28 cursor-pointer accent-primary"
+              aria-label="Kích thước ảnh"
+            />
+            <span className="min-w-12 text-center text-[10px] font-extrabold text-on-surface-variant">
+              {selectedImageWidthPercent}%
+            </span>
+          </>
+        )}
         {isInTable && (
           <>
             <ToolbarButton title="Thêm hàng bên dưới" onClick={() => editor.chain().focus().addRowAfter().run()}>+H</ToolbarButton>
