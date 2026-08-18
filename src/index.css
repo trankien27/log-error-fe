@@ -214,6 +214,63 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+  .document-rich-editor .tiptap .document-resizable-image {
+    position: relative;
+    max-width: 100%;
+    margin: 1rem 0;
+    line-height: 0;
+  }
+  .document-rich-editor .tiptap .document-resizable-image img {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+  .document-rich-editor .tiptap .document-resizable-image.is-selected img,
+  .document-rich-editor .tiptap .document-resizable-image.is-resizing img {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  .document-rich-editor .tiptap .document-image-resize-handle {
+    position: absolute;
+    z-index: 2;
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--color-surface);
+    border-radius: 3px;
+    background: var(--color-primary);
+    opacity: 0;
+    touch-action: none;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+  .document-rich-editor .tiptap .document-resizable-image:hover .document-image-resize-handle,
+  .document-rich-editor .tiptap .document-resizable-image.is-selected .document-image-resize-handle,
+  .document-rich-editor .tiptap .document-resizable-image.is-resizing .document-image-resize-handle {
+    opacity: 1;
+  }
+  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='top-left'] {
+    top: 0;
+    left: 0;
+    cursor: nwse-resize;
+    transform: translate(-50%, -50%);
+  }
+  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='top-right'] {
+    top: 0;
+    right: 0;
+    cursor: nesw-resize;
+    transform: translate(50%, -50%);
+  }
+  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='bottom-left'] {
+    bottom: 0;
+    left: 0;
+    cursor: nesw-resize;
+    transform: translate(-50%, 50%);
+  }
+  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='bottom-right'] {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+    transform: translate(50%, 50%);
+  }
   .document-rich-editor .tiptap .tableWrapper { margin: 1.25rem 0; overflow-x: auto; }
   .document-rich-editor .tiptap table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   .document-rich-editor .tiptap th,

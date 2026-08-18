@@ -326,7 +326,7 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
       </div>
 
       <div className="flex items-center justify-between border-t border-outline-variant bg-surface-2 px-4 py-2 text-[10px] font-semibold text-on-surface-variant">
-        <span>Soạn thảo trực quan — dán hoặc kéo-thả ảnh (tối đa 1MB) vào vị trí mong muốn</span>
+        <span>Soạn thảo trực quan — dán, kéo-thả và đổi kích thước ảnh từ các góc (tối đa 1MB)</span>
         <span>Hệ thống tự chuyển đổi và lưu dưới dạng Markdown</span>
       </div>
     </div>

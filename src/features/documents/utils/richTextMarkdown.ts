@@ -6,6 +6,8 @@ import TextAlign from '@tiptap/extension-text-align';
 import { TableKit } from '@tiptap/extension-table';
 import { Markdown } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import ResizableImageNodeView from '../components/ResizableImageNodeView';
 
 const ALLOWED_ALIGNMENTS = ['left', 'center', 'right', 'justify'];
 const MIN_IMAGE_WIDTH_PERCENT = 20;
@@ -70,6 +72,9 @@ function escapeMarkdownImageSrc(value: string) {
 }
 
 export const KnowledgeDocumentImage = Image.extend({
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageNodeView);
+  },
   addAttributes() {
     return {
       ...this.parent?.(),
