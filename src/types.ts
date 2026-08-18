@@ -320,6 +320,33 @@ export interface SaveKnowledgeDocumentRequest {
   visibility: KnowledgeDocumentVisibility;
 }
 
+export interface KnowledgeDocumentImageDto {
+  id: number;
+  documentId: number;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  base64Data: string;
+  position: number;
+  createdAt: string;
+}
+
+export interface KnowledgeDocumentImageSummaryDto {
+  id: number;
+  documentId: number;
+  fileName: string;
+  contentType: string;
+  fileSize: number;
+  position: number;
+  createdAt: string;
+}
+
+export interface UploadKnowledgeDocumentImageRequest {
+  fileName: string;
+  contentType: string;
+  base64Data: string;
+}
+
 export interface WorkScheduleDto {
   id: number;
   workDate: string;

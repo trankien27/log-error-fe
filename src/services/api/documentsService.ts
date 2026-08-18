@@ -1,7 +1,10 @@
 import {
   KnowledgeDocumentDto,
+  KnowledgeDocumentImageDto,
+  KnowledgeDocumentImageSummaryDto,
   KnowledgeDocumentSummaryDto,
   SaveKnowledgeDocumentRequest,
+  UploadKnowledgeDocumentImageRequest,
 } from '../../types';
 import { apiClient } from './apiClient';
 
@@ -20,4 +23,13 @@ export const documentsService = {
     apiClient.put<KnowledgeDocumentDto>(`/api/documents/${id}`, request),
 
   delete: (id: number) => apiClient.delete<boolean>(`/api/documents/${id}`),
+
+  listImages: (documentId: number) =>
+    apiClient.get<KnowledgeDocumentImageDto[]>(`/api/documents/${documentId}/images`),
+
+  uploadImage: (documentId: number, request: UploadKnowledgeDocumentImageRequest) =>
+    apiClient.post<KnowledgeDocumentImageSummaryDto>(`/api/documents/${documentId}/images`, request),
+
+  deleteImage: (documentId: number, imageId: number) =>
+    apiClient.delete<boolean>(`/api/documents/${documentId}/images/${imageId}`),
 };

@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useMemo, useState } from 'react';
+import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpenText,
   Clock3,
@@ -23,6 +23,14 @@ import {
 } from '../../../types';
 import MarkdownEditor from './MarkdownEditor';
 import MarkdownRenderer from './MarkdownRenderer';
+import {
+  DOC_IMAGE_PREFIX,
+  extractDataUriImages,
+  extractPlaceholderIds,
+  hydratePlaceholders,
+  replaceDataUri,
+  stripImageMarkdown,
+} from '../utils/documentImages';
 
 const EMPTY_DRAFT: SaveKnowledgeDocumentRequest = {
   title: '',
@@ -40,6 +48,15 @@ function visibilityLabel(visibility: KnowledgeDocumentVisibility) {
   return visibility === 1 ? 'Global' : 'Personal';
 }
 
+/**
+ * The editor only carries a content type for pasted images, not a file name, so the
+ * server-side metadata name is derived from it.
+ */
+function fileNameForContentType(contentType: string) {
+  const extension = contentType.split('/')[1]?.replace(/[^a-z0-9]/gi, '') || 'png';
+  return `image.${extension}`;
+}
+
 export default function DocumentsTab() {
   const [documents, setDocuments] = useState<KnowledgeDocumentSummaryDto[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocumentDto | null>(null);
@@ -51,6 +68,12 @@ export default function DocumentsTab() {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  /**
+   * The last content we know the server holds, with images still as `doc-image://{id}`
+   * placeholders. It is the baseline for working out which images a save orphaned.
+   */
+  const savedPlaceholderContentRef = useRef<string>('');
+
   const filteredDocuments = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase('vi-VN');
     if (!normalizedKeyword) return documents;
@@ -60,11 +83,36 @@ export default function DocumentsTab() {
     );
   }, [documents, keyword]);
 
+  /**
+   * Records the server's placeholder content as the orphan-diff baseline and swaps every
+   * `doc-image://{id}` for a real data URI so both the renderer and the editor receive
+   * displayable content.
+   *
+   * `MarkdownEditor` builds its editor once at mount and never re-reads its `value` prop,
+   * so hydration has to finish here — before `isEditing` is ever set to true.
+   */
+  const hydrateDocument = async (document: KnowledgeDocumentDto): Promise<KnowledgeDocumentDto> => {
+    savedPlaceholderContentRef.current = document.contentMarkdown;
+    if (!document.contentMarkdown.includes(DOC_IMAGE_PREFIX)) return document;
+
+    try {
+      const images = await documentsService.listImages(document.id);
+      return {
+        ...document,
+        contentMarkdown: hydratePlaceholders(document.contentMarkdown, images),
+      };
+    } catch {
+      // A failed image fetch must not blank the document — show it without its images.
+      toast.error('Không thể tải ảnh trong tài liệu.');
+      return document;
+    }
+  };
+
   const loadDocument = async (id: number) => {
     setIsLoadingDocument(true);
     try {
       const document = await documentsService.getById(id);
-      setSelectedDocument(document);
+      setSelectedDocument(await hydrateDocument(document));
       setIsCreating(false);
       setIsEditing(false);
     } catch (error: any) {
@@ -90,7 +138,8 @@ export default function DocumentsTab() {
         setDocuments(items);
         if (items.length > 0) {
           const firstDocument = await documentsService.getById(items[0].id);
-          if (isMounted) setSelectedDocument(firstDocument);
+          const hydratedDocument = await hydrateDocument(firstDocument);
+          if (isMounted) setSelectedDocument(hydratedDocument);
         }
       } catch (error: any) {
         if (isMounted) toast.error(error.message || 'Không thể tải danh sách tài liệu.');
@@ -108,6 +157,7 @@ export default function DocumentsTab() {
   const startCreating = () => {
     setDraft({ ...EMPTY_DRAFT });
     setSelectedDocument(null);
+    savedPlaceholderContentRef.current = '';
     setIsCreating(true);
     setIsEditing(true);
   };
@@ -132,24 +182,84 @@ export default function DocumentsTab() {
     if (firstDocument) await loadDocument(firstDocument.id);
   };
 
+  /**
+   * Saves the draft, moving any newly inserted images out of the content and into the
+   * image table:
+   *
+   *   1. create (new documents only) with image markdown stripped — a single 1MB image is
+   *      ~1.37M base64 characters against the server's 500,000 character content limit,
+   *      so raw data URIs would hard-fail the create.
+   *   2. upload each pending `data:` image, swapping it for its `doc-image://{id}`.
+   *   3. delete images the user removed from the content since the last save.
+   *   4. update with the placeholder-only content.
+   *
+   * There is no transaction across these calls. On any failure the editor stays open with
+   * the draft intact so nothing the user wrote is lost; `isCreating` flips to false only
+   * once the create has actually succeeded, so a retry updates rather than duplicating.
+   */
   const saveDocument = async (event: FormEvent) => {
     event.preventDefault();
-    if (!draft.title.trim()) {
+    const title = draft.title.trim();
+    if (!title) {
       toast.error('Vui lòng nhập tiêu đề tài liệu.');
       return;
     }
 
+    const wasCreating = isCreating;
+    if (!wasCreating && !selectedDocument) return;
+
     setIsSaving(true);
     try {
-      const savedDocument = isCreating
-        ? await documentsService.create({ ...draft, title: draft.title.trim() })
-        : await documentsService.update(selectedDocument!.id, { ...draft, title: draft.title.trim() });
+      let documentId = selectedDocument?.id ?? 0;
 
-      setSelectedDocument(savedDocument);
-      setIsCreating(false);
+      if (wasCreating) {
+        const createdDocument = await documentsService.create({
+          title,
+          contentMarkdown: stripImageMarkdown(draft.contentMarkdown),
+          visibility: draft.visibility,
+        });
+        documentId = createdDocument.id;
+        savedPlaceholderContentRef.current = createdDocument.contentMarkdown;
+        setSelectedDocument(createdDocument);
+        setIsCreating(false);
+      }
+
+      let content = draft.contentMarkdown;
+      for (const pendingImage of extractDataUriImages(content)) {
+        const uploadedImage = await documentsService.uploadImage(documentId, {
+          fileName: fileNameForContentType(pendingImage.contentType),
+          contentType: pendingImage.contentType,
+          base64Data: pendingImage.base64,
+        });
+        content = replaceDataUri(content, pendingImage.dataUri, uploadedImage.id);
+      }
+
+      const referencedImageIds = new Set(extractPlaceholderIds(content));
+      const orphanImageIds = extractPlaceholderIds(savedPlaceholderContentRef.current)
+        .filter(imageId => !referencedImageIds.has(imageId));
+
+      for (const orphanImageId of orphanImageIds) {
+        try {
+          await documentsService.deleteImage(documentId, orphanImageId);
+        } catch {
+          // Non-fatal: a leftover image row must not fail the save.
+          toast.warning('Không thể xoá một ảnh không còn được sử dụng.');
+        }
+      }
+
+      const savedDocument = await documentsService.update(documentId, {
+        title,
+        contentMarkdown: content,
+        visibility: draft.visibility,
+      });
+
+      savedPlaceholderContentRef.current = savedDocument.contentMarkdown;
+      // `draft.contentMarkdown` is already the hydrated equivalent of the content we just
+      // saved, so it is reused for display instead of re-downloading every image.
+      setSelectedDocument({ ...savedDocument, contentMarkdown: draft.contentMarkdown });
       setIsEditing(false);
       await refreshDocuments();
-      toast.success(isCreating ? 'Đã tạo tài liệu.' : 'Đã lưu thay đổi.');
+      toast.success(wasCreating ? 'Đã tạo tài liệu.' : 'Đã lưu thay đổi.');
     } catch (error: any) {
       toast.error(error.message || 'Không thể lưu tài liệu.');
     } finally {

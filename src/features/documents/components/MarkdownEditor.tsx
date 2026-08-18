@@ -1,4 +1,5 @@
-import React, { ReactNode } from 'react';
+import React, { ChangeEvent, ReactNode, useCallback, useEffect, useRef } from 'react';
+import type { Editor } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import {
   AlignCenter,
@@ -6,6 +7,7 @@ import {
   AlignRight,
   Bold,
   Braces,
+  ImagePlus,
   Italic,
   Link2,
   List,
@@ -20,9 +22,15 @@ import {
   Trash2,
   Undo2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   createKnowledgeDocumentExtensions,
 } from '../utils/richTextMarkdown';
+import {
+  readFileAsDataUri,
+  sanitizeAltText,
+  validateImageFile,
+} from '../utils/documentImages';
 
 type MarkdownEditorProps = {
   value: string;
@@ -61,7 +69,66 @@ function ToolbarSeparator() {
   return <span className="mx-1 h-5 w-px shrink-0 bg-outline-variant" />;
 }
 
+/**
+ * Collects image files from a paste or drop payload. Some browsers expose a pasted
+ * screenshot only through `items`, so `files` alone is not enough.
+ */
+function getImageFiles(dataTransfer: DataTransfer | null | undefined): File[] {
+  if (!dataTransfer) return [];
+
+  const droppedFiles = Array.from(dataTransfer.files || []).filter(file =>
+    file.type.startsWith('image/'),
+  );
+  if (droppedFiles.length > 0) return droppedFiles;
+
+  return Array.from(dataTransfer.items || [])
+    .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+    .map(item => item.getAsFile())
+    .filter((file): file is File => file !== null);
+}
+
 export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
+  const editorRef = useRef<Editor | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  /**
+   * Inserts images at `startPos`, advancing past each one so a multi-file paste keeps
+   * document order. Validation and its toast run before any FileReader work, so an
+   * oversized or unsupported file never gets read.
+   */
+  const insertImageFiles = useCallback(async (files: File[], startPos: number) => {
+    let position = startPos;
+
+    for (const file of files) {
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        toast.error(`${file.name}: ${validationError}`);
+        continue;
+      }
+
+      try {
+        const dataUri = await readFileAsDataUri(file);
+        const currentEditor = editorRef.current;
+        if (!currentEditor) return;
+
+        // The document may have changed while the file was being read.
+        const safePosition = Math.min(position, currentEditor.state.doc.content.size);
+        currentEditor
+          .chain()
+          .focus()
+          .insertContentAt(safePosition, {
+            type: 'image',
+            attrs: { src: dataUri, alt: sanitizeAltText(file.name) },
+          })
+          .run();
+
+        position = currentEditor.state.selection.from;
+      } catch {
+        toast.error(`Không thể đọc tệp ảnh ${file.name}.`);
+      }
+    }
+  }, []);
+
   const editor = useEditor({
     extensions: createKnowledgeDocumentExtensions(),
     content: value || '',
@@ -73,11 +140,45 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
         spellcheck: 'true',
         'aria-label': 'Nội dung tài liệu',
       },
+      handlePaste: (view, event) => {
+        const imageFiles = getImageFiles(event.clipboardData);
+        if (imageFiles.length === 0) return false;
+
+        void insertImageFiles(imageFiles, view.state.selection.from);
+        return true;
+      },
+      handleDrop: (view, event, _slice, moved) => {
+        // `moved` means an internal node drag (e.g. repositioning an existing image).
+        // Consuming it would break in-document drag and drop.
+        if (moved) return false;
+
+        const imageFiles = getImageFiles(event.dataTransfer);
+        if (imageFiles.length === 0) return false;
+
+        const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        void insertImageFiles(imageFiles, coordinates?.pos ?? view.state.selection.from);
+        return true;
+      },
     },
     onUpdate: ({ editor: currentEditor }) => {
       onChange(currentEditor.getMarkdown());
     },
   }, []);
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
+  const handleImageInputChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    // Reset so picking the same file twice in a row still fires a change event.
+    event.target.value = '';
+
+    const currentEditor = editorRef.current;
+    if (files.length === 0 || !currentEditor) return;
+
+    void insertImageFiles(files, currentEditor.state.selection.from);
+  };
 
   if (!editor) {
     return <div className="min-h-[520px] animate-pulse rounded-xl bg-surface-2" />;
@@ -133,6 +234,19 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
         >
           <Table2 className="h-4 w-4" />
         </ToolbarButton>
+        <ToolbarButton title="Chèn ảnh" onClick={() => fileInputRef.current?.click()}>
+          <ImagePlus className="h-4 w-4" />
+        </ToolbarButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple={false}
+          className="hidden"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={handleImageInputChange}
+        />
         {isInTable && (
           <>
             <ToolbarButton title="Thêm hàng bên dưới" onClick={() => editor.chain().focus().addRowAfter().run()}>+H</ToolbarButton>
@@ -159,7 +273,7 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
       </div>
 
       <div className="flex items-center justify-between border-t border-outline-variant bg-surface-2 px-4 py-2 text-[10px] font-semibold text-on-surface-variant">
-        <span>Soạn thảo trực quan — định dạng hiển thị ngay khi gõ</span>
+        <span>Soạn thảo trực quan — dán hoặc kéo-thả ảnh (tối đa 1MB) vào vị trí mong muốn</span>
         <span>Hệ thống tự chuyển đổi và lưu dưới dạng Markdown</span>
       </div>
     </div>

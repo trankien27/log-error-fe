@@ -1,5 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 import Heading from '@tiptap/extension-heading';
+import Image from '@tiptap/extension-image';
 import Paragraph from '@tiptap/extension-paragraph';
 import TextAlign from '@tiptap/extension-text-align';
 import { TableKit } from '@tiptap/extension-table';
@@ -139,6 +140,20 @@ export function createKnowledgeDocumentExtensions() {
         lastColumnResizable: true,
       },
     }),
+    // `allowBase64` is mandatory: without it `parseHTML` matches
+    // `img[src]:not([src^="data:"])` and every pasted data: image is dropped on the
+    // markdown -> HTML -> node round trip.
+    //
+    // `inline: false` is deliberate. The markdown parser hoists a standalone image line
+    // to a direct child of `doc` regardless of this setting, and an `inline` node in that
+    // position is a schema violation — reopening a saved document that contains an image
+    // and then aligning or typing throws "Invalid content for node doc". As a block node
+    // the hoisted image is valid, and `insertContentAt` still honours the exact drop
+    // position by splitting the paragraph there, so positioning accuracy is unaffected.
+    //
+    // The extension ships its own `renderMarkdown` (`![alt](src)`), so no `.extend()` is
+    // needed here — locked by the round-trip tests in richTextMarkdown.test.ts.
+    Image.configure({ inline: false, allowBase64: true }),
     Markdown.configure({
       markedOptions: { gfm: true, breaks: true },
     }),

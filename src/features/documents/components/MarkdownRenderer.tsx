@@ -1,8 +1,9 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema, type Options } from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
+import { isSafeImageSrc } from '../utils/documentImages';
 
 type MarkdownRendererProps = {
   content: string;
@@ -11,8 +12,18 @@ type MarkdownRendererProps = {
 
 const markdownSchema: Options = {
   ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    // Document images are stored as base64 and hydrated into `data:` URIs before
+    // rendering. `defaultSchema.protocols.src` is `['http', 'https']` only, so without
+    // this every embedded image would be silently stripped and render blank.
+    // `javascript:` stays excluded; the data URIs themselves are rebuilt from an
+    // allowlisted content type in `documentImages.buildDataUri`.
+    src: [...(defaultSchema.protocols?.src || []), 'data'],
+  },
   attributes: {
     ...defaultSchema.attributes,
+    img: [...(defaultSchema.attributes?.img || []), 'alt', 'title', 'width', 'height'],
     div: [...(defaultSchema.attributes?.div || []), ['align', 'left', 'center', 'right']],
     p: [...(defaultSchema.attributes?.p || []), ['align', 'left', 'center', 'right']],
     h1: [...(defaultSchema.attributes?.h1 || []), ['align', 'left', 'center', 'right']],
@@ -21,6 +32,15 @@ const markdownSchema: Options = {
     h4: [...(defaultSchema.attributes?.h4 || []), ['align', 'left', 'center', 'right']],
   },
 };
+
+/**
+ * `react-markdown` runs its own URL allowlist over every `href`/`src` before the sanitizer
+ * schema is ever consulted, and its default rejects `data:` — so loosening the sanitizer
+ * alone leaves every stored image blank. Vetted image data URIs are allowed through here;
+ * everything else, including every `href`, keeps the library's default treatment.
+ */
+const transformUrl = (url: string, key: string) =>
+  key === 'src' && isSafeImageSrc(url) ? url : defaultUrlTransform(url);
 
 export default function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
   if (!content.trim()) {
@@ -32,6 +52,7 @@ export default function MarkdownRenderer({ content, className = '' }: MarkdownRe
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, [rehypeSanitize, markdownSchema]]}
+        urlTransform={transformUrl}
         components={{
           h1: ({ children }) => <h1 className="mb-4 mt-8 text-3xl font-black tracking-tight first:mt-0">{children}</h1>,
           h2: ({ children }) => <h2 className="mb-3 mt-7 border-b border-outline-variant pb-2 text-2xl font-black">{children}</h2>,
@@ -65,6 +86,21 @@ export default function MarkdownRenderer({ content, className = '' }: MarkdownRe
               : <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[0.9em] text-primary">{children}</code>;
           },
           pre: ({ children }) => <pre className="my-4 overflow-x-auto rounded-xl bg-on-surface p-4 font-mono text-sm text-surface">{children}</pre>,
+          // The sanitizer's protocol allowlist permits any `data:` URI on `src`, including
+          // ones the upload path never vetted (a `data:` URI without `;base64,` is never
+          // uploaded, so it reaches stored content verbatim). Re-check the exact shape here,
+          // at the render boundary, so this holds whatever is already in the database.
+          img: ({ src, alt, title }) => isSafeImageSrc(src)
+            ? (
+              <img
+                src={src}
+                alt={alt || ''}
+                title={title}
+                loading="lazy"
+                className="my-4 h-auto max-w-full rounded-lg border border-outline-variant"
+              />
+            )
+            : null,
           hr: () => <hr className="my-7 border-outline-variant" />,
         }}
       >
