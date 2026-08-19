@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, CircleAlert, Loader2, Palette, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -9,9 +9,103 @@ import {
 } from '../../theme/theme.types';
 import { getContrastColor, HEX_COLOR_PATTERN } from '../../theme/theme.utils';
 import { THEME_PRESETS, ThemePreset, ThemePresetId, matchThemePreset } from '../../theme/theme.presets';
+import {
+  ALL_FONT_OPTIONS,
+  FontOption,
+  MONO_FONT_OPTIONS,
+  SANS_FONT_OPTIONS,
+  ensureFontLoaded,
+} from '../../theme/theme.fonts';
 import { useThemeStore } from '../../../stores/useThemeStore';
 
 type ThemeSettingKey = keyof ThemeSettings;
+
+const KNOWN_FONT_STACKS = new Set(ALL_FONT_OPTIONS.map(option => option.stack));
+
+function FontSelect({
+  value,
+  kind,
+  onChange,
+}: {
+  value: string;
+  kind: 'sans' | 'mono';
+  onChange: (value: string) => void;
+}) {
+  const options = kind === 'mono' ? MONO_FONT_OPTIONS : SANS_FONT_OPTIONS;
+  const isKnown = KNOWN_FONT_STACKS.has(value.trim());
+  const [manual, setManual] = useState(!isKnown);
+  const previousValue = useRef(value);
+
+  useEffect(() => {
+    ensureFontLoaded(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (previousValue.current !== value) {
+      previousValue.current = value;
+      if (KNOWN_FONT_STACKS.has(value.trim())) setManual(false);
+    }
+  }, [value]);
+
+  const showCustom = manual || !isKnown;
+  const grouped: Record<FontOption['category'], FontOption[]> = {
+    sans: options.filter(option => option.category === 'sans'),
+    serif: options.filter(option => option.category === 'serif'),
+    mono: options.filter(option => option.category === 'mono'),
+  };
+
+  const handleSelect = (next: string) => {
+    if (next === '__custom__') {
+      setManual(true);
+      return;
+    }
+    setManual(false);
+    ensureFontLoaded(next);
+    onChange(next);
+  };
+
+  return (
+    <div className="mt-3 space-y-2">
+      <select
+        value={showCustom ? '__custom__' : value}
+        onChange={event => handleSelect(event.target.value)}
+        className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 text-sm font-bold text-on-surface focus:outline-primary"
+      >
+        {grouped.sans.length > 0 && (
+          <optgroup label="Sans-serif">
+            {grouped.sans.map(option => <option key={option.id} value={option.stack}>{option.label}</option>)}
+          </optgroup>
+        )}
+        {grouped.serif.length > 0 && (
+          <optgroup label="Serif">
+            {grouped.serif.map(option => <option key={option.id} value={option.stack}>{option.label}</option>)}
+          </optgroup>
+        )}
+        {grouped.mono.length > 0 && (
+          <optgroup label="Monospace">
+            {grouped.mono.map(option => <option key={option.id} value={option.stack}>{option.label}</option>)}
+          </optgroup>
+        )}
+        <option value="__custom__">Tùy chỉnh (nhập CSS font-family)…</option>
+      </select>
+
+      {showCustom && (
+        <input
+          type="text"
+          value={value}
+          onChange={event => onChange(event.target.value)}
+          maxLength={300}
+          placeholder='"Tên font", sans-serif'
+          className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 font-mono text-xs font-bold text-on-surface focus:outline-primary"
+        />
+      )}
+
+      <p className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface" style={{ fontFamily: value }}>
+        Xem trước: Nhật ký lỗi #1234 — AaBbCc 0123
+      </p>
+    </div>
+  );
+}
 
 type ThemeField = {
   key: ThemeSettingKey;
@@ -30,7 +124,7 @@ type ThemeGroup = {
 const THEME_GROUPS: ThemeGroup[] = [
   {
     title: 'Font chữ',
-    description: 'Font mặc định cho nội dung thường và nội dung dạng mã.',
+    description: 'Chọn từ danh sách font phổ biến. Font web sẽ tự tải về nên mọi máy đều hiển thị đúng sau khi lưu và tải lại trang.',
     fields: [
       { key: 'fontSans', kind: 'font', label: 'Font chữ thường', variable: '--font-sans', usage: 'Áp dụng cho hầu hết tiêu đề, nội dung, form và button. Nhập một CSS font-family hợp lệ.' },
       { key: 'fontMono', kind: 'font', label: 'Font chữ mã', variable: '--font-mono', usage: 'Áp dụng cho mã danh mục, mã lỗi, mã bản ghi và các nội dung dùng class font-mono.' },
@@ -298,12 +392,10 @@ export default function ThemeSettingsSection() {
                       />
                     </div>
                   ) : (
-                    <input
-                      type="text"
+                    <FontSelect
                       value={draft[field.key]}
-                      onChange={event => updateDraft(field.key, event.target.value)}
-                      maxLength={300}
-                      className="mt-3 h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 font-mono text-xs font-bold text-on-surface focus:outline-primary"
+                      kind={field.key === 'fontMono' ? 'mono' : 'sans'}
+                      onChange={value => updateDraft(field.key, value)}
                     />
                   )}
 
