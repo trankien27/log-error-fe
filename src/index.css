@@ -222,6 +222,7 @@
   }
   .document-rich-editor .tiptap .document-resizable-image img {
     width: 100%;
+    height: 100%;
     max-width: none;
     margin: 0;
   }
@@ -246,24 +247,6 @@
   .document-rich-editor .tiptap .document-resizable-image.is-selected .document-image-resize-handle,
   .document-rich-editor .tiptap .document-resizable-image.is-resizing .document-image-resize-handle {
     opacity: 1;
-  }
-  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='top-left'] {
-    top: 0;
-    left: 0;
-    cursor: nwse-resize;
-    transform: translate(-50%, -50%);
-  }
-  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='top-right'] {
-    top: 0;
-    right: 0;
-    cursor: nesw-resize;
-    transform: translate(50%, -50%);
-  }
-  .document-rich-editor .tiptap .document-image-resize-handle[data-corner='bottom-left'] {
-    bottom: 0;
-    left: 0;
-    cursor: nesw-resize;
-    transform: translate(-50%, 50%);
   }
   .document-rich-editor .tiptap .document-image-resize-handle[data-corner='bottom-right'] {
     right: 0;

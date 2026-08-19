@@ -3,13 +3,18 @@ import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 
 const MIN_IMAGE_WIDTH_PERCENT = 20;
 const MAX_IMAGE_WIDTH_PERCENT = 100;
-
-type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+const MIN_IMAGE_HEIGHT_PX = 40;
 
 function normalizeImageWidthPercent(value: unknown) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return MAX_IMAGE_WIDTH_PERCENT;
   return Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(numeric)));
+}
+
+function normalizeImageAspectRatio(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return Math.min(20, Math.max(0.05, Number(numeric.toFixed(4))));
 }
 
 /**
@@ -24,10 +29,11 @@ export default function ResizableImageNodeView({
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const removeDragListenersRef = useRef<(() => void) | null>(null);
   const widthPercent = normalizeImageWidthPercent(node.attrs.widthPercent);
+  const aspectRatio = normalizeImageAspectRatio(node.attrs.aspectRatio);
 
   useEffect(() => () => removeDragListenersRef.current?.(), []);
 
-  const startResize = (event: React.PointerEvent<HTMLSpanElement>, corner: Corner) => {
+  const startResize = (event: React.PointerEvent<HTMLSpanElement>) => {
     if (event.button !== 0) return;
 
     event.preventDefault();
@@ -39,24 +45,28 @@ export default function ResizableImageNodeView({
     removeDragListenersRef.current?.();
 
     const startX = event.clientX;
-    const startWidth = wrapper.getBoundingClientRect().width;
+    const startY = event.clientY;
+    const { width: startWidth, height: startHeight } = wrapper.getBoundingClientRect();
     // Since the wrapper already uses a percentage, deriving the available width
     // from its rendered size avoids counting the editor's horizontal padding.
     const editorWidth = startWidth / (widthPercent / 100);
-    if (startWidth <= 0 || editorWidth <= 0) return;
-    const direction = corner.endsWith('right') ? 1 : -1;
+    if (startWidth <= 0 || startHeight <= 0 || editorWidth <= 0) return;
     const minWidth = editorWidth * MIN_IMAGE_WIDTH_PERCENT / 100;
     let nextWidth = startWidth;
+    let nextHeight = startHeight;
 
     wrapper.classList.add('is-resizing');
     wrapper.style.width = `${startWidth}px`;
+    wrapper.style.height = `${startHeight}px`;
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
       nextWidth = Math.min(
         editorWidth,
-        Math.max(minWidth, startWidth + ((moveEvent.clientX - startX) * direction)),
+        Math.max(minWidth, startWidth + (moveEvent.clientX - startX)),
       );
+      nextHeight = Math.max(MIN_IMAGE_HEIGHT_PX, startHeight + (moveEvent.clientY - startY));
       wrapper.style.width = `${nextWidth}px`;
+      wrapper.style.height = `${nextHeight}px`;
     };
 
     const finishResize = (commit = true) => {
@@ -68,12 +78,18 @@ export default function ResizableImageNodeView({
       wrapper.classList.remove('is-resizing');
       if (!commit) {
         wrapper.style.width = `${widthPercent}%`;
+        wrapper.style.height = '';
         return;
       }
 
       const nextWidthPercent = normalizeImageWidthPercent((nextWidth / editorWidth) * 100);
+      const nextAspectRatio = normalizeImageAspectRatio(nextWidth / nextHeight);
       wrapper.style.width = `${nextWidthPercent}%`;
-      updateAttributes({ widthPercent: nextWidthPercent });
+      wrapper.style.height = '';
+      updateAttributes({
+        widthPercent: nextWidthPercent,
+        aspectRatio: nextAspectRatio,
+      });
     };
 
     const commitResize = () => finishResize(true);
@@ -89,7 +105,10 @@ export default function ResizableImageNodeView({
     <NodeViewWrapper
       ref={wrapperRef}
       className={`document-resizable-image${selected ? ' is-selected' : ''}`}
-      style={{ width: `${widthPercent}%` }}
+      style={{
+        width: `${widthPercent}%`,
+        aspectRatio: aspectRatio || undefined,
+      }}
     >
       <img
         src={String(node.attrs.src || '')}
@@ -98,15 +117,12 @@ export default function ResizableImageNodeView({
         draggable={false}
         data-drag-handle
       />
-      {(['top-left', 'top-right', 'bottom-left', 'bottom-right'] as Corner[]).map(corner => (
-        <span
-          key={corner}
-          className="document-image-resize-handle"
-          data-corner={corner}
-          aria-hidden="true"
-          onPointerDown={event => startResize(event, corner)}
-        />
-      ))}
+      <span
+        className="document-image-resize-handle"
+        data-corner="bottom-right"
+        aria-hidden="true"
+        onPointerDown={startResize}
+      />
     </NodeViewWrapper>
   );
 }

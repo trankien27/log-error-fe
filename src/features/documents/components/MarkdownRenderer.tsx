@@ -19,6 +19,12 @@ function normalizeImageWidthPercent(value: unknown) {
   return Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(numeric)));
 }
 
+function normalizeImageAspectRatio(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return undefined;
+  return Math.min(20, Math.max(0.05, Number(numeric.toFixed(4))));
+}
+
 const markdownSchema: Options = {
   ...defaultSchema,
   protocols: {
@@ -32,7 +38,15 @@ const markdownSchema: Options = {
   },
   attributes: {
     ...defaultSchema.attributes,
-    img: [...(defaultSchema.attributes?.img || []), 'alt', 'title', 'width', 'height', 'data-width-percent'],
+    img: [
+      ...(defaultSchema.attributes?.img || []),
+      'alt',
+      'title',
+      'width',
+      'height',
+      'data-width-percent',
+      'dataAspectRatio',
+    ],
     div: [...(defaultSchema.attributes?.div || []), ['align', 'left', 'center', 'right']],
     p: [...(defaultSchema.attributes?.p || []), ['align', 'left', 'center', 'right']],
     h1: [...(defaultSchema.attributes?.h1 || []), ['align', 'left', 'center', 'right']],
@@ -106,6 +120,9 @@ export default function MarkdownRenderer({ content, className = '' }: MarkdownRe
               String(width || (node?.properties as Record<string, unknown> | undefined)?.width || '')
                 .replace('%', ''),
             );
+            const aspectRatio = normalizeImageAspectRatio(
+              (node?.properties as Record<string, unknown> | undefined)?.dataAspectRatio,
+            );
 
             return (
               <img
@@ -113,7 +130,10 @@ export default function MarkdownRenderer({ content, className = '' }: MarkdownRe
                 alt={alt || ''}
                 title={title}
                 loading="lazy"
-                style={widthPercent < MAX_IMAGE_WIDTH_PERCENT ? { width: `${widthPercent}%` } : undefined}
+                style={{
+                  width: widthPercent < MAX_IMAGE_WIDTH_PERCENT ? `${widthPercent}%` : undefined,
+                  aspectRatio,
+                }}
                 className="my-4 h-auto max-w-full rounded-lg border border-outline-variant"
               />
             );

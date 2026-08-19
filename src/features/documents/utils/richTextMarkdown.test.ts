@@ -76,9 +76,13 @@ describe('rich text markdown serialization', () => {
       contentType: 'markdown',
     });
 
-    editor.chain().focus().setNodeSelection(0).updateAttributes('image', { widthPercent: 60 }).run();
+    editor.chain().focus().setNodeSelection(0).updateAttributes('image', {
+      widthPercent: 60,
+      aspectRatio: 1.5,
+    }).run();
     const storedMarkdown = editor.getMarkdown();
     expect(storedMarkdown).toContain('width="60%"');
+    expect(storedMarkdown).toContain('data-aspect-ratio="1.5"');
     editor.destroy();
 
     const reopenedEditor = new Editor({
@@ -87,6 +91,7 @@ describe('rich text markdown serialization', () => {
       contentType: 'markdown',
     });
     expect(reopenedEditor.getAttributes('image').widthPercent).toBe(60);
+    expect(reopenedEditor.getAttributes('image').aspectRatio).toBe(1.5);
     reopenedEditor.destroy();
   });
 

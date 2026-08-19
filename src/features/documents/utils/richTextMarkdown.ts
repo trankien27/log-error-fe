@@ -67,6 +67,12 @@ function normalizeImageWidthPercent(value: unknown) {
   return Math.min(MAX_IMAGE_WIDTH_PERCENT, Math.max(MIN_IMAGE_WIDTH_PERCENT, Math.round(numeric)));
 }
 
+function normalizeImageAspectRatio(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return Math.min(20, Math.max(0.05, Number(numeric.toFixed(4))));
+}
+
 function escapeMarkdownImageSrc(value: string) {
   return value.replace(/\)/g, '\\)');
 }
@@ -106,6 +112,21 @@ export const KnowledgeDocumentImage = Image.extend({
           };
         },
       },
+      aspectRatio: {
+        default: null,
+        parseHTML: element => normalizeImageAspectRatio(
+          element.getAttribute('data-aspect-ratio') || element.style.aspectRatio,
+        ),
+        renderHTML: attributes => {
+          const aspectRatio = normalizeImageAspectRatio(attributes.aspectRatio);
+          if (!aspectRatio) return {};
+
+          return {
+            'data-aspect-ratio': String(aspectRatio),
+            style: `aspect-ratio: ${aspectRatio};`,
+          };
+        },
+      },
     };
   },
   renderHTML({ HTMLAttributes }) {
@@ -116,10 +137,11 @@ export const KnowledgeDocumentImage = Image.extend({
     if (!src) return '';
 
     const widthPercent = normalizeImageWidthPercent(node.attrs.widthPercent);
+    const aspectRatio = normalizeImageAspectRatio(node.attrs.aspectRatio);
     const altText = escapeHtml(String(node.attrs.alt || ''));
     const escapedSrc = escapeMarkdownImageSrc(src);
 
-    if (widthPercent >= MAX_IMAGE_WIDTH_PERCENT) {
+    if (widthPercent >= MAX_IMAGE_WIDTH_PERCENT && !aspectRatio) {
       return `![${altText}](${escapedSrc})`;
     }
 
@@ -127,7 +149,14 @@ export const KnowledgeDocumentImage = Image.extend({
       ? ` title="${escapeHtml(String(node.attrs.title))}"`
       : '';
 
-    return `<img src="${escapeHtml(src)}" alt="${altText}" width="${widthPercent}%"${title} />`;
+    const width = widthPercent < MAX_IMAGE_WIDTH_PERCENT
+      ? ` width="${widthPercent}%"`
+      : '';
+    const ratio = aspectRatio
+      ? ` data-aspect-ratio="${aspectRatio}"`
+      : '';
+
+    return `<img src="${escapeHtml(src)}" alt="${altText}"${width}${ratio}${title} />`;
   },
 });
 

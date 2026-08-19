@@ -25,6 +25,15 @@ describe('MarkdownRenderer image sources', () => {
     expect(image?.style.width).toBe('65%');
   });
 
+  it('applies the aspect ratio saved by freeform corner resizing', () => {
+    const image = renderMarkdown(
+      `<img src="${PNG_DATA_URI}" alt="anh" width="65%" data-aspect-ratio="1.5" />`,
+    ).querySelector('img');
+
+    expect(image?.style.width).toBe('65%');
+    expect(image?.style.aspectRatio).toBe('1.5 / 1');
+  });
+
   it('renders a remote https image', () => {
     const image = renderMarkdown('![anh](https://example.com/a.png)').querySelector('img');
     expect(image?.getAttribute('src')).toBe('https://example.com/a.png');

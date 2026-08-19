@@ -35,13 +35,18 @@ describe('MarkdownEditor image resizing', () => {
       toJSON: () => ({}),
     });
 
-    fireEvent.pointerDown(resizeHandle as HTMLElement, { button: 0, clientX: 600 });
-    fireEvent.pointerMove(window, { clientX: 300 });
+    fireEvent.pointerDown(resizeHandle as HTMLElement, { button: 0, clientX: 600, clientY: 400 });
+    fireEvent.pointerMove(window, { clientX: 300, clientY: 200 });
+
+    expect(imageWrapper.style.width).toBe('300px');
+    expect(imageWrapper.style.height).toBe('200px');
+
     fireEvent.pointerUp(window);
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalled();
       expect(onChange.mock.calls.at(-1)?.[0]).toContain('width="50%"');
+      expect(onChange.mock.calls.at(-1)?.[0]).toContain('data-aspect-ratio="1.5"');
     });
   });
 });
