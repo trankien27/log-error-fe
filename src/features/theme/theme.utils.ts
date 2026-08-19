@@ -1,4 +1,5 @@
 import { ThemeSettings } from './theme.types';
+import { ensureThemeFontsLoaded } from './theme.fonts';
 
 export const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
 
@@ -74,4 +75,6 @@ export function applyThemeSettings(theme: ThemeSettings) {
   root.style.setProperty('--color-on-secondary', getContrastColor(theme.secondaryColor));
   root.style.setProperty('--color-on-button-primary', theme.onPrimaryColor);
   root.style.setProperty('--color-on-button-secondary', getContrastColor(theme.secondaryButtonColor));
+
+  ensureThemeFontsLoaded(theme.fontSans, theme.fontMono);
 }
