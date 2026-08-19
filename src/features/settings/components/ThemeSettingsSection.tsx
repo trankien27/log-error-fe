@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { CircleAlert, Loader2, Palette, Save } from 'lucide-react';
+import { Check, CircleAlert, Loader2, Palette, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   THEME_COLOR_KEYS,
@@ -8,6 +8,7 @@ import {
   ThemeSettings,
 } from '../../theme/theme.types';
 import { getContrastColor, HEX_COLOR_PATTERN } from '../../theme/theme.utils';
+import { THEME_PRESETS, ThemePreset, ThemePresetId, matchThemePreset } from '../../theme/theme.presets';
 import { useThemeStore } from '../../../stores/useThemeStore';
 
 type ThemeSettingKey = keyof ThemeSettings;
@@ -103,6 +104,7 @@ export default function ThemeSettingsSection() {
   const [draft, setDraft] = useState<ThemeSettings>(theme);
   const [infoField, setInfoField] = useState<ThemeSettingKey | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [applyingPreset, setApplyingPreset] = useState<ThemePresetId | null>(null);
 
   useEffect(() => setDraft(theme), [theme]);
 
@@ -110,6 +112,22 @@ export default function ThemeSettingsSection() {
     () => THEME_SETTING_KEYS.some(key => draft[key] !== theme[key]),
     [draft, theme],
   );
+
+  const activePreset = useMemo(() => matchThemePreset(theme), [theme]);
+
+  const handleApplyPreset = async (preset: ThemePreset) => {
+    if (applyingPreset || isSaving) return;
+    setDraft(preset.settings);
+    try {
+      setApplyingPreset(preset.id);
+      await updateTheme(preset.settings);
+      toast.success(`Đã chuyển sang ${preset.name} và áp dụng cho toàn hệ thống.`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể áp dụng bộ giao diện.');
+    } finally {
+      setApplyingPreset(null);
+    }
+  };
 
   const updateDraft = (key: ThemeSettingKey, value: string) => {
     setDraft(current => ({ ...current, [key]: value }));
@@ -162,8 +180,70 @@ export default function ThemeSettingsSection() {
         <div>
           <h3 className="text-base font-black text-on-surface">Theme toàn hệ thống</h3>
           <p className="mt-1 text-xs text-on-surface-variant">
-            Cấu hình 30 token giao diện. Bấm dấu chấm than cạnh từng token để xem thành phần chịu ảnh hưởng.
+            Chọn nhanh một bộ giao diện dựng sẵn, hoặc tinh chỉnh từng token bên dưới. Bấm dấu chấm than cạnh từng token để xem thành phần chịu ảnh hưởng.
           </p>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-2xl border border-outline-variant bg-surface-2/30 p-4">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-black text-on-surface">Bộ giao diện</h4>
+            <p className="mt-1 text-xs text-on-surface-variant">
+              Bấm để chuyển bộ và áp dụng ngay cho toàn hệ thống. Có thể tinh chỉnh thêm ở phần token bên dưới.
+            </p>
+          </div>
+          {activePreset === null && (
+            <span className="shrink-0 rounded-full border border-warning/30 bg-warning-container/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-on-warning-container">
+              Bản tùy chỉnh
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {THEME_PRESETS.map(preset => {
+            const isActive = activePreset === preset.id;
+            const isApplying = applyingPreset === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handleApplyPreset(preset)}
+                disabled={applyingPreset !== null || isSaving}
+                aria-pressed={isActive}
+                className={`group relative flex flex-col gap-3 rounded-xl border p-4 text-left transition-all disabled:cursor-not-allowed ${
+                  isActive
+                    ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
+                    : 'border-outline-variant bg-surface hover:border-primary/50 hover:bg-surface-2/50'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-on-surface">{preset.name}</p>
+                    <p className="mt-1 text-xs leading-5 text-on-surface-variant">{preset.description}</p>
+                  </div>
+                  <span
+                    className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      isActive ? 'bg-primary text-on-primary' : 'border border-outline-variant text-transparent group-hover:text-outline-variant'
+                    }`}
+                  >
+                    {isApplying ? <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" /> : <Check className="h-3.5 w-3.5" />}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <div className="flex overflow-hidden rounded-lg border border-outline-variant">
+                    {preset.swatches.map((color, index) => (
+                      <span key={index} className="h-7 w-8" style={{ backgroundColor: color }} />
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                    {isActive ? 'Đang áp dụng' : isApplying ? 'Đang áp dụng...' : 'Chọn bộ này'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
