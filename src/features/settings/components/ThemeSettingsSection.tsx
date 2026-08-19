@@ -121,7 +121,7 @@ export default function ThemeSettingsSection() {
     try {
       setApplyingPreset(preset.id);
       await updateTheme(preset.settings);
-      toast.success(`Đã chuyển sang ${preset.name} và áp dụng cho toàn hệ thống.`);
+      toast.success(`Đã lưu ${preset.name} làm giao diện global. Mọi người dùng sẽ thấy sau khi tải lại trang.`);
     } catch (error: any) {
       toast.error(error?.message || 'Không thể áp dụng bộ giao diện.');
     } finally {
@@ -190,7 +190,7 @@ export default function ThemeSettingsSection() {
           <div>
             <h4 className="text-sm font-black text-on-surface">Bộ giao diện</h4>
             <p className="mt-1 text-xs text-on-surface-variant">
-              Bấm để chuyển bộ và áp dụng ngay cho toàn hệ thống. Có thể tinh chỉnh thêm ở phần token bên dưới.
+              Bấm để chuyển bộ và lưu cấu hình global cho toàn hệ thống — mọi người dùng sẽ thấy sau khi tải lại trang. Có thể tinh chỉnh thêm ở phần token bên dưới.
             </p>
           </div>
           {activePreset === null && (
