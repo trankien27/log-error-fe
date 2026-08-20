@@ -34,6 +34,7 @@ import {
   ExcelDictionaryDraft,
   ExcelImportFieldDraft,
   parseExcelDictionaryFile,
+  parseImportOptions,
 } from '../utils/excelDictionaryImport';
 
 const FIELD_TYPES: Array<{ value: ListDictionaryFieldType; label: string }> = [
@@ -45,7 +46,7 @@ const FIELD_TYPES: Array<{ value: ListDictionaryFieldType; label: string }> = [
   { value: 6, label: 'Một lựa chọn' },
 ];
 
-const IMPORT_FIELD_TYPES = FIELD_TYPES.filter(type => type.value !== 6);
+const IMPORT_FIELD_TYPES = FIELD_TYPES;
 
 type FieldDraft = {
   key: string;
@@ -407,17 +408,20 @@ export default function ListDictionariesTab() {
   );
 
   const importFieldErrors = useMemo(() => {
-    const errors: Record<string, { name?: string; code?: string }> = {};
+    const errors: Record<string, { name?: string; code?: string; options?: string }> = {};
     if (!excelImportDraft) return errors;
     const seenCodes = new Map<string, string>();
     excelImportDraft.fields.forEach(field => {
-      const entry: { name?: string; code?: string } = {};
+      const entry: { name?: string; code?: string; options?: string } = {};
       if (!field.name.trim()) entry.name = 'Cần nhập tên field.';
       const code = toCode(field.code);
       if (!/^[A-Z][A-Z0-9_]*$/.test(code)) entry.code = 'Mã field không hợp lệ.';
       else if (seenCodes.has(code)) entry.code = 'Trùng mã với cột khác.';
       else seenCodes.set(code, field.key);
-      if (entry.name || entry.code) errors[field.key] = entry;
+      if (field.dataType === 6 && parseImportOptions(field.optionsText).length < 2) {
+        entry.options = 'Cần tối thiểu 2 lựa chọn, phân tách bằng dấu phẩy.';
+      }
+      if (entry.name || entry.code || entry.options) errors[field.key] = entry;
     });
     return errors;
   }, [excelImportDraft]);
@@ -627,6 +631,13 @@ export default function ListDictionariesTab() {
     } : current);
   };
 
+  const removeExcelImportField = (key: string) => {
+    setExcelImportDraft(current => {
+      if (!current || current.fields.length <= 1) return current;
+      return { ...current, fields: current.fields.filter(field => field.key !== key) };
+    });
+  };
+
   const updateExcelImportCell = (rowNumber: number, sourceIndex: number, value: string) => {
     setExcelImportDraft(current => current ? {
       ...current,
@@ -685,7 +696,7 @@ export default function ListDictionariesTab() {
           name: field.name,
           dataType: field.dataType,
           isRequired: field.isRequired,
-          options: [],
+          options: field.dataType === 6 ? parseImportOptions(field.optionsText) : [],
         })),
         items,
       });
@@ -1480,13 +1491,15 @@ export default function ListDictionariesTab() {
                         <th className="px-3 py-3">Mã field</th>
                         <th className="px-3 py-3">Kiểu dữ liệu</th>
                         <th className="px-3 py-3 text-center">Bắt buộc</th>
+                        <th className="px-3 py-3 text-center">Xóa</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/50">
                       {excelImportDraft.fields.map(field => {
                         const fieldError = importFieldErrors[field.key];
                         return (
-                        <tr key={field.key}>
+                        <React.Fragment key={field.key}>
+                        <tr>
                           <td className="max-w-48 px-3 py-2 font-bold" title={field.sourceHeader}>{field.sourceHeader}</td>
                           <td className="px-3 py-2">
                             <input
@@ -1529,7 +1542,43 @@ export default function ListDictionariesTab() {
                               className="h-4 w-4 accent-primary"
                             />
                           </td>
+                          <td className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeExcelImportField(field.key)}
+                              disabled={excelImportDraft.fields.length <= 1}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded border border-error/30 text-error hover:bg-error-container disabled:cursor-not-allowed disabled:opacity-40"
+                              title={excelImportDraft.fields.length <= 1 ? 'Phải giữ ít nhất 1 cột' : 'Bỏ cột này khỏi import'}
+                              aria-label={`Bỏ cột ${field.sourceHeader}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
                         </tr>
+                        {field.dataType === 6 && (
+                          <tr>
+                            <td colSpan={6} className="px-3 pb-3 pt-0">
+                              <div className="rounded-lg border border-outline-variant bg-surface-2/50 p-2">
+                                <label className="block text-[11px] font-bold text-on-surface-variant">
+                                  Danh sách lựa chọn cho “{field.name || field.sourceHeader}” (phân tách bằng dấu phẩy) *
+                                  <input
+                                    value={field.optionsText}
+                                    onChange={event => updateExcelImportField(field.key, { optionsText: event.target.value })}
+                                    placeholder="Đang dùng, Bảo trì, Ngừng dùng"
+                                    className={`mt-1 h-9 w-full rounded border px-2 text-xs focus:outline-primary ${
+                                      fieldError?.options ? 'border-error bg-error-container/30' : 'border-outline-variant'
+                                    }`}
+                                    title={fieldError?.options || ''}
+                                  />
+                                </label>
+                                {fieldError?.options
+                                  ? <span className="mt-1 block text-[10px] font-semibold text-error">{fieldError.options}</span>
+                                  : <span className="mt-1 block text-[10px] text-on-surface-variant">Giá trị trong cột phải khớp một trong các lựa chọn (không phân biệt hoa/thường).</span>}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        </React.Fragment>
                         );
                       })}
                     </tbody>

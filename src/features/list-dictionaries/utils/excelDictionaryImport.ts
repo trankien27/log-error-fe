@@ -14,6 +14,23 @@ export interface ExcelImportFieldDraft {
   code: string;
   dataType: ListDictionaryFieldType;
   isRequired: boolean;
+  /** Danh sách lựa chọn (phân tách bằng dấu phẩy) — chỉ dùng cho kiểu "Một lựa chọn". */
+  optionsText: string;
+}
+
+/** Tách chuỗi "a, b, c" thành danh sách lựa chọn (trim, bỏ rỗng, khử trùng không phân biệt hoa/thường). */
+export function parseImportOptions(text: string): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of (text || '').split(',')) {
+    const option = raw.trim();
+    if (!option) continue;
+    const key = option.toLocaleLowerCase('vi');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(option);
+  }
+  return result;
 }
 
 export interface ExcelImportRow {
@@ -139,6 +156,7 @@ export function buildExcelDictionaryDraft(fileName: string, sheetData: ExcelImpo
       code: uniqueCode(header, sourceIndex, usedCodes),
       dataType: inferDataType(nonEmptyValues),
       isRequired: rows.length > 0 && nonEmptyValues.length === rows.length,
+      optionsText: '',
     } satisfies ExcelImportFieldDraft;
   });
 
@@ -215,6 +233,14 @@ function convertCell(value: ExcelImportCell, field: ExcelImportFieldDraft) {
     const date = value instanceof Date ? value : new Date(String(value));
     if (Number.isNaN(date.getTime())) throw new Error(`Trường ${field.name} phải là ngày giờ hợp lệ.`);
     return date.toISOString();
+  }
+  if (field.dataType === 6) {
+    const options = parseImportOptions(field.optionsText);
+    if (options.length < 2) throw new Error(`Trường ${field.name} cần khai báo tối thiểu 2 lựa chọn.`);
+    const text = value instanceof Date ? value.toISOString() : String(value).trim();
+    const match = options.find(option => option.toLocaleLowerCase('vi') === text.toLocaleLowerCase('vi'));
+    if (!match) throw new Error(`Trường ${field.name}: '${text}' không nằm trong danh sách lựa chọn.`);
+    return match;
   }
   throw new Error(`Kiểu dữ liệu của trường ${field.name} không hỗ trợ import.`);
 }
