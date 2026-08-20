@@ -112,6 +112,12 @@ function formatValue(field: ListDictionaryFieldDto, value: unknown) {
   return String(value);
 }
 
+const DICT_DEFAULT_COL_WIDTH = 180;
+const DICT_MIN_COL_WIDTH = 80;
+const DICT_INDEX_COL_WIDTH = 48;
+const DICT_ACTION_COL_WIDTH = 56;
+const columnWidthStorageKey = (code: string) => `list-dictionary-column-widths:${code}`;
+
 function buildItemValues(
   fields: ListDictionaryFieldDto[],
   raw: Record<string, string>,
@@ -276,6 +282,8 @@ export default function ListDictionariesTab() {
   const [editingCell, setEditingCell] = useState<{ itemId: number; fieldCode: string } | null>(null);
   const [savingCellKey, setSavingCellKey] = useState<string | null>(null);
   const [savedCellKey, setSavedCellKey] = useState<string | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const resizeStateRef = useRef<{ code: string; startX: number; startWidth: number } | null>(null);
   const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
   const [displayDictionaryCodes, setDisplayDictionaryCodes] = useState<string[]>([]);
   const [displayFilter, setDisplayFilter] = useState('');
@@ -298,6 +306,12 @@ export default function ListDictionariesTab() {
     () => (selectedDictionary?.fields || [])
       .sort((left, right) => left.sortOrder - right.sortOrder),
     [selectedDictionary],
+  );
+
+  const gridTotalWidth = useMemo(
+    () => DICT_INDEX_COL_WIDTH + DICT_ACTION_COL_WIDTH +
+      dataFields.reduce((sum, field) => sum + (columnWidths[field.code] ?? DICT_DEFAULT_COL_WIDTH), 0),
+    [dataFields, columnWidths],
   );
 
   const filteredItems = useMemo(() => {
@@ -379,6 +393,34 @@ export default function ListDictionariesTab() {
     setEditingCell(null);
     void loadItems(routeCode);
   }, [routeCode]);
+
+  // Khởi tạo độ rộng cột cho danh mục đang mở (ưu tiên giá trị đã lưu trong localStorage).
+  useEffect(() => {
+    if (!routeCode || dataFields.length === 0) return;
+    let persisted: Record<string, number> = {};
+    try {
+      const raw = localStorage.getItem(columnWidthStorageKey(routeCode));
+      if (raw) persisted = JSON.parse(raw);
+    } catch {
+      persisted = {};
+    }
+    const next: Record<string, number> = {};
+    dataFields.forEach(field => {
+      const width = Number(persisted[field.code]);
+      next[field.code] = Number.isFinite(width) && width >= DICT_MIN_COL_WIDTH ? width : DICT_DEFAULT_COL_WIDTH;
+    });
+    setColumnWidths(next);
+  }, [routeCode, dataFields]);
+
+  // Ghi nhớ độ rộng cột đã kéo cho lần sau.
+  useEffect(() => {
+    if (!routeCode || Object.keys(columnWidths).length === 0) return;
+    try {
+      localStorage.setItem(columnWidthStorageKey(routeCode), JSON.stringify(columnWidths));
+    } catch {
+      /* bỏ qua nếu localStorage không khả dụng */
+    }
+  }, [routeCode, columnWidths]);
 
   const openDefinitionModal = () => {
     setDefinitionDraft(newDefinition());
@@ -623,6 +665,36 @@ export default function ListDictionariesTab() {
   const beginCellEdit = (itemId: number, fieldCode: string) => {
     if (savingCellKey) return;
     setEditingCell({ itemId, fieldCode });
+  };
+
+  const startColumnResize = (event: React.MouseEvent, fieldCode: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizeStateRef.current = {
+      code: fieldCode,
+      startX: event.clientX,
+      startWidth: columnWidths[fieldCode] ?? DICT_DEFAULT_COL_WIDTH,
+    };
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      const state = resizeStateRef.current;
+      if (!state) return;
+      const nextWidth = Math.max(DICT_MIN_COL_WIDTH, state.startWidth + (moveEvent.clientX - state.startX));
+      setColumnWidths(current => ({ ...current, [state.code]: Math.round(nextWidth) }));
+    };
+
+    const handleUp = () => {
+      resizeStateRef.current = null;
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
   };
 
   const commitCell = async (
@@ -1004,18 +1076,38 @@ export default function ListDictionariesTab() {
             <div className="overflow-x-auto">
               {viewMode === 'grid' ? (
                 <table
-                  className="w-full border-collapse text-left text-xs"
-                  style={{ minWidth: Math.max(680, 120 + dataFields.length * 180) }}
+                  className="border-collapse text-left text-xs"
+                  style={{ tableLayout: 'fixed', width: gridTotalWidth }}
                 >
+                  <colgroup>
+                    <col style={{ width: DICT_INDEX_COL_WIDTH }} />
+                    {dataFields.map(field => (
+                      <col key={field.id} style={{ width: columnWidths[field.code] ?? DICT_DEFAULT_COL_WIDTH }} />
+                    ))}
+                    <col style={{ width: DICT_ACTION_COL_WIDTH }} />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
-                      <th className="w-12 px-2 py-3 text-center">#</th>
+                      <th className="px-2 py-3 text-center">#</th>
                       {dataFields.map(field => (
-                        <th key={field.id} className="border-l border-outline-variant/40 px-3 py-3">
-                          {field.name}{field.isRequired && <span className="text-error"> *</span>}
+                        <th key={field.id} className="relative border-l border-outline-variant/40 px-3 py-3">
+                          <span className="block truncate pr-2">
+                            {field.name}{field.isRequired && <span className="text-error"> *</span>}
+                          </span>
+                          <span
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Kéo để chỉnh độ rộng cột ${field.name}`}
+                            onMouseDown={event => startColumnResize(event, field.code)}
+                            onClick={event => event.stopPropagation()}
+                            className="absolute right-0 top-0 z-10 flex h-full w-2 cursor-col-resize touch-none items-stretch justify-center hover:bg-primary/30"
+                            title="Kéo để chỉnh độ rộng cột"
+                          >
+                            <span className="w-px bg-outline-variant" />
+                          </span>
                         </th>
                       ))}
-                      <th className="w-14 px-2 py-3 text-right">Xóa</th>
+                      <th className="px-2 py-3 text-right">Xóa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/40">
