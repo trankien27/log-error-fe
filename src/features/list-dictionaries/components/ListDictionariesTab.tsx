@@ -424,6 +424,7 @@ export default function ListDictionariesTab() {
 
   const importDictNameError = importDefinition.name.trim() ? '' : 'Cần nhập tên danh mục.';
   const importDictCodeError = /^[A-Z][A-Z0-9_]*$/.test(toCode(importDefinition.code)) ? '' : 'Mã danh mục không hợp lệ.';
+  const importHasNoRows = !!excelImportDraft && excelImportDraft.rows.length === 0;
 
   const importTotalErrorCount =
     importCellErrors.length +
@@ -646,6 +647,11 @@ export default function ListDictionariesTab() {
     event.preventDefault();
     if (!excelImportDraft) return;
     setImportServerError(null);
+
+    if (importHasNoRows) {
+      toast.error('File chưa có dòng dữ liệu nào để tạo danh mục.');
+      return;
+    }
 
     if (importTotalErrorCount > 0) {
       if (importCellErrors.length > 0) setShowOnlyImportErrorRows(true);
@@ -1396,6 +1402,12 @@ export default function ListDictionariesTab() {
                 </div>
               )}
 
+              {importHasNoRows && (
+                <div className="rounded-xl border border-warning/50 bg-warning-container/50 px-4 py-3 text-xs font-bold text-on-warning-container">
+                  File chưa có dòng dữ liệu — cần ít nhất 1 dòng để tạo danh mục. Bạn vẫn có thể xem và chỉnh mapping cột ở trên.
+                </div>
+              )}
+
               {importTotalErrorCount > 0 && (
                 <div className="flex flex-col gap-2 rounded-xl border border-error/40 bg-error-container/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs font-bold text-on-error-container">
@@ -1609,6 +1621,8 @@ export default function ListDictionariesTab() {
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {isSaving
                     ? 'Đang tạo...'
+                    : importHasNoRows
+                    ? 'Chưa có dòng dữ liệu'
                     : importTotalErrorCount > 0
                     ? `Còn ${importTotalErrorCount} mục cần sửa`
                     : `Tạo danh mục (${excelImportDraft.rows.length} dòng)`}

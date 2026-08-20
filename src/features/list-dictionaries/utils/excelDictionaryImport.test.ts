@@ -41,10 +41,21 @@ describe('excelDictionaryImport', () => {
     ]);
   });
 
-  it('rejects a blank header between populated columns', () => {
-    expect(() => buildExcelDictionaryDraft('invalid.xlsx', [
+  it('keeps a blank-header column that has data and flags it for the user to name', () => {
+    const draft = buildExcelDictionaryDraft('gap.xlsx', [
       ['Tên', null, 'Ghi chú'],
       ['A', 1, 'Test'],
-    ])).toThrow('Cột 2 đang thiếu header.');
+    ]);
+    expect(draft.fields.map(field => field.code)).toEqual(['TEN', 'FIELD_2', 'GHI_CHU']);
+    expect(draft.fields[1].name).toBe('');
+    expect(draft.rows).toHaveLength(1);
+  });
+
+  it('drops fully empty columns and allows a header-only file without throwing', () => {
+    const draft = buildExcelDictionaryDraft('header-only.xlsx', [
+      ['Tên', null, 'Ghi chú'],
+    ]);
+    expect(draft.fields.map(field => field.code)).toEqual(['TEN', 'GHI_CHU']);
+    expect(draft.rows).toHaveLength(0);
   });
 });

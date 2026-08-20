@@ -78,50 +78,67 @@ export function buildExcelDictionaryDraft(fileName: string, sheetData: ExcelImpo
   if (headerRowIndex < 0) throw new Error('File Excel không có dữ liệu.');
 
   const headerRow = sheetData[headerRowIndex];
-  let lastHeaderIndex = headerRow.length - 1;
-  while (lastHeaderIndex >= 0 && isEmptyCell(headerRow[lastHeaderIndex])) lastHeaderIndex -= 1;
-  if (lastHeaderIndex < 0) throw new Error('Không tìm thấy header trong file Excel.');
-  if (lastHeaderIndex + 1 > MAX_EXCEL_IMPORT_FIELDS) {
+  const dataRows = sheetData.slice(headerRowIndex + 1);
+
+  // Số cột = vị trí không rỗng xa nhất trên header HOẶC bất kỳ dòng dữ liệu nào.
+  let columnCount = 0;
+  const extendColumnCount = (row: ExcelImportCell[]) => {
+    for (let index = row.length - 1; index >= 0; index -= 1) {
+      if (!isEmptyCell(row[index])) {
+        columnCount = Math.max(columnCount, index + 1);
+        break;
+      }
+    }
+  };
+  extendColumnCount(headerRow);
+  dataRows.forEach(extendColumnCount);
+  if (columnCount === 0) throw new Error('Không tìm thấy dữ liệu trong file Excel.');
+
+  // Bỏ cột hoàn toàn trống (không header và không dữ liệu). Cột thiếu header nhưng có
+  // dữ liệu vẫn được giữ, để UI tô đỏ cho user đặt tên — không chặn mở modal.
+  const includedIndexes: number[] = [];
+  for (let index = 0; index < columnCount; index += 1) {
+    const headerEmpty = isEmptyCell(headerRow[index]);
+    const hasData = dataRows.some(row => !isEmptyCell(row[index]));
+    if (!headerEmpty || hasData) includedIndexes.push(index);
+  }
+  if (includedIndexes.length > MAX_EXCEL_IMPORT_FIELDS) {
     throw new Error(`File chỉ được có tối đa ${MAX_EXCEL_IMPORT_FIELDS} cột.`);
   }
 
-  const headers = headerRow.slice(0, lastHeaderIndex + 1).map((value, index) => {
-    if (isEmptyCell(value)) throw new Error(`Cột ${index + 1} đang thiếu header.`);
-    return String(value).trim();
-  });
-
-  const rows: ExcelImportRow[] = sheetData
-    .slice(headerRowIndex + 1)
+  const rows: ExcelImportRow[] = dataRows
     .map((values, index) => ({
       sourceRowNumber: headerRowIndex + index + 2,
-      values: values.slice(0, headers.length),
+      values: values.slice(0, columnCount),
     }))
-    .filter(row => row.values.some(value => !isEmptyCell(value)));
+    .filter(row => includedIndexes.some(index => !isEmptyCell(row.values[index])));
 
-  if (rows.length === 0) throw new Error('File Excel chỉ có header, chưa có dòng dữ liệu.');
   if (rows.length > MAX_EXCEL_IMPORT_ROWS) {
     throw new Error(`Mỗi lần chỉ được import tối đa ${MAX_EXCEL_IMPORT_ROWS} dòng dữ liệu.`);
   }
 
   const usedCodes = new Set<string>();
   const headerOccurrences = new Map<string, number>();
-  const fields = headers.map((header, sourceIndex) => {
-    const occurrence = (headerOccurrences.get(header.toLocaleLowerCase('vi')) || 0) + 1;
-    headerOccurrences.set(header.toLocaleLowerCase('vi'), occurrence);
+  const fields = includedIndexes.map(sourceIndex => {
+    const rawHeader = headerRow[sourceIndex];
+    const header = isEmptyCell(rawHeader) ? '' : String(rawHeader).trim();
+    const occurrenceKey = header.toLocaleLowerCase('vi');
+    const occurrence = (headerOccurrences.get(occurrenceKey) || 0) + 1;
+    headerOccurrences.set(occurrenceKey, occurrence);
     const occurrenceLabel = occurrence === 1 ? '' : ` (${occurrence})`;
-    const name = `${header.slice(0, 150 - occurrenceLabel.length)}${occurrenceLabel}`;
+    const name = header ? `${header.slice(0, 150 - occurrenceLabel.length)}${occurrenceLabel}` : '';
     const nonEmptyValues = rows
       .map(row => row.values[sourceIndex])
       .filter(value => !isEmptyCell(value)) as ExcelImportCell[];
 
     return {
-      key: `${sourceIndex}-${header}`,
+      key: `${sourceIndex}-${header || 'col'}`,
       sourceIndex,
-      sourceHeader: header,
+      sourceHeader: header || `(cột ${sourceIndex + 1} thiếu header)`,
       name,
       code: uniqueCode(header, sourceIndex, usedCodes),
       dataType: inferDataType(nonEmptyValues),
-      isRequired: nonEmptyValues.length === rows.length,
+      isRequired: rows.length > 0 && nonEmptyValues.length === rows.length,
     } satisfies ExcelImportFieldDraft;
   });
 
