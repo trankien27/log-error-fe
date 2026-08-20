@@ -20,6 +20,7 @@ import NotificationsTab from './features/notifications/components/NotificationsT
 import ScheduleTab from './features/schedule/components/ScheduleTab';
 import OvertimeApprovalTab from './features/overtime/components/OvertimeApprovalTab';
 import SettingsTab from './features/settings/components/SettingsTab';
+import AppearanceSettingsTab from './features/settings/components/AppearanceSettingsTab';
 import DocumentsTab from './features/documents/components/DocumentsTab';
 import BoothGuestLayout from './features/booth-guest/components/BoothGuestLayout';
 import BoothPinPage from './features/booth-guest/components/BoothPinPage';
@@ -140,6 +141,14 @@ export default function App() {
           )}
         />
         <Route path="settings" element={<SettingsTab />} />
+        <Route
+          path="appearance"
+          element={(
+            <AdminRoute>
+              <AppearanceSettingsTab />
+            </AdminRoute>
+          )}
+        />
       </Route>
 
       {/* Catch-all redirect to root */}
