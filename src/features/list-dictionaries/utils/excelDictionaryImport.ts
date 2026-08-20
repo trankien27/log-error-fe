@@ -202,6 +202,52 @@ function convertCell(value: ExcelImportCell, field: ExcelImportFieldDraft) {
   throw new Error(`Kiểu dữ liệu của trường ${field.name} không hỗ trợ import.`);
 }
 
+export interface ImportCellError {
+  rowNumber: number;
+  sourceIndex: number;
+  message: string;
+}
+
+/**
+ * Kiểm tra toàn bộ dữ liệu và trả về DANH SÁCH mọi ô cần sửa (không ném lỗi ở ô
+ * đầu tiên), để UI tô đánh dấu từng ô cho user sửa trực tiếp.
+ */
+export function collectImportItemErrors(
+  fields: ExcelImportFieldDraft[],
+  rows: ExcelImportRow[],
+): ImportCellError[] {
+  const errors: ImportCellError[] = [];
+  rows.forEach(row => {
+    fields.forEach(field => {
+      const value = row.values[field.sourceIndex];
+      if (isEmptyCell(value)) {
+        if (field.isRequired) {
+          errors.push({ rowNumber: row.sourceRowNumber, sourceIndex: field.sourceIndex, message: `${field.name} là bắt buộc.` });
+        }
+        return;
+      }
+      try {
+        convertCell(value as ExcelImportCell, field);
+      } catch (error: any) {
+        errors.push({
+          rowNumber: row.sourceRowNumber,
+          sourceIndex: field.sourceIndex,
+          message: error?.message || 'Giá trị không hợp lệ.',
+        });
+      }
+    });
+  });
+  return errors;
+}
+
+/** Chuyển một ô Excel về chuỗi để hiển thị trong input chỉnh sửa. */
+export function cellToInputValue(value: ExcelImportCell | undefined): string {
+  if (isEmptyCell(value)) return '';
+  if (value instanceof Date) return formatExcelPreviewValue(value);
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+}
+
 export function buildImportItems(fields: ExcelImportFieldDraft[], rows: ExcelImportRow[]) {
   return rows.map(row => {
     const values: Record<string, string | number | boolean> = {};
