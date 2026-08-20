@@ -29,9 +29,10 @@ import {
 } from '../../../types';
 import {
   buildImportItems,
+  cellToInputValue,
+  collectImportItemErrors,
   ExcelDictionaryDraft,
   ExcelImportFieldDraft,
-  formatExcelPreviewValue,
   parseExcelDictionaryFile,
 } from '../utils/excelDictionaryImport';
 
@@ -111,6 +112,12 @@ function formatValue(field: ListDictionaryFieldDto, value: unknown) {
   if (field.dataType === 5) return formatDateTime(String(value));
   return String(value);
 }
+
+const DICT_DEFAULT_COL_WIDTH = 180;
+const DICT_MIN_COL_WIDTH = 80;
+const DICT_INDEX_COL_WIDTH = 48;
+const DICT_ACTION_COL_WIDTH = 56;
+const columnWidthStorageKey = (code: string) => `list-dictionary-column-widths:${code}`;
 
 function buildItemValues(
   fields: ListDictionaryFieldDto[],
@@ -276,6 +283,8 @@ export default function ListDictionariesTab() {
   const [editingCell, setEditingCell] = useState<{ itemId: number; fieldCode: string } | null>(null);
   const [savingCellKey, setSavingCellKey] = useState<string | null>(null);
   const [savedCellKey, setSavedCellKey] = useState<string | null>(null);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const resizeStateRef = useRef<{ code: string; startX: number; startWidth: number } | null>(null);
   const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
   const [displayDictionaryCodes, setDisplayDictionaryCodes] = useState<string[]>([]);
   const [displayFilter, setDisplayFilter] = useState('');
@@ -288,6 +297,7 @@ export default function ListDictionariesTab() {
     name: '',
     description: '',
   });
+  const [showOnlyImportErrorRows, setShowOnlyImportErrorRows] = useState(false);
 
   const selectedDictionary = useMemo(
     () => dictionaries.find(item => item.code === routeCode) || null,
@@ -298,6 +308,12 @@ export default function ListDictionariesTab() {
     () => (selectedDictionary?.fields || [])
       .sort((left, right) => left.sortOrder - right.sortOrder),
     [selectedDictionary],
+  );
+
+  const gridTotalWidth = useMemo(
+    () => DICT_INDEX_COL_WIDTH + DICT_ACTION_COL_WIDTH +
+      dataFields.reduce((sum, field) => sum + (columnWidths[field.code] ?? DICT_DEFAULT_COL_WIDTH), 0),
+    [dataFields, columnWidths],
   );
 
   const filteredItems = useMemo(() => {
@@ -343,6 +359,56 @@ export default function ListDictionariesTab() {
     [dictionaries],
   );
 
+  // ==== Kiểm tra dữ liệu import Excel để đánh dấu ô cần sửa (thay vì chỉ báo lỗi) ====
+  const importCellErrors = useMemo(
+    () => (excelImportDraft ? collectImportItemErrors(excelImportDraft.fields, excelImportDraft.rows) : []),
+    [excelImportDraft],
+  );
+
+  const importCellErrorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    importCellErrors.forEach(error => map.set(`${error.rowNumber}:${error.sourceIndex}`, error.message));
+    return map;
+  }, [importCellErrors]);
+
+  const importErrorRowNumbers = useMemo(
+    () => new Set(importCellErrors.map(error => error.rowNumber)),
+    [importCellErrors],
+  );
+
+  const importFieldErrors = useMemo(() => {
+    const errors: Record<string, { name?: string; code?: string }> = {};
+    if (!excelImportDraft) return errors;
+    const seenCodes = new Map<string, string>();
+    excelImportDraft.fields.forEach(field => {
+      const entry: { name?: string; code?: string } = {};
+      if (!field.name.trim()) entry.name = 'Cần nhập tên field.';
+      const code = toCode(field.code);
+      if (!/^[A-Z][A-Z0-9_]*$/.test(code)) entry.code = 'Mã field không hợp lệ.';
+      else if (seenCodes.has(code)) entry.code = 'Trùng mã với cột khác.';
+      else seenCodes.set(code, field.key);
+      if (entry.name || entry.code) errors[field.key] = entry;
+    });
+    return errors;
+  }, [excelImportDraft]);
+
+  const importDictNameError = importDefinition.name.trim() ? '' : 'Cần nhập tên danh mục.';
+  const importDictCodeError = /^[A-Z][A-Z0-9_]*$/.test(toCode(importDefinition.code)) ? '' : 'Mã danh mục không hợp lệ.';
+
+  const importTotalErrorCount =
+    importCellErrors.length +
+    Object.keys(importFieldErrors).length +
+    (importDictNameError ? 1 : 0) +
+    (importDictCodeError ? 1 : 0);
+
+  const importPreviewRows = useMemo(() => {
+    if (!excelImportDraft) return [];
+    const source = showOnlyImportErrorRows
+      ? excelImportDraft.rows.filter(row => importErrorRowNumbers.has(row.sourceRowNumber))
+      : excelImportDraft.rows;
+    return source.slice(0, 100);
+  }, [excelImportDraft, showOnlyImportErrorRows, importErrorRowNumbers]);
+
   const loadDictionaries = async () => {
     try {
       setIsLoadingDictionaries(true);
@@ -379,6 +445,34 @@ export default function ListDictionariesTab() {
     setEditingCell(null);
     void loadItems(routeCode);
   }, [routeCode]);
+
+  // Khởi tạo độ rộng cột cho danh mục đang mở (ưu tiên giá trị đã lưu trong localStorage).
+  useEffect(() => {
+    if (!routeCode || dataFields.length === 0) return;
+    let persisted: Record<string, number> = {};
+    try {
+      const raw = localStorage.getItem(columnWidthStorageKey(routeCode));
+      if (raw) persisted = JSON.parse(raw);
+    } catch {
+      persisted = {};
+    }
+    const next: Record<string, number> = {};
+    dataFields.forEach(field => {
+      const width = Number(persisted[field.code]);
+      next[field.code] = Number.isFinite(width) && width >= DICT_MIN_COL_WIDTH ? width : DICT_DEFAULT_COL_WIDTH;
+    });
+    setColumnWidths(next);
+  }, [routeCode, dataFields]);
+
+  // Ghi nhớ độ rộng cột đã kéo cho lần sau.
+  useEffect(() => {
+    if (!routeCode || Object.keys(columnWidths).length === 0) return;
+    try {
+      localStorage.setItem(columnWidthStorageKey(routeCode), JSON.stringify(columnWidths));
+    } catch {
+      /* bỏ qua nếu localStorage không khả dụng */
+    }
+  }, [routeCode, columnWidths]);
 
   const openDefinitionModal = () => {
     setDefinitionDraft(newDefinition());
@@ -465,6 +559,7 @@ export default function ListDictionariesTab() {
         name: (baseName || 'Danh mục import').slice(0, 150),
         description: `Import từ file ${file.name}`,
       });
+      setShowOnlyImportErrorRows(false);
       setIsImportModalOpen(true);
     } catch (error: any) {
       toast.error(error?.message || 'Không thể đọc file Excel.');
@@ -480,34 +575,32 @@ export default function ListDictionariesTab() {
     } : current);
   };
 
+  const updateExcelImportCell = (rowNumber: number, sourceIndex: number, value: string) => {
+    setExcelImportDraft(current => current ? {
+      ...current,
+      rows: current.rows.map(row => row.sourceRowNumber === rowNumber
+        ? { ...row, values: row.values.map((cell, index) => index === sourceIndex ? value : cell) }
+        : row),
+    } : current);
+  };
+
+  const closeImportModal = () => {
+    setIsImportModalOpen(false);
+    setExcelImportDraft(null);
+    setShowOnlyImportErrorRows(false);
+  };
+
   const submitExcelImport = async (event: FormEvent) => {
     event.preventDefault();
     if (!excelImportDraft) return;
 
+    if (importTotalErrorCount > 0) {
+      if (importCellErrors.length > 0) setShowOnlyImportErrorRows(true);
+      toast.error(`Còn ${importTotalErrorCount} mục cần sửa (đã tô đỏ). Sửa xong rồi bấm tạo lại.`);
+      return;
+    }
+
     const dictionaryCode = toCode(importDefinition.code);
-    if (!importDefinition.name.trim()) {
-      toast.error('Vui lòng nhập tên danh mục.');
-      return;
-    }
-    if (!/^[A-Z][A-Z0-9_]*$/.test(dictionaryCode)) {
-      toast.error('Mã danh mục không hợp lệ.');
-      return;
-    }
-
-    const fieldCodes = new Set<string>();
-    for (const field of excelImportDraft.fields) {
-      const fieldCode = toCode(field.code);
-      if (!field.name.trim() || !/^[A-Z][A-Z0-9_]*$/.test(fieldCode)) {
-        toast.error(`Mapping của header “${field.sourceHeader}” chưa hợp lệ.`);
-        return;
-      }
-      if (fieldCodes.has(fieldCode)) {
-        toast.error(`Mã trường ${fieldCode} đang bị trùng.`);
-        return;
-      }
-      fieldCodes.add(fieldCode);
-    }
-
     const normalizedFields = excelImportDraft.fields.map(field => ({
       ...field,
       code: toCode(field.code),
@@ -538,8 +631,7 @@ export default function ListDictionariesTab() {
         items,
       });
 
-      setIsImportModalOpen(false);
-      setExcelImportDraft(null);
+      closeImportModal();
       await loadDictionaries();
       window.dispatchEvent(new Event('list-dictionaries:sidebar-updated'));
       navigate(`/list-dictionaries/${encodeURIComponent(created.code)}`);
@@ -623,6 +715,36 @@ export default function ListDictionariesTab() {
   const beginCellEdit = (itemId: number, fieldCode: string) => {
     if (savingCellKey) return;
     setEditingCell({ itemId, fieldCode });
+  };
+
+  const startColumnResize = (event: React.MouseEvent, fieldCode: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizeStateRef.current = {
+      code: fieldCode,
+      startX: event.clientX,
+      startWidth: columnWidths[fieldCode] ?? DICT_DEFAULT_COL_WIDTH,
+    };
+
+    const handleMove = (moveEvent: MouseEvent) => {
+      const state = resizeStateRef.current;
+      if (!state) return;
+      const nextWidth = Math.max(DICT_MIN_COL_WIDTH, state.startWidth + (moveEvent.clientX - state.startX));
+      setColumnWidths(current => ({ ...current, [state.code]: Math.round(nextWidth) }));
+    };
+
+    const handleUp = () => {
+      resizeStateRef.current = null;
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
   };
 
   const commitCell = async (
@@ -1004,18 +1126,38 @@ export default function ListDictionariesTab() {
             <div className="overflow-x-auto">
               {viewMode === 'grid' ? (
                 <table
-                  className="w-full border-collapse text-left text-xs"
-                  style={{ minWidth: Math.max(680, 120 + dataFields.length * 180) }}
+                  className="border-collapse text-left text-xs"
+                  style={{ tableLayout: 'fixed', width: gridTotalWidth }}
                 >
+                  <colgroup>
+                    <col style={{ width: DICT_INDEX_COL_WIDTH }} />
+                    {dataFields.map(field => (
+                      <col key={field.id} style={{ width: columnWidths[field.code] ?? DICT_DEFAULT_COL_WIDTH }} />
+                    ))}
+                    <col style={{ width: DICT_ACTION_COL_WIDTH }} />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
-                      <th className="w-12 px-2 py-3 text-center">#</th>
+                      <th className="px-2 py-3 text-center">#</th>
                       {dataFields.map(field => (
-                        <th key={field.id} className="border-l border-outline-variant/40 px-3 py-3">
-                          {field.name}{field.isRequired && <span className="text-error"> *</span>}
+                        <th key={field.id} className="relative border-l border-outline-variant/40 px-3 py-3">
+                          <span className="block truncate pr-2">
+                            {field.name}{field.isRequired && <span className="text-error"> *</span>}
+                          </span>
+                          <span
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Kéo để chỉnh độ rộng cột ${field.name}`}
+                            onMouseDown={event => startColumnResize(event, field.code)}
+                            onClick={event => event.stopPropagation()}
+                            className="absolute right-0 top-0 z-10 flex h-full w-2 cursor-col-resize touch-none items-stretch justify-center hover:bg-primary/30"
+                            title="Kéo để chỉnh độ rộng cột"
+                          >
+                            <span className="w-px bg-outline-variant" />
+                          </span>
                         </th>
                       ))}
-                      <th className="w-14 px-2 py-3 text-right">Xóa</th>
+                      <th className="px-2 py-3 text-right">Xóa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/40">
@@ -1148,10 +1290,7 @@ export default function ListDictionariesTab() {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setIsImportModalOpen(false);
-                  setExcelImportDraft(null);
-                }}
+                onClick={closeImportModal}
                 className="inline-flex h-8 w-8 items-center justify-center rounded hover:bg-surface-2"
               >
                 <X className="h-4 w-4" />
@@ -1172,11 +1311,28 @@ export default function ListDictionariesTab() {
                   <p className="text-[10px] font-black uppercase text-on-surface-variant">Trường bắt buộc</p>
                   <p className="mt-1 text-xl font-black">{excelImportDraft.fields.filter(field => field.isRequired).length}</p>
                 </div>
-                <div className="rounded-xl border border-outline-variant bg-surface-2 p-3">
-                  <p className="text-[10px] font-black uppercase text-on-surface-variant">Sheet sử dụng</p>
-                  <p className="mt-1 text-sm font-black">Sheet đầu tiên</p>
+                <div className={`rounded-xl border p-3 ${importCellErrors.length > 0 ? 'border-error/40 bg-error-container/50' : 'border-outline-variant bg-surface-2'}`}>
+                  <p className="text-[10px] font-black uppercase text-on-surface-variant">Ô cần sửa</p>
+                  <p className={`mt-1 text-xl font-black ${importCellErrors.length > 0 ? 'text-error' : 'text-success'}`}>{importCellErrors.length}</p>
                 </div>
               </div>
+
+              {importTotalErrorCount > 0 && (
+                <div className="flex flex-col gap-2 rounded-xl border border-error/40 bg-error-container/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs font-bold text-on-error-container">
+                    Còn {importTotalErrorCount} mục cần sửa — các ô/field chưa hợp lệ đã được tô đỏ. Sửa trực tiếp rồi bấm “Tạo danh mục”.
+                  </p>
+                  {importCellErrors.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOnlyImportErrorRows(current => !current)}
+                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-error/40 bg-surface px-3 text-xs font-bold text-error hover:bg-error-container"
+                    >
+                      {showOnlyImportErrorRows ? 'Hiện tất cả dòng' : `Chỉ hiện ${importErrorRowNumbers.size} dòng lỗi`}
+                    </button>
+                  )}
+                </div>
+              )}
 
               <section className="space-y-4">
                 <p className="text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Thông tin danh mục sẽ tạo</p>
@@ -1187,8 +1343,11 @@ export default function ListDictionariesTab() {
                       value={importDefinition.name}
                       maxLength={150}
                       onChange={event => setImportDefinition(current => ({ ...current, name: event.target.value }))}
-                      className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-primary"
+                      className={`mt-1 h-10 w-full rounded-lg border px-3 text-sm focus:outline-primary ${
+                        importDictNameError ? 'border-error bg-error-container/30' : 'border-outline-variant'
+                      }`}
                     />
+                    {importDictNameError && <span className="mt-1 block text-[11px] font-semibold text-error">{importDictNameError}</span>}
                   </label>
                   <label className="text-sm font-bold">
                     Mã danh mục *
@@ -1196,8 +1355,11 @@ export default function ListDictionariesTab() {
                       value={importDefinition.code}
                       maxLength={50}
                       onChange={event => setImportDefinition(current => ({ ...current, code: toCode(event.target.value) }))}
-                      className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 font-mono text-sm uppercase focus:outline-primary"
+                      className={`mt-1 h-10 w-full rounded-lg border px-3 font-mono text-sm uppercase focus:outline-primary ${
+                        importDictCodeError ? 'border-error bg-error-container/30' : 'border-outline-variant'
+                      }`}
                     />
+                    {importDictCodeError && <span className="mt-1 block text-[11px] font-semibold text-error">{importDictCodeError}</span>}
                   </label>
                 </div>
                 <label className="block text-sm font-bold">
@@ -1228,7 +1390,9 @@ export default function ListDictionariesTab() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/50">
-                      {excelImportDraft.fields.map(field => (
+                      {excelImportDraft.fields.map(field => {
+                        const fieldError = importFieldErrors[field.key];
+                        return (
                         <tr key={field.key}>
                           <td className="max-w-48 px-3 py-2 font-bold" title={field.sourceHeader}>{field.sourceHeader}</td>
                           <td className="px-3 py-2">
@@ -1236,7 +1400,10 @@ export default function ListDictionariesTab() {
                               value={field.name}
                               maxLength={150}
                               onChange={event => updateExcelImportField(field.key, { name: event.target.value })}
-                              className="h-9 w-full rounded border border-outline-variant px-2 text-xs focus:outline-primary"
+                              className={`h-9 w-full rounded border px-2 text-xs focus:outline-primary ${
+                                fieldError?.name ? 'border-error bg-error-container/30' : 'border-outline-variant'
+                              }`}
+                              title={fieldError?.name || ''}
                             />
                           </td>
                           <td className="px-3 py-2">
@@ -1244,7 +1411,10 @@ export default function ListDictionariesTab() {
                               value={field.code}
                               maxLength={50}
                               onChange={event => updateExcelImportField(field.key, { code: toCode(event.target.value) })}
-                              className="h-9 w-full rounded border border-outline-variant px-2 font-mono text-xs uppercase focus:outline-primary"
+                              className={`h-9 w-full rounded border px-2 font-mono text-xs uppercase focus:outline-primary ${
+                                fieldError?.code ? 'border-error bg-error-container/30' : 'border-outline-variant'
+                              }`}
+                              title={fieldError?.code || ''}
                             />
                           </td>
                           <td className="px-3 py-2">
@@ -1267,7 +1437,8 @@ export default function ListDictionariesTab() {
                             />
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1275,51 +1446,79 @@ export default function ListDictionariesTab() {
 
               <section className="space-y-3 border-t border-outline-variant pt-5">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Xem trước dữ liệu</p>
-                  <p className="mt-1 text-xs text-on-surface-variant">Hiển thị tối đa 10 dòng đầu tiên sau header.</p>
+                  <p className="text-[11px] font-black uppercase tracking-wider text-on-surface-variant">Dữ liệu — sửa trực tiếp</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    Ô tô đỏ là dữ liệu chưa hợp lệ; sửa ngay tại đây rồi bấm tạo danh mục.
+                    {showOnlyImportErrorRows
+                      ? ` Đang lọc ${importErrorRowNumbers.size} dòng lỗi.`
+                      : ` Hiển thị ${importPreviewRows.length}/${excelImportDraft.rows.length} dòng.`}
+                  </p>
                 </div>
                 <div className="overflow-x-auto rounded-xl border border-outline-variant">
                   <table className="w-full min-w-[720px] text-left text-xs">
                     <thead className="bg-surface-2 text-[10px] font-black uppercase text-on-surface-variant">
                       <tr>
-                        <th className="px-3 py-3">Dòng</th>
+                        <th className="w-16 px-3 py-3">Dòng</th>
                         {excelImportDraft.fields.map(field => <th key={field.key} className="px-3 py-3">{field.name}</th>)}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/50">
-                      {excelImportDraft.rows.slice(0, 10).map(row => (
+                      {importPreviewRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={excelImportDraft.fields.length + 1} className="px-3 py-8 text-center font-bold text-on-surface-variant">
+                            {showOnlyImportErrorRows ? 'Không còn dòng lỗi nào. Bấm “Hiện tất cả dòng”.' : 'Không có dữ liệu.'}
+                          </td>
+                        </tr>
+                      ) : importPreviewRows.map(row => (
                         <tr key={row.sourceRowNumber}>
                           <td className="px-3 py-2 font-mono text-on-surface-variant">{row.sourceRowNumber}</td>
-                          {excelImportDraft.fields.map(field => (
-                            <td key={field.key} className="max-w-60 truncate px-3 py-2" title={formatExcelPreviewValue(row.values[field.sourceIndex])}>
-                              {formatExcelPreviewValue(row.values[field.sourceIndex])}
-                            </td>
-                          ))}
+                          {excelImportDraft.fields.map(field => {
+                            const message = importCellErrorMap.get(`${row.sourceRowNumber}:${field.sourceIndex}`);
+                            return (
+                              <td key={field.key} className="p-1 align-top">
+                                <input
+                                  value={cellToInputValue(row.values[field.sourceIndex])}
+                                  onChange={event => updateExcelImportCell(row.sourceRowNumber, field.sourceIndex, event.target.value)}
+                                  title={message || ''}
+                                  className={`h-9 w-full min-w-[120px] rounded border px-2 text-xs focus:outline-primary ${
+                                    message ? 'border-error bg-error-container/40 text-on-error-container' : 'border-outline-variant'
+                                  }`}
+                                />
+                                {message && <span className="mt-0.5 block text-[10px] font-semibold text-error">{message}</span>}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                {!showOnlyImportErrorRows && excelImportDraft.rows.length > importPreviewRows.length && (
+                  <p className="text-[11px] text-on-surface-variant">
+                    Chỉ hiển thị {importPreviewRows.length} dòng đầu. Bật “Chỉ hiện dòng lỗi” để xem toàn bộ dòng cần sửa.
+                  </p>
+                )}
               </section>
 
               <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-5 text-on-surface-variant">
-                Chưa có dữ liệu nào được tạo. Khi bấm xác nhận, backend sẽ kiểm tra lại toàn bộ và tạo danh mục cùng dữ liệu trong một lần.
+                Dữ liệu chỉ được tạo khi tất cả ô đã hợp lệ. Sửa các ô tô đỏ ngay trên bảng rồi bấm tạo danh mục.
               </div>
 
               <div className="flex flex-col-reverse gap-2 border-t border-outline-variant pt-4 sm:flex-row sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsImportModalOpen(false);
-                    setExcelImportDraft(null);
-                  }}
+                  onClick={closeImportModal}
                   className="btn-secondary h-10 px-4"
                 >
                   Hủy
                 </button>
                 <button type="submit" disabled={isSaving} className="btn-primary h-10 px-5">
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                  {isSaving ? 'Đang import...' : `Xác nhận import ${excelImportDraft.rows.length} dòng`}
+                  {isSaving
+                    ? 'Đang tạo...'
+                    : importTotalErrorCount > 0
+                    ? `Còn ${importTotalErrorCount} mục cần sửa`
+                    : `Tạo danh mục (${excelImportDraft.rows.length} dòng)`}
                 </button>
               </div>
             </form>
