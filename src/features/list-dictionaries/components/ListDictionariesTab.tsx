@@ -142,6 +142,35 @@ function buildItemValues(
   return { values };
 }
 
+interface ImportServerError {
+  message: string;
+  rowNumber?: number;
+  sourceIndex?: number;
+  dictCode?: boolean;
+}
+
+/**
+ * Phân tích thông báo lỗi từ backend khi import để biết dòng/field/mã nào sai,
+ * nhằm tô đỏ đúng chỗ thay vì chỉ hiện 1 toast.
+ */
+function parseImportServerError(message: string, draft: ExcelDictionaryDraft): ImportServerError {
+  const result: ImportServerError = { message };
+  const rowMatch = message.match(/Dòng dữ liệu\s+(\d+)/);
+  if (rowMatch) {
+    const row = draft.rows[Number(rowMatch[1]) - 2];
+    if (row) result.rowNumber = row.sourceRowNumber;
+    const fieldMatch = message.match(/Trường '(.+?)'/);
+    if (fieldMatch) {
+      const field = draft.fields.find(item => item.name.trim() === fieldMatch[1]);
+      if (field) result.sourceIndex = field.sourceIndex;
+    }
+  }
+  if (/^Mã danh mục/i.test(message) || /Mã danh mục '.*' đã tồn tại/i.test(message)) {
+    result.dictCode = true;
+  }
+  return result;
+}
+
 type EditableCellProps = {
   field: ListDictionaryFieldDto;
   rawValue: string;
@@ -298,6 +327,7 @@ export default function ListDictionariesTab() {
     description: '',
   });
   const [showOnlyImportErrorRows, setShowOnlyImportErrorRows] = useState(false);
+  const [importServerError, setImportServerError] = useState<ImportServerError | null>(null);
 
   const selectedDictionary = useMemo(
     () => dictionaries.find(item => item.code === routeCode) || null,
@@ -394,6 +424,7 @@ export default function ListDictionariesTab() {
 
   const importDictNameError = importDefinition.name.trim() ? '' : 'Cần nhập tên danh mục.';
   const importDictCodeError = /^[A-Z][A-Z0-9_]*$/.test(toCode(importDefinition.code)) ? '' : 'Mã danh mục không hợp lệ.';
+  const importHasNoRows = !!excelImportDraft && excelImportDraft.rows.length === 0;
 
   const importTotalErrorCount =
     importCellErrors.length +
@@ -401,13 +432,29 @@ export default function ListDictionariesTab() {
     (importDictNameError ? 1 : 0) +
     (importDictCodeError ? 1 : 0);
 
+  const importServerCell = useMemo(() => {
+    if (!importServerError || importServerError.rowNumber == null) return null;
+    return {
+      key: `${importServerError.rowNumber}:${importServerError.sourceIndex ?? -1}`,
+      rowNumber: importServerError.rowNumber,
+      sourceIndex: importServerError.sourceIndex,
+      message: importServerError.message,
+    };
+  }, [importServerError]);
+
+  const importAllErrorRowNumbers = useMemo(() => {
+    const set = new Set(importErrorRowNumbers);
+    if (importServerCell) set.add(importServerCell.rowNumber);
+    return set;
+  }, [importErrorRowNumbers, importServerCell]);
+
   const importPreviewRows = useMemo(() => {
     if (!excelImportDraft) return [];
     const source = showOnlyImportErrorRows
-      ? excelImportDraft.rows.filter(row => importErrorRowNumbers.has(row.sourceRowNumber))
+      ? excelImportDraft.rows.filter(row => importAllErrorRowNumbers.has(row.sourceRowNumber))
       : excelImportDraft.rows;
     return source.slice(0, 100);
-  }, [excelImportDraft, showOnlyImportErrorRows, importErrorRowNumbers]);
+  }, [excelImportDraft, showOnlyImportErrorRows, importAllErrorRowNumbers]);
 
   const loadDictionaries = async () => {
     try {
@@ -473,6 +520,11 @@ export default function ListDictionariesTab() {
       /* bỏ qua nếu localStorage không khả dụng */
     }
   }, [routeCode, columnWidths]);
+
+  // Khi user chỉnh sửa dữ liệu/định nghĩa thì bỏ đánh dấu lỗi backend cũ (buộc kiểm tra lại).
+  useEffect(() => {
+    setImportServerError(null);
+  }, [excelImportDraft, importDefinition]);
 
   const openDefinitionModal = () => {
     setDefinitionDraft(newDefinition());
@@ -588,11 +640,18 @@ export default function ListDictionariesTab() {
     setIsImportModalOpen(false);
     setExcelImportDraft(null);
     setShowOnlyImportErrorRows(false);
+    setImportServerError(null);
   };
 
   const submitExcelImport = async (event: FormEvent) => {
     event.preventDefault();
     if (!excelImportDraft) return;
+    setImportServerError(null);
+
+    if (importHasNoRows) {
+      toast.error('File chưa có dòng dữ liệu nào để tạo danh mục.');
+      return;
+    }
 
     if (importTotalErrorCount > 0) {
       if (importCellErrors.length > 0) setShowOnlyImportErrorRows(true);
@@ -637,7 +696,11 @@ export default function ListDictionariesTab() {
       navigate(`/list-dictionaries/${encodeURIComponent(created.code)}`);
       toast.success(`Đã tạo danh mục và import ${created.itemCount} bản ghi.`);
     } catch (error: any) {
-      toast.error(error?.message || 'Không thể import danh mục từ Excel.');
+      const message = error?.message || 'Không thể import danh mục từ Excel.';
+      const parsed = parseImportServerError(message, excelImportDraft);
+      setImportServerError(parsed);
+      if (parsed.rowNumber != null) setShowOnlyImportErrorRows(true);
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -1317,6 +1380,34 @@ export default function ListDictionariesTab() {
                 </div>
               </div>
 
+              {importServerError && (
+                <div className="flex flex-col gap-2 rounded-xl border border-error bg-error-container px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs font-bold text-on-error-container">
+                    Máy chủ từ chối: {importServerError.message}
+                    {importServerError.dictCode
+                      ? ' → đổi Mã danh mục ở trên rồi tạo lại.'
+                      : importServerError.rowNumber != null
+                      ? ` → xem dòng ${importServerError.rowNumber} (đã tô đỏ), sửa rồi tạo lại.`
+                      : ''}
+                  </p>
+                  {importServerError.rowNumber != null && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOnlyImportErrorRows(current => !current)}
+                      className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-error bg-surface px-3 text-xs font-bold text-error hover:bg-error-container"
+                    >
+                      {showOnlyImportErrorRows ? 'Hiện tất cả dòng' : 'Tới dòng lỗi'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {importHasNoRows && (
+                <div className="rounded-xl border border-warning/50 bg-warning-container/50 px-4 py-3 text-xs font-bold text-on-warning-container">
+                  File chưa có dòng dữ liệu — cần ít nhất 1 dòng để tạo danh mục. Bạn vẫn có thể xem và chỉnh mapping cột ở trên.
+                </div>
+              )}
+
               {importTotalErrorCount > 0 && (
                 <div className="flex flex-col gap-2 rounded-xl border border-error/40 bg-error-container/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs font-bold text-on-error-container">
@@ -1328,7 +1419,7 @@ export default function ListDictionariesTab() {
                       onClick={() => setShowOnlyImportErrorRows(current => !current)}
                       className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-error/40 bg-surface px-3 text-xs font-bold text-error hover:bg-error-container"
                     >
-                      {showOnlyImportErrorRows ? 'Hiện tất cả dòng' : `Chỉ hiện ${importErrorRowNumbers.size} dòng lỗi`}
+                      {showOnlyImportErrorRows ? 'Hiện tất cả dòng' : `Chỉ hiện ${importAllErrorRowNumbers.size} dòng lỗi`}
                     </button>
                   )}
                 </div>
@@ -1356,10 +1447,12 @@ export default function ListDictionariesTab() {
                       maxLength={50}
                       onChange={event => setImportDefinition(current => ({ ...current, code: toCode(event.target.value) }))}
                       className={`mt-1 h-10 w-full rounded-lg border px-3 font-mono text-sm uppercase focus:outline-primary ${
-                        importDictCodeError ? 'border-error bg-error-container/30' : 'border-outline-variant'
+                        importDictCodeError || importServerError?.dictCode ? 'border-error bg-error-container/30' : 'border-outline-variant'
                       }`}
                     />
-                    {importDictCodeError && <span className="mt-1 block text-[11px] font-semibold text-error">{importDictCodeError}</span>}
+                    {importDictCodeError
+                      ? <span className="mt-1 block text-[11px] font-semibold text-error">{importDictCodeError}</span>
+                      : importServerError?.dictCode && <span className="mt-1 block text-[11px] font-semibold text-error">{importServerError.message}</span>}
                   </label>
                 </div>
                 <label className="block text-sm font-bold">
@@ -1450,7 +1543,7 @@ export default function ListDictionariesTab() {
                   <p className="mt-1 text-xs text-on-surface-variant">
                     Ô tô đỏ là dữ liệu chưa hợp lệ; sửa ngay tại đây rồi bấm tạo danh mục.
                     {showOnlyImportErrorRows
-                      ? ` Đang lọc ${importErrorRowNumbers.size} dòng lỗi.`
+                      ? ` Đang lọc ${importAllErrorRowNumbers.size} dòng lỗi.`
                       : ` Hiển thị ${importPreviewRows.length}/${excelImportDraft.rows.length} dòng.`}
                   </p>
                 </div>
@@ -1469,11 +1562,22 @@ export default function ListDictionariesTab() {
                             {showOnlyImportErrorRows ? 'Không còn dòng lỗi nào. Bấm “Hiện tất cả dòng”.' : 'Không có dữ liệu.'}
                           </td>
                         </tr>
-                      ) : importPreviewRows.map(row => (
+                      ) : importPreviewRows.map(row => {
+                        const serverRowMessage = importServerCell && importServerCell.rowNumber === row.sourceRowNumber
+                          ? importServerCell.message
+                          : undefined;
+                        return (
                         <tr key={row.sourceRowNumber}>
-                          <td className="px-3 py-2 font-mono text-on-surface-variant">{row.sourceRowNumber}</td>
+                          <td
+                            className={`px-3 py-2 font-mono ${serverRowMessage ? 'bg-error-container/50 font-bold text-error' : 'text-on-surface-variant'}`}
+                            title={serverRowMessage || ''}
+                          >
+                            {row.sourceRowNumber}
+                          </td>
                           {excelImportDraft.fields.map(field => {
-                            const message = importCellErrorMap.get(`${row.sourceRowNumber}:${field.sourceIndex}`);
+                            const cellCode = `${row.sourceRowNumber}:${field.sourceIndex}`;
+                            const message = importCellErrorMap.get(cellCode)
+                              ?? (importServerCell?.key === cellCode ? importServerCell.message : undefined);
                             return (
                               <td key={field.key} className="p-1 align-top">
                                 <input
@@ -1489,7 +1593,8 @@ export default function ListDictionariesTab() {
                             );
                           })}
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1516,6 +1621,8 @@ export default function ListDictionariesTab() {
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   {isSaving
                     ? 'Đang tạo...'
+                    : importHasNoRows
+                    ? 'Chưa có dòng dữ liệu'
                     : importTotalErrorCount > 0
                     ? `Còn ${importTotalErrorCount} mục cần sửa`
                     : `Tạo danh mục (${excelImportDraft.rows.length} dòng)`}
