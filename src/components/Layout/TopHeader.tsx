@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Bell, Check, LogOut, Menu, Search, Send, UserCog } from 'lucide-react';
+import { AlertTriangle, Bell, Check, LogOut, Menu, Palette, Search, Send, UserCog } from 'lucide-react';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLogsStore } from '../../stores/useLogsStore';
@@ -22,7 +22,8 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
     setSelectedNotification, 
     setIsNotificationModalOpen 
   } = useNotificationStore();
-  const { logout } = useAuthStore();
+  const { logout, hasAnyRole } = useAuthStore();
+  const isAdmin = hasAnyRole([1, 'Admin']);
 
   // Search queries for all views
   const logSearch = useLogsStore(s => s.searchQuery);
@@ -79,6 +80,11 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   const openAccountSettings = () => {
     setIsUserMenuOpen(false);
     navigate('/settings');
+  };
+
+  const openAppearanceSettings = () => {
+    setIsUserMenuOpen(false);
+    navigate('/appearance');
   };
 
   return (
@@ -286,6 +292,16 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                   <UserCog className="h-4 w-4 text-primary" />
                   <span>Thiết lập tài khoản</span>
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={openAppearanceSettings}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold text-on-surface hover:bg-surface-2 cursor-pointer"
+                  >
+                    <Palette className="h-4 w-4 text-primary" />
+                    <span>Cài đặt giao diện</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleLogoutClick}
