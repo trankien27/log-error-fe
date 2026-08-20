@@ -8,6 +8,8 @@ import {
   Edit3,
   FileSpreadsheet,
   Loader2,
+  Maximize2,
+  Minimize2,
   Plus,
   Search,
   Settings2,
@@ -310,6 +312,7 @@ export default function ListDictionariesTab() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemValues, setItemValues] = useState<Record<string, string>>({});
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [isDataFullscreen, setIsDataFullscreen] = useState(false);
   const [editingCell, setEditingCell] = useState<{ itemId: number; fieldCode: string } | null>(null);
   const [savingCellKey, setSavingCellKey] = useState<string | null>(null);
   const [savedCellKey, setSavedCellKey] = useState<string | null>(null);
@@ -494,8 +497,19 @@ export default function ListDictionariesTab() {
   useEffect(() => {
     setItemFilter('');
     setEditingCell(null);
+    setIsDataFullscreen(false);
     void loadItems(routeCode);
   }, [routeCode]);
+
+  // Thoát chế độ toàn màn hình bằng phím Esc.
+  useEffect(() => {
+    if (!isDataFullscreen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsDataFullscreen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isDataFullscreen]);
 
   // Khởi tạo độ rộng cột cho danh mục đang mở (ưu tiên giá trị đã lưu trong localStorage).
   useEffect(() => {
@@ -719,6 +733,7 @@ export default function ListDictionariesTab() {
 
   const openItemModal = (item?: ListDictionaryItemDto) => {
     if (!selectedDictionary) return;
+    setIsDataFullscreen(false);
     setEditingItem(item || null);
     const values: Record<string, string> = {};
     selectedDictionary.fields.forEach(field => {
@@ -1178,9 +1193,9 @@ export default function ListDictionariesTab() {
             </div>
           </div>
 
-          <div className="card-surface overflow-hidden">
-            <div className="border-b border-outline-variant p-4">
-              <div className="relative max-w-xl">
+          <div className={isDataFullscreen ? 'fixed inset-0 z-[60] flex flex-col overflow-hidden bg-surface p-3' : 'card-surface overflow-hidden'}>
+            <div className="flex items-center gap-3 border-b border-outline-variant p-4">
+              <div className="relative w-full max-w-xl">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
                 <input
                   value={itemFilter}
@@ -1189,6 +1204,15 @@ export default function ListDictionariesTab() {
                   className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm focus:outline-primary"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setIsDataFullscreen(current => !current)}
+                className="ml-auto inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-outline-variant px-3 text-xs font-bold hover:bg-surface-2"
+                title={isDataFullscreen ? 'Thu nhỏ (Esc)' : 'Toàn màn hình'}
+              >
+                {isDataFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                <span className="hidden sm:inline">{isDataFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}</span>
+              </button>
             </div>
 
             {viewMode === 'grid' && (
@@ -1197,7 +1221,7 @@ export default function ListDictionariesTab() {
                 Chế độ Excel — bấm vào ô để sửa trực tiếp vào bản ghi. Enter để lưu, Esc để hủy.
               </div>
             )}
-            <div className="overflow-x-auto">
+            <div className={`overflow-auto ${isDataFullscreen ? 'flex-1' : 'max-h-[65vh]'}`}>
               {viewMode === 'grid' ? (
                 <table
                   className="border-collapse text-left text-xs"
@@ -1211,7 +1235,7 @@ export default function ListDictionariesTab() {
                     <col style={{ width: DICT_ACTION_COL_WIDTH }} />
                   </colgroup>
                   <thead>
-                    <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
+                    <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant [&>th]:sticky [&>th]:top-0 [&>th]:z-[5] [&>th]:bg-surface-2">
                       <th className="px-2 py-3 text-center">#</th>
                       {dataFields.map(field => (
                         <th key={field.id} className="relative border-l border-outline-variant/40 px-3 py-3">
@@ -1627,16 +1651,35 @@ export default function ListDictionariesTab() {
                             const cellCode = `${row.sourceRowNumber}:${field.sourceIndex}`;
                             const message = importCellErrorMap.get(cellCode)
                               ?? (importServerCell?.key === cellCode ? importServerCell.message : undefined);
+                            const rawCell = cellToInputValue(row.values[field.sourceIndex]);
+                            const cellClass = `h-9 w-full min-w-[120px] rounded border px-2 text-xs focus:outline-primary ${
+                              message ? 'border-error bg-error-container/40 text-on-error-container' : 'border-outline-variant'
+                            }`;
+                            const selectOptions = field.dataType === 6 ? parseImportOptions(field.optionsText) : null;
+                            const matchedOption = selectOptions?.find(
+                              option => option.toLocaleLowerCase('vi') === rawCell.toLocaleLowerCase('vi'),
+                            );
                             return (
                               <td key={field.key} className="p-1 align-top">
-                                <input
-                                  value={cellToInputValue(row.values[field.sourceIndex])}
-                                  onChange={event => updateExcelImportCell(row.sourceRowNumber, field.sourceIndex, event.target.value)}
-                                  title={message || ''}
-                                  className={`h-9 w-full min-w-[120px] rounded border px-2 text-xs focus:outline-primary ${
-                                    message ? 'border-error bg-error-container/40 text-on-error-container' : 'border-outline-variant'
-                                  }`}
-                                />
+                                {selectOptions ? (
+                                  <select
+                                    value={matchedOption ?? rawCell}
+                                    onChange={event => updateExcelImportCell(row.sourceRowNumber, field.sourceIndex, event.target.value)}
+                                    title={message || ''}
+                                    className={cellClass}
+                                  >
+                                    <option value="">—</option>
+                                    {selectOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                                    {rawCell && !matchedOption && <option value={rawCell}>{rawCell} (ngoài danh sách)</option>}
+                                  </select>
+                                ) : (
+                                  <input
+                                    value={rawCell}
+                                    onChange={event => updateExcelImportCell(row.sourceRowNumber, field.sourceIndex, event.target.value)}
+                                    title={message || ''}
+                                    className={cellClass}
+                                  />
+                                )}
                                 {message && <span className="mt-0.5 block text-[10px] font-semibold text-error">{message}</span>}
                               </td>
                             );
