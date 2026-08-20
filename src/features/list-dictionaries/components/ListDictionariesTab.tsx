@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Settings2,
+  Table,
   Trash2,
   X,
 } from 'lucide-react';
@@ -111,6 +112,144 @@ function formatValue(field: ListDictionaryFieldDto, value: unknown) {
   return String(value);
 }
 
+function buildItemValues(
+  fields: ListDictionaryFieldDto[],
+  raw: Record<string, string>,
+): { values: Record<string, string | number | boolean> } | { error: string } {
+  const values: Record<string, string | number | boolean> = {};
+  for (const field of fields) {
+    const rawValue = raw[field.code] ?? '';
+    if (field.isRequired && rawValue === '') return { error: `Trường ${field.name} là bắt buộc.` };
+    if (rawValue === '') continue;
+
+    if (field.dataType === 2) {
+      const numberValue = Number(rawValue);
+      if (!Number.isFinite(numberValue)) return { error: `Trường ${field.name} phải là số.` };
+      values[field.code] = numberValue;
+    } else if (field.dataType === 3) {
+      values[field.code] = rawValue === 'true';
+    } else {
+      values[field.code] = rawValue;
+    }
+  }
+  return { values };
+}
+
+type EditableCellProps = {
+  field: ListDictionaryFieldDto;
+  rawValue: string;
+  display: React.ReactNode;
+  isEditing: boolean;
+  isSaving: boolean;
+  isSaved: boolean;
+  onBegin: () => void;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+};
+
+function EditableCell({
+  field,
+  rawValue,
+  display,
+  isEditing,
+  isSaving,
+  isSaved,
+  onBegin,
+  onCommit,
+  onCancel,
+}: EditableCellProps) {
+  const [draft, setDraft] = useState(rawValue);
+  const committedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement | HTMLSelectElement | null>(null);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    setDraft(rawValue);
+    committedRef.current = false;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [isEditing, rawValue]);
+
+  const commit = (value: string) => {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    onCommit(value);
+  };
+
+  if (!isEditing) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onBegin}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === 'F2') {
+            event.preventDefault();
+            onBegin();
+          }
+        }}
+        className={`flex min-h-[40px] w-full cursor-text items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/40 ${
+          isSaved ? 'ring-2 ring-inset ring-success/60' : ''
+        }`}
+        title="Bấm để sửa"
+      >
+        <span className="min-w-0 flex-1 truncate">{display}</span>
+        {isSaving && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />}
+      </div>
+    );
+  }
+
+  const editorClass = 'h-[40px] w-full border-0 bg-primary/5 px-3 text-xs font-semibold text-on-surface ring-2 ring-inset ring-primary/60 focus:outline-none';
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commit(draft);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      onCancel();
+    }
+  };
+
+  if (field.dataType === 3 || field.dataType === 6) {
+    const options = field.dataType === 3
+      ? [{ value: 'true', label: 'Có' }, { value: 'false', label: 'Không' }]
+      : field.options.map(option => ({ value: option, label: option }));
+    return (
+      <select
+        ref={element => { inputRef.current = element; }}
+        value={draft}
+        onChange={event => { setDraft(event.target.value); commit(event.target.value); }}
+        onBlur={() => { if (!committedRef.current) onCancel(); }}
+        onKeyDown={handleKeyDown}
+        className={editorClass}
+      >
+        <option value="">—</option>
+        {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+    );
+  }
+
+  const inputType = field.dataType === 2
+    ? 'number'
+    : field.dataType === 4
+    ? 'date'
+    : field.dataType === 5
+    ? 'datetime-local'
+    : 'text';
+  return (
+    <input
+      ref={element => { inputRef.current = element; }}
+      type={inputType}
+      step={field.dataType === 2 ? 'any' : undefined}
+      value={field.dataType === 5 ? draft.slice(0, 16) : draft}
+      onChange={event => setDraft(event.target.value)}
+      onKeyDown={handleKeyDown}
+      onBlur={() => commit(draft)}
+      className={editorClass}
+    />
+  );
+}
+
 export default function ListDictionariesTab() {
   const navigate = useNavigate();
   const { code: routeCodeParam } = useParams<{ code?: string }>();
@@ -133,6 +272,10 @@ export default function ListDictionariesTab() {
   const [editingItem, setEditingItem] = useState<ListDictionaryItemDto | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemValues, setItemValues] = useState<Record<string, string>>({});
+  const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [editingCell, setEditingCell] = useState<{ itemId: number; fieldCode: string } | null>(null);
+  const [savingCellKey, setSavingCellKey] = useState<string | null>(null);
+  const [savedCellKey, setSavedCellKey] = useState<string | null>(null);
   const [isDisplayModalOpen, setIsDisplayModalOpen] = useState(false);
   const [displayDictionaryCodes, setDisplayDictionaryCodes] = useState<string[]>([]);
   const [displayFilter, setDisplayFilter] = useState('');
@@ -233,6 +376,7 @@ export default function ListDictionariesTab() {
 
   useEffect(() => {
     setItemFilter('');
+    setEditingCell(null);
     void loadItems(routeCode);
   }, [routeCode]);
 
@@ -471,6 +615,56 @@ export default function ListDictionariesTab() {
       toast.error(error?.message || 'Không thể lưu bản ghi.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const cellKey = (itemId: number, fieldCode: string) => `${itemId}::${fieldCode}`;
+
+  const beginCellEdit = (itemId: number, fieldCode: string) => {
+    if (savingCellKey) return;
+    setEditingCell({ itemId, fieldCode });
+  };
+
+  const commitCell = async (
+    item: ListDictionaryItemDto,
+    field: ListDictionaryFieldDto,
+    rawValue: string,
+  ) => {
+    if (!selectedDictionary) return;
+
+    const currentValue = item.values[field.code];
+    const currentRaw = currentValue === null || currentValue === undefined ? '' : String(currentValue);
+    if (rawValue === currentRaw) {
+      setEditingCell(null);
+      return;
+    }
+
+    const raw: Record<string, string> = {};
+    selectedDictionary.fields.forEach(current => {
+      const value = item.values[current.code];
+      raw[current.code] = value === null || value === undefined ? '' : String(value);
+    });
+    raw[field.code] = rawValue;
+
+    const built = buildItemValues(selectedDictionary.fields, raw);
+    if ('error' in built) {
+      toast.error(built.error);
+      setEditingCell(null);
+      return;
+    }
+
+    const key = cellKey(item.id, field.code);
+    try {
+      setSavingCellKey(key);
+      const updated = await listDictionariesService.updateItem(selectedDictionary.code, item.id, { values: built.values });
+      setItems(current => current.map(existing => existing.id === item.id ? updated : existing));
+      setSavedCellKey(key);
+      window.setTimeout(() => setSavedCellKey(current => (current === key ? null : current)), 1200);
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể lưu ô dữ liệu.');
+    } finally {
+      setSavingCellKey(null);
+      setEditingCell(null);
     }
   };
 
@@ -759,7 +953,29 @@ export default function ListDictionariesTab() {
                 )}
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold transition-colors ${
+                    viewMode === 'table' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
+                  }`}
+                  title="Xem dạng bảng"
+                >
+                  <Table className="h-4 w-4" /> Bảng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold transition-colors ${
+                    viewMode === 'grid' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
+                  }`}
+                  title="Sửa trực tiếp như Excel"
+                >
+                  <FileSpreadsheet className="h-4 w-4" /> Excel
+                </button>
+              </div>
               <button type="button" onClick={() => openItemModal()} className="btn-primary h-10 px-4">
                 <Plus className="h-4 w-4" /> Thêm dữ liệu
               </button>
@@ -779,7 +995,80 @@ export default function ListDictionariesTab() {
               </div>
             </div>
 
+            {viewMode === 'grid' && (
+              <div className="flex items-center gap-2 border-b border-outline-variant bg-primary/5 px-4 py-2 text-[11px] font-semibold text-on-surface-variant">
+                <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
+                Chế độ Excel — bấm vào ô để sửa trực tiếp vào bản ghi. Enter để lưu, Esc để hủy.
+              </div>
+            )}
             <div className="overflow-x-auto">
+              {viewMode === 'grid' ? (
+                <table
+                  className="w-full border-collapse text-left text-xs"
+                  style={{ minWidth: Math.max(680, 120 + dataFields.length * 180) }}
+                >
+                  <thead>
+                    <tr className="border-b border-outline-variant bg-surface-2 text-[10px] font-black uppercase tracking-wider text-on-surface-variant">
+                      <th className="w-12 px-2 py-3 text-center">#</th>
+                      {dataFields.map(field => (
+                        <th key={field.id} className="border-l border-outline-variant/40 px-3 py-3">
+                          {field.name}{field.isRequired && <span className="text-error"> *</span>}
+                        </th>
+                      ))}
+                      <th className="w-14 px-2 py-3 text-right">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-outline-variant/40">
+                    {isLoadingItems ? (
+                      <tr>
+                        <td colSpan={dataFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
+                          <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" /> Đang tải dữ liệu...
+                        </td>
+                      </tr>
+                    ) : filteredItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={dataFields.length + 2} className="py-12 text-center font-bold text-on-surface-variant">
+                          {items.length === 0 ? 'Chưa có dữ liệu trong danh mục này.' : 'Không có dữ liệu phù hợp.'}
+                        </td>
+                      </tr>
+                    ) : filteredItems.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-surface-2/20">
+                        <td className="px-2 py-2 text-center font-mono text-[11px] text-on-surface-variant">{index + 1}</td>
+                        {dataFields.map(field => {
+                          const cellValue = item.values[field.code];
+                          const rawValue = cellValue === null || cellValue === undefined ? '' : String(cellValue);
+                          const key = cellKey(item.id, field.code);
+                          return (
+                            <td key={field.id} className="border-l border-outline-variant/40 p-0 align-middle">
+                              <EditableCell
+                                field={field}
+                                rawValue={rawValue}
+                                display={formatValue(field, cellValue)}
+                                isEditing={editingCell?.itemId === item.id && editingCell?.fieldCode === field.code}
+                                isSaving={savingCellKey === key}
+                                isSaved={savedCellKey === key}
+                                onBegin={() => beginCellEdit(item.id, field.code)}
+                                onCommit={value => void commitCell(item, field, value)}
+                                onCancel={() => setEditingCell(null)}
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="px-2 py-2 text-right align-middle">
+                          <button
+                            type="button"
+                            onClick={() => void deleteItem(item)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded border border-error/30 text-error hover:bg-error-container"
+                            title="Xóa bản ghi"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
               <table
                 className="w-full border-collapse text-left text-xs"
                 style={{ minWidth: Math.max(680, 260 + dataFields.length * 180) }}
@@ -841,6 +1130,7 @@ export default function ListDictionariesTab() {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
           </div>
         </>
