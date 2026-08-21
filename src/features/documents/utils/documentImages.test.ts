@@ -5,10 +5,12 @@ import {
   DOC_IMAGE_PREFIX,
   MAX_IMAGE_BYTES,
   buildDataUri,
+  dehydrateKnownImages,
   extractDataUriImages,
   extractPlaceholderIds,
   hydratePlaceholders,
   isSafeImageSrc,
+  mapHydratedImageSources,
   replaceDataUri,
   sanitizeAltText,
   stripImageMarkdown,
@@ -25,10 +27,22 @@ function makeImage(overrides: Partial<KnowledgeDocumentImageDto> = {}): Knowledg
     contentType: 'image/png',
     fileSize: 1024,
     base64Data: PNG_BASE64,
+    url: null,
+    storageProvider: 'InlineBase64',
     position: 0,
     createdAt: '2026-08-18T00:00:00Z',
     ...overrides,
   };
+}
+
+/** An R2-backed image: `url` set, `base64Data` null — the shape the backend now sends. */
+function makeR2Image(overrides: Partial<KnowledgeDocumentImageDto> = {}): KnowledgeDocumentImageDto {
+  return makeImage({
+    base64Data: null,
+    url: 'https://pub-example.r2.dev/knowledge-documents/10/abc.png',
+    storageProvider: 'R2',
+    ...overrides,
+  });
 }
 
 function makeFile(name: string, type: string, size: number): File {
@@ -114,6 +128,71 @@ describe('hydratePlaceholders', () => {
 
   it('returns content without placeholders unchanged', () => {
     expect(hydratePlaceholders('Không có ảnh', [makeImage()])).toBe('Không có ảnh');
+  });
+
+  it('prefers the R2 url over base64Data when both could theoretically apply', () => {
+    const markdown = `![Ảnh](${DOC_IMAGE_PREFIX}1)`;
+    const image = makeR2Image({ id: 1 });
+    expect(hydratePlaceholders(markdown, [image])).toBe(`![Ảnh](${image.url})`);
+  });
+
+  it('hydrates a mix of R2 and inline-base64 images correctly', () => {
+    const markdown = `![a](${DOC_IMAGE_PREFIX}1) ![b](${DOC_IMAGE_PREFIX}2)`;
+    const r2 = makeR2Image({ id: 1 });
+    const inline = makeImage({ id: 2, base64Data: 'BBBB' });
+    expect(hydratePlaceholders(markdown, [r2, inline]))
+      .toBe(`![a](${r2.url}) ![b](data:image/png;base64,BBBB)`);
+  });
+});
+
+describe('mapHydratedImageSources', () => {
+  it('maps an R2 image url back to its id', () => {
+    const image = makeR2Image({ id: 5 });
+    expect(mapHydratedImageSources([image])).toEqual(new Map([[image.url!, 5]]));
+  });
+
+  it('maps an inline-base64 image data URI back to its id', () => {
+    const image = makeImage({ id: 5, base64Data: 'AAAA' });
+    expect(mapHydratedImageSources([image])).toEqual(
+      new Map([[`data:image/png;base64,AAAA`, 5]]),
+    );
+  });
+
+  it('skips an image with neither url nor base64Data', () => {
+    const image = makeImage({ base64Data: null, url: null });
+    expect(mapHydratedImageSources([image]).size).toBe(0);
+  });
+});
+
+describe('dehydrateKnownImages', () => {
+  it('puts an untouched R2 image back to its placeholder', () => {
+    const image = makeR2Image({ id: 5 });
+    const hydrated = `# Tiêu đề\n\n![anh.png](${image.url})`;
+    const bySrc = mapHydratedImageSources([image]);
+    expect(dehydrateKnownImages(hydrated, bySrc)).toBe(`# Tiêu đề\n\n![anh.png](${DOC_IMAGE_PREFIX}5)`);
+  });
+
+  it('leaves an R2 url the caller does not know about untouched (so it still counts as a removed/new image)', () => {
+    const markdown = '![a](https://pub-example.r2.dev/some/other.png)';
+    expect(dehydrateKnownImages(markdown, new Map())).toBe(markdown);
+  });
+
+  it('round-trips: hydrate then dehydrate an R2 image returns the original placeholder content', () => {
+    const original = `# Hướng dẫn\n\n![anh.png](${DOC_IMAGE_PREFIX}5)\n\nKết thúc.`;
+    const images = [makeR2Image({ id: 5 })];
+
+    const hydrated = hydratePlaceholders(original, images);
+    expect(hydrated).not.toBe(original);
+
+    const dehydrated = dehydrateKnownImages(hydrated, mapHydratedImageSources(images));
+    expect(dehydrated).toBe(original);
+  });
+
+  it('does not touch a genuinely new pasted data: URI image', () => {
+    const dataUri = `data:image/png;base64,${PNG_BASE64}`;
+    const markdown = `![new](${dataUri})`;
+    const bySrc = mapHydratedImageSources([makeR2Image({ id: 1 })]);
+    expect(dehydrateKnownImages(markdown, bySrc)).toBe(markdown);
   });
 });
 

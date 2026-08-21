@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Clock3,
   ClipboardList,
+  Database,
   History,
   LayoutDashboard,
   LibraryBig,
@@ -66,6 +67,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const { hasAnyRole, getCurrentRoleNumber } = useAuthStore();
   const isAdmin = hasAnyRole([1, 'Admin']);
   const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
+  const canViewR2Usage = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
   const canViewShifts = getCurrentRoleNumber() !== 2;
 
   useEffect(() => {
@@ -114,6 +116,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
     if (path === '/overtime-approval') return 'overtime_approval';
+    if (path === '/r2-usage') return 'r2_usage';
     if (path === '/settings') return 'settings';
     return 'overview';
   };
@@ -148,6 +151,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
       case 'overtime_approval': navigate('/overtime-approval'); break;
+      case 'r2_usage': navigate('/r2-usage'); break;
       case 'settings': navigate('/settings'); break;
       default: navigate('/overview');
     }
@@ -387,6 +391,14 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <button onClick={() => navigateTo('overtime_approval')} className={navButtonClass(activeTab === 'overtime_approval')}>
                   <TimerReset className="w-4 h-4" />
                   <span>Duyệt OT</span>
+                </button>
+              </li>
+            )}
+            {canViewR2Usage && (
+              <li>
+                <button onClick={() => navigateTo('r2_usage')} className={navButtonClass(activeTab === 'r2_usage')}>
+                  <Database className="w-4 h-4" />
+                  <span>Hạn mức R2</span>
                 </button>
               </li>
             )}

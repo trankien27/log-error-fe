@@ -326,7 +326,12 @@ export interface KnowledgeDocumentImageDto {
   fileName: string;
   contentType: string;
   fileSize: number;
-  base64Data: string;
+  /** null khi ảnh nằm trên R2 — dùng `url` khi đó. */
+  base64Data: string | null;
+  /** URL tải ảnh khi ảnh nằm trên R2; null khi ảnh lưu inline base64. */
+  url: string | null;
+  /** Tên enum `FileStorageProvider` phía backend ("R2" | "InlineBase64"), không phải số. */
+  storageProvider: string;
   position: number;
   createdAt: string;
 }
@@ -337,6 +342,8 @@ export interface KnowledgeDocumentImageSummaryDto {
   fileName: string;
   contentType: string;
   fileSize: number;
+  url: string | null;
+  storageProvider: string;
   position: number;
   createdAt: string;
 }
@@ -645,4 +652,5 @@ export type TabType =
   | 'notifications'
   | 'schedule'
   | 'overtime_approval'
+  | 'r2_usage'
   | 'settings';

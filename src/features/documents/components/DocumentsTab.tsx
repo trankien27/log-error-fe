@@ -25,9 +25,11 @@ import MarkdownEditor from './MarkdownEditor';
 import MarkdownRenderer from './MarkdownRenderer';
 import {
   DOC_IMAGE_PREFIX,
+  dehydrateKnownImages,
   extractDataUriImages,
   extractPlaceholderIds,
   hydratePlaceholders,
+  mapHydratedImageSources,
   replaceDataUri,
   stripImageMarkdown,
 } from '../utils/documentImages';
@@ -74,6 +76,14 @@ export default function DocumentsTab() {
    */
   const savedPlaceholderContentRef = useRef<string>('');
 
+  /**
+   * Reverse of the src map `hydratePlaceholders` just applied — src (a `data:` URI or an R2
+   * `url`) back to image id. `saveDocument` runs this before diffing so an image the user
+   * never touched is not mistaken for a new pending upload or an orphan. See
+   * `dehydrateKnownImages` for why this matters more for R2-backed images than base64 ones.
+   */
+  const hydratedImageSrcByIdRef = useRef<Map<string, number>>(new Map());
+
   const filteredDocuments = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase('vi-VN');
     if (!normalizedKeyword) return documents;
@@ -93,10 +103,12 @@ export default function DocumentsTab() {
    */
   const hydrateDocument = async (document: KnowledgeDocumentDto): Promise<KnowledgeDocumentDto> => {
     savedPlaceholderContentRef.current = document.contentMarkdown;
+    hydratedImageSrcByIdRef.current = new Map();
     if (!document.contentMarkdown.includes(DOC_IMAGE_PREFIX)) return document;
 
     try {
       const images = await documentsService.listImages(document.id);
+      hydratedImageSrcByIdRef.current = mapHydratedImageSources(images);
       return {
         ...document,
         contentMarkdown: hydratePlaceholders(document.contentMarkdown, images),
@@ -158,6 +170,7 @@ export default function DocumentsTab() {
     setDraft({ ...EMPTY_DRAFT });
     setSelectedDocument(null);
     savedPlaceholderContentRef.current = '';
+    hydratedImageSrcByIdRef.current = new Map();
     setIsCreating(true);
     setIsEditing(true);
   };
@@ -224,7 +237,10 @@ export default function DocumentsTab() {
         setIsCreating(false);
       }
 
-      let content = draft.contentMarkdown;
+      // Put every image the user did NOT touch back to its `doc-image://{id}` placeholder
+      // before scanning for pending uploads/orphans — see `dehydrateKnownImages` for why
+      // this is required (not just an optimization) once R2-backed images are in play.
+      let content = dehydrateKnownImages(draft.contentMarkdown, hydratedImageSrcByIdRef.current);
       for (const pendingImage of extractDataUriImages(content)) {
         const uploadedImage = await documentsService.uploadImage(documentId, {
           fileName: fileNameForContentType(pendingImage.contentType),

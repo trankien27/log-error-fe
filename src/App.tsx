@@ -22,6 +22,7 @@ import OvertimeApprovalTab from './features/overtime/components/OvertimeApproval
 import SettingsTab from './features/settings/components/SettingsTab';
 import AppearanceSettingsTab from './features/settings/components/AppearanceSettingsTab';
 import DocumentsTab from './features/documents/components/DocumentsTab';
+import R2UsageTab from './features/r2-usage/components/R2UsageTab';
 import BoothGuestLayout from './features/booth-guest/components/BoothGuestLayout';
 import BoothPinPage from './features/booth-guest/components/BoothPinPage';
 import { useAuthStore } from './stores/useAuthStore';
@@ -47,6 +48,12 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function OvertimeApprovalRoute({ children }: { children: React.ReactNode }) {
   const { hasAnyRole } = useAuthStore();
   return hasAnyRole([1, 3, 'Admin', 'ITSupportManager']) ? <>{children}</> : <Navigate to="/schedule" replace />;
+}
+
+// Admin hoac IT Support Manager; khac OvertimeApprovalRoute o cho redirect ve /overview.
+function AdminOrManagerRoute({ children }: { children: React.ReactNode }) {
+  const { hasAnyRole } = useAuthStore();
+  return hasAnyRole([1, 3, 'Admin', 'ITSupportManager']) ? <>{children}</> : <Navigate to="/overview" replace />;
 }
 
 function NotITSupportRoute({ children }: { children: React.ReactNode }) {
@@ -138,6 +145,14 @@ export default function App() {
             <OvertimeApprovalRoute>
               <OvertimeApprovalTab />
             </OvertimeApprovalRoute>
+          )}
+        />
+        <Route
+          path="r2-usage"
+          element={(
+            <AdminOrManagerRoute>
+              <R2UsageTab />
+            </AdminOrManagerRoute>
           )}
         />
         <Route path="settings" element={<SettingsTab />} />
