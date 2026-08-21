@@ -1,5 +1,6 @@
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   BookOpenText,
   Clock3,
   Edit3,
@@ -164,11 +165,6 @@ export default function DocumentsTab() {
         const items = await documentsService.getAll();
         if (!isMounted) return;
         setDocuments(items);
-        if (items.length > 0) {
-          const firstDocument = await documentsService.getById(items[0].id);
-          const hydratedDocument = await hydrateDocument(firstDocument);
-          if (isMounted) setSelectedDocument(hydratedDocument);
-        }
       } catch (error: any) {
         if (isMounted) toast.error(error.message || 'Không thể tải danh sách tài liệu.');
       } finally {
@@ -208,8 +204,18 @@ export default function DocumentsTab() {
     if (!isCreating) return;
 
     setIsCreating(false);
-    const firstDocument = documents[0];
-    if (firstDocument) await loadDocument(firstDocument.id);
+    setSelectedDocument(null);
+  };
+
+  const goBackToList = () => {
+    if (isSaving) return;
+    setSelectedDocument(null);
+    setIsCreating(false);
+    setIsEditing(false);
+    setDraft({ ...EMPTY_DRAFT });
+    savedPlaceholderContentRef.current = '';
+    hydratedImageSrcByIdRef.current = new Map();
+    pendingImageFilesByDataUriRef.current = new Map();
   };
 
   /**
@@ -306,9 +312,8 @@ export default function DocumentsTab() {
 
     try {
       await documentsService.delete(selectedDocument.id);
-      const remainingDocuments = await refreshDocuments();
+      await refreshDocuments();
       setSelectedDocument(null);
-      if (remainingDocuments.length > 0) await loadDocument(remainingDocuments[0].id);
       toast.success('Đã xoá tài liệu.');
     } catch (error: any) {
       toast.error(error.message || 'Không thể xoá tài liệu.');
@@ -316,77 +321,81 @@ export default function DocumentsTab() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-112px)] w-full max-w-[1680px] flex-col gap-4 p-3 sm:p-5 xl:flex-row">
-      <aside className="flex max-h-[360px] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card xl:max-h-none xl:w-[330px]">
-        <div className="border-b border-outline-variant p-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h1 className="flex items-center gap-2 text-lg font-black text-on-surface">
-                <BookOpenText className="h-5 w-5 text-primary" /> Tài liệu
-              </h1>
-              <p className="mt-1 text-[11px] font-medium text-on-surface-variant">Kho Markdown dùng chung và cá nhân</p>
+    <div className="mx-auto min-h-[calc(100dvh-112px)] w-full max-w-[1280px] p-3 sm:p-5">
+      {!selectedDocument && !isEditing ? (
+        <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card">
+          <div className="border-b border-outline-variant px-4 py-4 sm:px-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="flex items-center gap-2 text-xl font-black text-on-surface">
+                  <BookOpenText className="h-5 w-5 text-primary" /> Tài liệu
+                </h1>
+                <p className="mt-1 text-xs font-medium text-on-surface-variant">Chọn một tài liệu để mở nội dung chi tiết.</p>
+              </div>
+              <button type="button" onClick={startCreating} className="btn-primary h-10 px-4" title="Tạo tài liệu mới">
+                <Plus className="h-4 w-4" /> Thêm tài liệu
+              </button>
             </div>
-            <button type="button" onClick={startCreating} className="btn-primary h-9 px-3" title="Tạo tài liệu mới">
-              <Plus className="h-4 w-4" /> <span className="hidden sm:inline xl:hidden 2xl:inline">Thêm</span>
-            </button>
+
+            <label className="relative block max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+              <input
+                value={keyword}
+                onChange={event => setKeyword(event.target.value)}
+                placeholder="Tìm trong tài liệu..."
+                className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
           </div>
 
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-            <input
-              value={keyword}
-              onChange={event => setKeyword(event.target.value)}
-              placeholder="Tìm trong tài liệu..."
-              className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-        </div>
-
-        <div className="flex-1 space-y-1 overflow-y-auto p-2">
-          {isLoadingList ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm font-semibold text-on-surface-variant">
-              <Loader2 className="h-4 w-4 animate-spin" /> Đang tải...
-            </div>
-          ) : filteredDocuments.length === 0 ? (
-            <div className="px-5 py-12 text-center">
-              <FileText className="mx-auto mb-3 h-9 w-9 text-on-surface-variant/40" />
-              <p className="text-sm font-bold text-on-surface">Chưa có tài liệu</p>
-              <p className="mt-1 text-xs text-on-surface-variant">Tạo tài liệu đầu tiên để bắt đầu ghi chú.</p>
-            </div>
-          ) : (
-            filteredDocuments.map(document => {
-              const isSelected = !isCreating && selectedDocument?.id === document.id;
-              return (
-                <button
-                  key={document.id}
-                  type="button"
-                  onClick={() => void loadDocument(document.id)}
-                  className={`w-full rounded-lg border px-3 py-3 text-left transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'border-primary/25 bg-primary-subtle'
-                      : 'border-transparent hover:border-outline-variant hover:bg-surface-2'
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <p className={`line-clamp-2 text-sm font-extrabold ${isSelected ? 'text-primary' : 'text-on-surface'}`}>{document.title}</p>
-                    {document.visibility === 1
-                      ? <Globe2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                      : <LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0 text-on-surface-variant" />}
-                  </div>
-                  <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-on-surface-variant">
-                    {document.preview || 'Tài liệu chưa có nội dung'}
-                  </p>
-                  <p className="mt-2 flex items-center gap-1 text-[10px] font-semibold text-on-surface-variant/80">
-                    <Clock3 className="h-3 w-3" /> {formatDateTime(document.updatedAt || document.createdAt)}
-                  </p>
+          <div className="p-3 sm:p-5">
+            {isLoadingList ? (
+              <div className="flex min-h-[360px] items-center justify-center gap-2 text-sm font-semibold text-on-surface-variant">
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải danh sách tài liệu...
+              </div>
+            ) : filteredDocuments.length === 0 ? (
+              <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
+                <FileText className="mb-3 h-10 w-10 text-on-surface-variant/40" />
+                <p className="text-base font-bold text-on-surface">Chưa có tài liệu</p>
+                <p className="mt-1 text-sm text-on-surface-variant">Tạo tài liệu đầu tiên để bắt đầu ghi chú.</p>
+                <button type="button" onClick={startCreating} className="btn-primary mt-5">
+                  <Plus className="h-4 w-4" /> Tạo tài liệu
                 </button>
-              );
-            })
-          )}
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card">
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {filteredDocuments.map(document => (
+                  <button
+                    key={document.id}
+                    type="button"
+                    onClick={() => void loadDocument(document.id)}
+                    className="min-h-40 rounded-xl border border-outline-variant bg-surface-2 p-4 text-left transition-colors hover:border-primary/35 hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/25"
+                  >
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <p className="line-clamp-2 text-base font-extrabold text-on-surface">{document.title}</p>
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${
+                        document.visibility === 1
+                          ? 'bg-primary-subtle text-primary'
+                          : 'bg-surface text-on-surface-variant'
+                      }`}>
+                        {document.visibility === 1 ? <Globe2 className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}
+                        {visibilityLabel(document.visibility)}
+                      </span>
+                    </div>
+                    <p className="line-clamp-3 text-sm leading-6 text-on-surface-variant">
+                      {document.preview || 'Tài liệu chưa có nội dung'}
+                    </p>
+                    <p className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant/80">
+                      <Clock3 className="h-3.5 w-3.5" /> {formatDateTime(document.updatedAt || document.createdAt)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      ) : (
+      <main className="min-w-0 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card">
         {isLoadingDocument ? (
           <div className="flex min-h-[560px] items-center justify-center gap-2 text-sm font-semibold text-on-surface-variant">
             <Loader2 className="h-5 w-5 animate-spin" /> Đang mở tài liệu...
@@ -396,18 +405,23 @@ export default function DocumentsTab() {
             <div className="border-b border-outline-variant px-4 py-4 sm:px-7">
               <div className="mx-auto max-w-6xl">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <select
-                    value={draft.visibility}
-                    onChange={event => setDraft(current => ({
-                      ...current,
-                      visibility: Number(event.target.value) as KnowledgeDocumentVisibility,
-                    }))}
-                    className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
-                    aria-label="Phạm vi tài liệu"
-                  >
-                    <option value={2}>🔒 Personal — chỉ mình tôi</option>
-                    <option value={1}>🌐 Global — tất cả người dùng</option>
-                  </select>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={goBackToList} disabled={isSaving} className="btn-secondary h-9 px-3">
+                      <ArrowLeft className="h-4 w-4" /> Danh sách
+                    </button>
+                    <select
+                      value={draft.visibility}
+                      onChange={event => setDraft(current => ({
+                        ...current,
+                        visibility: Number(event.target.value) as KnowledgeDocumentVisibility,
+                      }))}
+                      className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
+                      aria-label="Phạm vi tài liệu"
+                    >
+                      <option value={2}>Personal - chỉ mình tôi</option>
+                      <option value={1}>Global - tất cả người dùng</option>
+                    </select>
+                  </div>
 
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={() => void cancelEditing()} disabled={isSaving} className="btn-secondary h-9 px-3">
@@ -451,14 +465,19 @@ export default function DocumentsTab() {
             <header className="border-b border-outline-variant px-5 py-5 sm:px-8">
               <div className="mx-auto max-w-5xl">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${
-                    selectedDocument.visibility === 1
-                      ? 'bg-primary-subtle text-primary'
-                      : 'bg-surface-2 text-on-surface-variant'
-                  }`}>
-                    {selectedDocument.visibility === 1 ? <Globe2 className="h-3.5 w-3.5" /> : <LockKeyhole className="h-3.5 w-3.5" />}
-                    {visibilityLabel(selectedDocument.visibility)}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={goBackToList} className="btn-secondary h-9 px-3">
+                      <ArrowLeft className="h-4 w-4" /> Danh sách
+                    </button>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${
+                      selectedDocument.visibility === 1
+                        ? 'bg-primary-subtle text-primary'
+                        : 'bg-surface-2 text-on-surface-variant'
+                    }`}>
+                      {selectedDocument.visibility === 1 ? <Globe2 className="h-3.5 w-3.5" /> : <LockKeyhole className="h-3.5 w-3.5" />}
+                      {visibilityLabel(selectedDocument.visibility)}
+                    </span>
+                  </div>
 
                   {selectedDocument.canEdit && (
                     <div className="flex items-center gap-2">
@@ -500,6 +519,7 @@ export default function DocumentsTab() {
           </div>
         )}
       </main>
+      )}
     </div>
   );
 }
