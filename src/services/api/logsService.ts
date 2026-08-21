@@ -252,7 +252,7 @@ export const logsService = {
 
     const payload = await response.json().catch(() => null);
     if (!response.ok) {
-      throw new Error(payload?.message || `Không thể tải tệp lên Telegram. Status: ${response.status}`);
+      throw new Error(payload?.message || `Không thể tải tệp lên hệ thống lưu trữ. Status: ${response.status}`);
     }
 
     return payload?.data ?? payload;
