@@ -785,11 +785,7 @@ export default function ErrorLogsTab() {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map(log => {
-                  const cloudflareImages = log.attachments?.filter(canPreviewCloudflareImage) ?? [];
-                  const previewImage = cloudflareImages[0];
-
-                  return (
+                filteredLogs.map(log => (
                   <tr key={log.id} className="hover:bg-surface-2 transition-colors">
                     <td className="py-4 px-5">
                       <input
@@ -821,36 +817,11 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className={previewImage
-                            ? 'inline-flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface-2 p-1 pr-2 text-left font-bold text-primary transition-colors hover:border-primary/40 hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/30'
-                            : 'inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 font-bold text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30'}
-                          title={previewImage ? 'Xem preview ảnh Cloudflare' : 'Xem tệp đính kèm'}
+                          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 font-bold text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          title="Xem tệp đính kèm"
                         >
-                          {previewImage ? (
-                            <>
-                              <span className="h-12 w-16 shrink-0 overflow-hidden rounded-md bg-surface">
-                                <img
-                                  src={previewImage.downloadUrl}
-                                  alt={previewImage.fileName}
-                                  loading="lazy"
-                                  className="h-full w-full object-cover"
-                                />
-                              </span>
-                              <span className="flex min-w-0 flex-col">
-                                <span className="truncate text-[11px] text-on-surface" title={previewImage.fileName}>
-                                  {previewImage.fileName}
-                                </span>
-                                <span className="text-[10px] text-on-surface-variant">
-                                  {cloudflareImages.length} ảnh · {log.attachments.length} tệp
-                                </span>
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Paperclip className="h-3.5 w-3.5" />
-                              {log.attachments.length}
-                            </>
-                          )}
+                          <Paperclip className="h-3.5 w-3.5" />
+                          {log.attachments.length}
                         </button>
                       ) : (
                         <span className="text-on-surface-variant/60">—</span>
@@ -888,8 +859,7 @@ export default function ErrorLogsTab() {
                       </div>
                     </td>
                   </tr>
-                  );
-                })
+                ))
               )}
             </tbody>
           </table>
