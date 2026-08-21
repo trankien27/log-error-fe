@@ -6,7 +6,7 @@ import { lookupService } from '../../../services/api/lookupService';
 import { logsService } from '../../../services/api/logsService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
-import { ErrorGroup, ErrorLog, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
+import { ErrorGroup, ErrorLog, ErrorLogAttachment, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
 
 const errorGroupLabels: Record<ErrorGroup, string> = {
   1: 'Phần cứng',
@@ -92,6 +92,36 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const IMAGE_ATTACHMENT_EXTENSIONS = ['.apng', '.avif', '.bmp', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp'];
+
+function getAttachmentProvider(attachment: ErrorLogAttachment) {
+  return (attachment.storageProvider || '').trim().toLowerCase();
+}
+
+function isCloudflareAttachment(attachment: ErrorLogAttachment) {
+  const provider = getAttachmentProvider(attachment);
+  return provider === 'r2' || provider === 'cloudflare' || provider === 'cloudflarer2';
+}
+
+function isImageAttachment(attachment: ErrorLogAttachment) {
+  const contentType = (attachment.contentType || '').toLowerCase();
+
+  if (contentType.startsWith('image/')) {
+    return true;
+  }
+
+  const fileName = (attachment.fileName || '').toLowerCase();
+  return IMAGE_ATTACHMENT_EXTENSIONS.some(extension => fileName.endsWith(extension));
+}
+
+function canPreviewCloudflareImage(attachment: ErrorLogAttachment) {
+  return isCloudflareAttachment(attachment) && isImageAttachment(attachment) && Boolean(attachment.downloadUrl);
+}
+
+function getStorageProviderLabel(attachment: ErrorLogAttachment) {
+  return isCloudflareAttachment(attachment) ? 'Cloudflare' : (attachment.storageProvider || 'Telegram');
+}
+
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 48 * 1024 * 1024;
 
@@ -175,6 +205,7 @@ export default function ErrorLogsTab() {
 
   const filteredLogs = getFilteredLogs();
   const selectedLogIdSet = new Set(selectedLogIds);
+  const selectedLogCloudflareImages = selectedLogDetails?.attachments?.filter(canPreviewCloudflareImage) ?? [];
   const currentPageLogIds = filteredLogs.map(log => log.id);
   const isAllCurrentPageSelected = currentPageLogIds.length > 0 && currentPageLogIds.every(id => selectedLogIdSet.has(id));
   useEffect(() => {
@@ -308,7 +339,7 @@ export default function ErrorLogsTab() {
 
       await fetchLogs(getActiveQuery());
       toast.success(
-        `${currentEditingLog ? 'Cập nhật' : 'Tạo'} log lỗi thành công${attachmentFiles.length > 0 ? ` và đã tải ${attachmentFiles.length} tệp lên Telegram` : ''}.`,
+        `${currentEditingLog ? 'Cập nhật' : 'Tạo'} log lỗi thành công${attachmentFiles.length > 0 ? ` và đã tải ${attachmentFiles.length} tệp lên hệ thống lưu trữ` : ''}.`,
       );
       setIsModalOpen(false);
     } catch (err: any) {
@@ -1099,20 +1130,46 @@ export default function ErrorLogsTab() {
                   <div className="mt-4 border-t border-outline-variant pt-3">
                     <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tệp đã lưu</p>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {currentEditingLog!.attachments.map(attachment => (
-                        <a
-                          key={attachment.id}
-                          href={attachment.downloadUrl}
-                          download={attachment.fileName}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs transition-colors hover:border-primary/40 hover:text-primary"
-                        >
-                          <Download className="h-4 w-4 shrink-0" />
-                          <span className="min-w-0 flex-1 truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
-                          <span className="shrink-0 text-on-surface-variant">{formatFileSize(attachment.fileSize)}</span>
-                        </a>
-                      ))}
+                      {currentEditingLog!.attachments.map(attachment => {
+                        const canPreview = canPreviewCloudflareImage(attachment);
+
+                        return (
+                          <a
+                            key={attachment.id}
+                            href={attachment.downloadUrl}
+                            download={attachment.fileName}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={canPreview
+                              ? 'block min-w-0 overflow-hidden rounded-lg border border-outline-variant bg-surface text-xs transition-colors hover:border-primary/40 hover:text-primary'
+                              : 'flex min-w-0 items-center gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-xs transition-colors hover:border-primary/40 hover:text-primary'}
+                          >
+                            {canPreview ? (
+                              <>
+                                <div className="aspect-video w-full bg-surface-2">
+                                  <img
+                                    src={attachment.downloadUrl}
+                                    alt={attachment.fileName}
+                                    loading="lazy"
+                                    className="h-full w-full object-contain"
+                                  />
+                                </div>
+                                <div className="flex min-w-0 items-center gap-2 px-3 py-2">
+                                  <Download className="h-4 w-4 shrink-0" />
+                                  <span className="min-w-0 flex-1 truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
+                                  <span className="shrink-0 text-on-surface-variant">{formatFileSize(attachment.fileSize)}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <Download className="h-4 w-4 shrink-0" />
+                                <span className="min-w-0 flex-1 truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
+                                <span className="shrink-0 text-on-surface-variant">{formatFileSize(attachment.fileSize)}</span>
+                              </>
+                            )}
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1131,7 +1188,7 @@ export default function ErrorLogsTab() {
                   disabled={isLoading || isUploadingAttachments}
                   className="btn-primary"
                 >
-                  {isUploadingAttachments ? 'Đang tải tệp lên Telegram...' : isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  {isUploadingAttachments ? 'Đang tải tệp...' : isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>
@@ -1141,7 +1198,7 @@ export default function ErrorLogsTab() {
 
       {selectedLogDetails && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+          <div className="bg-surface rounded-xl shadow-xl w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
               <div>
                 <h3 className="text-lg font-bold text-on-surface">Chi tiết log lỗi</h3>
@@ -1202,31 +1259,91 @@ export default function ErrorLogsTab() {
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Ghi chú</span>
                 <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
               </div>
+              {selectedLogCloudflareImages.length > 0 && (
+                <div>
+                  <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Ảnh Cloudflare</span>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {selectedLogCloudflareImages.map(attachment => (
+                      <a
+                        key={attachment.id}
+                        href={attachment.downloadUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group block overflow-hidden rounded-lg border border-outline-variant bg-surface-2 transition-colors hover:border-primary/40"
+                        title="Mở ảnh Cloudflare"
+                      >
+                        <div className="aspect-video w-full bg-surface">
+                          <img
+                            src={attachment.downloadUrl}
+                            alt={attachment.fileName}
+                            loading="lazy"
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
+                        <div className="flex min-w-0 items-center gap-2 px-3 py-2 text-xs">
+                          <span className="min-w-0 flex-1 truncate font-semibold text-on-surface group-hover:text-primary" title={attachment.fileName}>{attachment.fileName}</span>
+                          <span className="shrink-0 text-on-surface-variant">{formatFileSize(attachment.fileSize)}</span>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tệp đính kèm</span>
                 {(selectedLogDetails.attachments?.length ?? 0) === 0 ? (
                   <p className="rounded-lg border border-dashed border-outline-variant bg-surface-2 p-3 text-on-surface-variant">Chưa có tệp đính kèm.</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {selectedLogDetails.attachments.map(attachment => (
-                      <a
-                        key={attachment.id}
-                        href={attachment.downloadUrl}
-                        download={attachment.fileName}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                        title="Mở và tải trực tiếp"
-                      >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Download className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
-                          <span className="block text-xs text-on-surface-variant">{formatFileSize(attachment.fileSize)} · Telegram</span>
-                        </span>
-                      </a>
-                    ))}
+                    {selectedLogDetails.attachments.map(attachment => {
+                      const canPreview = canPreviewCloudflareImage(attachment);
+
+                      return (
+                        <a
+                          key={attachment.id}
+                          href={attachment.downloadUrl}
+                          download={attachment.fileName}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={canPreview
+                            ? 'block min-w-0 overflow-hidden rounded-lg border border-outline-variant bg-surface-2 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary'
+                            : 'flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary'}
+                          title="Mở và tải trực tiếp"
+                        >
+                          {canPreview ? (
+                            <>
+                              <div className="aspect-video w-full bg-surface">
+                                <img
+                                  src={attachment.downloadUrl}
+                                  alt={attachment.fileName}
+                                  loading="lazy"
+                                  className="h-full w-full object-contain"
+                                />
+                              </div>
+                              <span className="flex min-w-0 items-center gap-3 p-3">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                  <Download className="h-4 w-4" />
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
+                                  <span className="block text-xs text-on-surface-variant">{formatFileSize(attachment.fileSize)} · {getStorageProviderLabel(attachment)}</span>
+                                </span>
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Download className="h-4 w-4" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate font-semibold" title={attachment.fileName}>{attachment.fileName}</span>
+                                <span className="block text-xs text-on-surface-variant">{formatFileSize(attachment.fileSize)} · {getStorageProviderLabel(attachment)}</span>
+                              </span>
+                            </>
+                          )}
+                        </a>
+                      );
+                    })}
                   </div>
                 )}
               </div>

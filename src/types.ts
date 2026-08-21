@@ -10,6 +10,7 @@ export interface ErrorLogAttachment {
   fileSize: number;
   telegramFilePath: string;
   downloadUrl: string;
+  storageProvider?: string;
   createdTime: string;
 }
 
