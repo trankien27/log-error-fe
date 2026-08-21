@@ -26,12 +26,11 @@ import MarkdownEditor from './MarkdownEditor';
 import MarkdownRenderer from './MarkdownRenderer';
 import {
   DOC_IMAGE_PREFIX,
-  dehydrateKnownImages,
   extractDataUriImages,
   extractPlaceholderIds,
   hydratePlaceholders,
   mapHydratedImageSources,
-  replaceDataUri,
+  replaceDataUriWithSrc,
   stripImageMarkdown,
 } from '../utils/documentImages';
 
@@ -84,16 +83,15 @@ export default function DocumentsTab() {
   const [isCreating, setIsCreating] = useState(false);
 
   /**
-   * The last content we know the server holds, with images still as `doc-image://{id}`
-   * placeholders. It is the baseline for working out which images a save orphaned.
+   * The last content we know the server holds. Older documents may still contain
+   * `doc-image://{id}` placeholders; new saves write R2 URLs directly.
    */
   const savedPlaceholderContentRef = useRef<string>('');
 
   /**
-   * Reverse of the src map `hydratePlaceholders` just applied — src (a `data:` URI or an R2
-   * `url`) back to image id. `saveDocument` runs this before diffing so an image the user
-   * never touched is not mistaken for a new pending upload or an orphan. See
-   * `dehydrateKnownImages` for why this matters more for R2-backed images than base64 ones.
+   * Reverse of the src map `hydratePlaceholders` just applied: R2 URL back to image id.
+   * This keeps cleanup working for old placeholder-backed documents after they are saved
+   * in the new URL-backed format.
    */
   const hydratedImageSrcByIdRef = useRef<Map<string, number>>(new Map());
 
@@ -121,11 +119,12 @@ export default function DocumentsTab() {
     savedPlaceholderContentRef.current = document.contentMarkdown;
     hydratedImageSrcByIdRef.current = new Map();
     pendingImageFilesByDataUriRef.current = new Map();
-    if (!document.contentMarkdown.includes(DOC_IMAGE_PREFIX)) return document;
 
     try {
       const images = await documentsService.listImages(document.id);
       hydratedImageSrcByIdRef.current = mapHydratedImageSources(images);
+      if (!document.contentMarkdown.includes(DOC_IMAGE_PREFIX)) return document;
+
       return {
         ...document,
         contentMarkdown: hydratePlaceholders(document.contentMarkdown, images),
@@ -260,22 +259,33 @@ export default function DocumentsTab() {
         setIsCreating(false);
       }
 
-      // Put every image the user did NOT touch back to its `doc-image://{id}` placeholder
-      // before scanning for pending uploads/orphans — see `dehydrateKnownImages` for why
-      // this is required (not just an optimization) once R2-backed images are in play.
-      let content = dehydrateKnownImages(draft.contentMarkdown, hydratedImageSrcByIdRef.current);
+      let content = draft.contentMarkdown;
       for (const pendingImage of extractDataUriImages(content)) {
         const uploadedImage = await documentsService.uploadImage(
           documentId,
           pendingImageFilesByDataUriRef.current.get(pendingImage.dataUri) ??
             dataUriToFile(pendingImage.dataUri, pendingImage.contentType),
         );
-        content = replaceDataUri(content, pendingImage.dataUri, uploadedImage.id);
+        if (!uploadedImage.url) {
+          throw new Error('Backend chưa trả URL Cloudflare R2 cho ảnh vừa tải lên.');
+        }
+
+        content = replaceDataUriWithSrc(content, pendingImage.dataUri, uploadedImage.url);
+        hydratedImageSrcByIdRef.current.set(uploadedImage.url, uploadedImage.id);
         pendingImageFilesByDataUriRef.current.delete(pendingImage.dataUri);
       }
 
       const referencedImageIds = new Set(extractPlaceholderIds(content));
-      const orphanImageIds = extractPlaceholderIds(savedPlaceholderContentRef.current)
+      for (const [src, imageId] of hydratedImageSrcByIdRef.current) {
+        if (content.includes(src)) referencedImageIds.add(imageId);
+      }
+
+      const previousImageIds = new Set(extractPlaceholderIds(savedPlaceholderContentRef.current));
+      for (const [src, imageId] of hydratedImageSrcByIdRef.current) {
+        if (savedPlaceholderContentRef.current.includes(src)) previousImageIds.add(imageId);
+      }
+
+      const orphanImageIds = [...previousImageIds]
         .filter(imageId => !referencedImageIds.has(imageId));
 
       for (const orphanImageId of orphanImageIds) {
@@ -363,33 +373,40 @@ export default function DocumentsTab() {
                 </button>
               </div>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {filteredDocuments.map(document => (
-                  <button
-                    key={document.id}
-                    type="button"
-                    onClick={() => void loadDocument(document.id)}
-                    className="min-h-40 rounded-xl border border-outline-variant bg-surface-2 p-4 text-left transition-colors hover:border-primary/35 hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/25"
-                  >
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <p className="line-clamp-2 text-base font-extrabold text-on-surface">{document.title}</p>
-                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${
+              <div className="overflow-hidden rounded-lg border border-outline-variant">
+                <div className="grid grid-cols-[minmax(0,1fr)_120px_180px] gap-4 border-b border-outline-variant bg-surface-2 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant max-md:hidden">
+                  <span>Tiêu đề</span>
+                  <span>Phạm vi</span>
+                  <span>Cập nhật</span>
+                </div>
+                <div className="divide-y divide-outline-variant/70">
+                  {filteredDocuments.map(document => (
+                    <button
+                      key={document.id}
+                      type="button"
+                      onClick={() => void loadDocument(document.id)}
+                      className="grid w-full gap-2 px-4 py-3 text-left transition-colors hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/25 md:grid-cols-[minmax(0,1fr)_120px_180px] md:items-center md:gap-4"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-extrabold text-on-surface">{document.title}</span>
+                        <span className="mt-1 block truncate text-xs text-on-surface-variant">
+                          {document.preview || 'Tài liệu chưa có nội dung'}
+                        </span>
+                      </span>
+                      <span className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${
                         document.visibility === 1
                           ? 'bg-primary-subtle text-primary'
-                          : 'bg-surface text-on-surface-variant'
+                          : 'bg-surface-2 text-on-surface-variant'
                       }`}>
                         {document.visibility === 1 ? <Globe2 className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}
                         {visibilityLabel(document.visibility)}
                       </span>
-                    </div>
-                    <p className="line-clamp-3 text-sm leading-6 text-on-surface-variant">
-                      {document.preview || 'Tài liệu chưa có nội dung'}
-                    </p>
-                    <p className="mt-4 flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant/80">
-                      <Clock3 className="h-3.5 w-3.5" /> {formatDateTime(document.updatedAt || document.createdAt)}
-                    </p>
-                  </button>
-                ))}
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant/80">
+                        <Clock3 className="h-3.5 w-3.5" /> {formatDateTime(document.updatedAt || document.createdAt)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

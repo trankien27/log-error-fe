@@ -216,6 +216,12 @@ export function replaceDataUri(markdown: string, dataUri: string, imageId: numbe
   return markdown.split(dataUri).join(`${DOC_IMAGE_PREFIX}${imageId}`);
 }
 
+/** Replaces a temporary editor data URI with a permanent R2 URL. */
+export function replaceDataUriWithSrc(markdown: string, dataUri: string, src: string): string {
+  if (!markdown || !dataUri || !src) return markdown;
+  return markdown.split(dataUri).join(src);
+}
+
 /** Distinct image ids referenced by the content, in first-seen order. */
 export function extractPlaceholderIds(markdown: string): number[] {
   if (!markdown) return [];
