@@ -1,6 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AlertTriangle, Bell, Check, LogOut, Menu, Palette, Search, Send, UserCog } from 'lucide-react';
+import {
+  AlertTriangle,
+  Bell,
+  Check,
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
+  CloudSun,
+  LogOut,
+  Menu,
+  Palette,
+  Search,
+  Send,
+  Sun,
+  UserCog,
+} from 'lucide-react';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLogsStore } from '../../stores/useLogsStore';
@@ -10,6 +27,68 @@ import { useBoothsStore } from '../../stores/useBoothsStore';
 type TopHeaderProps = {
   onOpenSidebar: () => void;
 };
+
+type WeatherState = {
+  temperature: number;
+  code: number;
+  isDay: boolean;
+};
+
+function getWeatherMeta(code: number, isDay: boolean) {
+  if (code === 0) {
+    return {
+      label: 'Trời quang',
+      icon: isDay ? Sun : CloudSun,
+      iconClassName: isDay ? 'text-warning animate-pulse' : 'text-primary animate-pulse',
+    };
+  }
+
+  if ([1, 2, 3].includes(code)) {
+    return {
+      label: 'Có mây',
+      icon: CloudSun,
+      iconClassName: 'text-primary animate-pulse',
+    };
+  }
+
+  if ([45, 48].includes(code)) {
+    return {
+      label: 'Sương mù',
+      icon: CloudFog,
+      iconClassName: 'text-on-surface-variant animate-pulse',
+    };
+  }
+
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) {
+    return {
+      label: 'Có mưa',
+      icon: CloudRain,
+      iconClassName: 'text-primary animate-bounce',
+    };
+  }
+
+  if ([71, 73, 75, 77, 85, 86].includes(code)) {
+    return {
+      label: 'Có tuyết',
+      icon: CloudSnow,
+      iconClassName: 'text-info animate-pulse',
+    };
+  }
+
+  if ([95, 96, 99].includes(code)) {
+    return {
+      label: 'Dông sét',
+      icon: CloudLightning,
+      iconClassName: 'text-warning animate-pulse',
+    };
+  }
+
+  return {
+    label: 'Thời tiết',
+    icon: Cloud,
+    iconClassName: 'text-on-surface-variant animate-pulse',
+  };
+}
 
 export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   const navigate = useNavigate();
@@ -48,8 +127,71 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   // Local UI States for quick notifications panel
   const [isQuickNotifModalOpen, setIsQuickNotifModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [weather, setWeather] = useState<WeatherState | null>(null);
+  const [weatherStatus, setWeatherStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const quickNotifRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!navigator.geolocation) {
+      setWeatherStatus('error');
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    setWeatherStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      async position => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const params = new URLSearchParams({
+            latitude: latitude.toFixed(4),
+            longitude: longitude.toFixed(4),
+            current: 'temperature_2m,weather_code,is_day',
+            timezone: 'auto',
+          });
+          const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+
+          if (!response.ok) {
+            throw new Error(`Weather request failed: ${response.status}`);
+          }
+
+          const payload = await response.json();
+          const current = payload?.current;
+
+          if (!isMounted) return;
+          if (!current) {
+            setWeatherStatus('error');
+            return;
+          }
+
+          setWeather({
+            temperature: Number(current.temperature_2m),
+            code: Number(current.weather_code),
+            isDay: Number(current.is_day) === 1,
+          });
+          setWeatherStatus('idle');
+        } catch {
+          if (isMounted) setWeatherStatus('error');
+        }
+      },
+      () => {
+        if (isMounted) setWeatherStatus('error');
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 10 * 60 * 1000,
+        timeout: 8000,
+      },
+    );
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Click outside to close notifications dropdown
   useEffect(() => {
@@ -70,6 +212,8 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   }, [isQuickNotifModalOpen, isUserMenuOpen]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+  const weatherMeta = weather ? getWeatherMeta(weather.code, weather.isDay) : null;
+  const WeatherIcon = weatherMeta?.icon;
 
   const handleLogoutClick = () => {
     setIsUserMenuOpen(false);
@@ -101,6 +245,21 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
       <div className="flex-1 max-w-sm min-w-0" />
 
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div
+          className="hidden sm:flex h-9 items-center gap-2 rounded-full border border-outline-variant bg-surface-2 px-3 text-xs font-bold text-on-surface shadow-sm"
+          title={weather ? `${weatherMeta?.label} tại vị trí hiện tại` : weatherStatus === 'loading' ? 'Đang lấy thời tiết tại vị trí hiện tại' : 'Không lấy được thời tiết tại vị trí hiện tại'}
+        >
+          {WeatherIcon ? (
+            <WeatherIcon className={`h-4 w-4 shrink-0 ${weatherMeta.iconClassName}`} />
+          ) : (
+            <CloudSun className={`h-4 w-4 shrink-0 text-primary ${weatherStatus === 'loading' ? 'animate-pulse' : ''}`} />
+          )}
+          <span className="tabular-nums">
+            {weather ? `${Math.round(weather.temperature)}°C` : weatherStatus === 'loading' ? '...' : '--°'}
+          </span>
+          {weatherMeta && <span className="hidden lg:inline text-on-surface-variant">{weatherMeta.label}</span>}
+        </div>
+
         {/* Notification Bell Dropdown Container */}
         <div className="relative" ref={quickNotifRef}>
           <button
