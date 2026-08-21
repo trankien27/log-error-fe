@@ -117,22 +117,76 @@ export function buildDataUri(contentType: string, base64: string): string {
 }
 
 /**
- * Replaces every `doc-image://{id}` placeholder with the matching image's data URI.
- * Placeholders with no matching image (deleted, or not visible to this user) are left
- * untouched — the sanitizer then drops the unknown protocol and the image simply does
- * not render, rather than the document failing to load.
+ * Resolves the src a hydrated image should render with: the server-supplied `url` when the
+ * image lives on R2, otherwise a `data:` URI built from the inline base64 payload. Shared by
+ * `hydratePlaceholders` and `mapHydratedImageSources` so the two can never disagree about
+ * what a given image's rendered src looks like.
+ */
+function resolveHydratedSrc(image: KnowledgeDocumentImageDto): string | null {
+  if (image.url) return image.url;
+  if (image.base64Data) return buildDataUri(image.contentType, image.base64Data);
+  return null;
+}
+
+/**
+ * Replaces every `doc-image://{id}` placeholder with the matching image's rendered src —
+ * a `url` for an R2-backed image, a `data:` URI for an inline-base64 one. Placeholders with
+ * no matching image (deleted, or not visible to this user) are left untouched — the
+ * sanitizer then drops the unknown protocol and the image simply does not render, rather
+ * than the document failing to load.
  */
 export function hydratePlaceholders(markdown: string, images: KnowledgeDocumentImageDto[]): string {
   if (!markdown || !markdown.includes(DOC_IMAGE_PREFIX)) return markdown;
 
-  const dataUriById = new Map<number, string>();
+  const srcById = new Map<number, string>();
   for (const image of images) {
-    dataUriById.set(image.id, buildDataUri(image.contentType, image.base64Data));
+    const src = resolveHydratedSrc(image);
+    if (src) srcById.set(image.id, src);
   }
 
   return markdown.replace(PLACEHOLDER_PATTERN, (match, rawId: string) =>
-    dataUriById.get(Number(rawId)) ?? match,
+    srcById.get(Number(rawId)) ?? match,
   );
+}
+
+/**
+ * Maps each hydrated image's rendered src back to its id — the exact reverse of what
+ * `hydratePlaceholders` just built. Used by `dehydrateKnownImages` right before a save.
+ */
+export function mapHydratedImageSources(images: KnowledgeDocumentImageDto[]): Map<string, number> {
+  const bySrc = new Map<string, number>();
+  for (const image of images) {
+    const src = resolveHydratedSrc(image);
+    if (src) bySrc.set(src, image.id);
+  }
+  return bySrc;
+}
+
+/**
+ * Puts every KNOWN image (per `bySrc`) still present in the editor's content back to its
+ * `doc-image://{id}` placeholder, before the save flow scans for pending uploads and
+ * orphans.
+ *
+ * This matters differently for the two storage backends. For an inline-base64 image its
+ * hydrated src is a `data:` URI, so without this step `extractDataUriImages` would treat an
+ * untouched image as a brand-new pending upload on every save — wasteful, but at least the
+ * bytes survive (re-uploaded under a new id, old id then deleted as an "orphan").
+ * For an R2-backed image its hydrated src is a plain `https://` URL, which matches neither
+ * `DATA_URI_IMAGE_PATTERN` (so it is never picked up as pending) nor `PLACEHOLDER_PATTERN`
+ * (so the orphan diff sees its id as removed from the content) — an untouched R2 image would
+ * silently be deleted server-side, both the DB row and the R2 object, on the very next save.
+ * Running this first makes both backends behave identically: an image the user did not
+ * touch keeps its id and is left alone.
+ */
+export function dehydrateKnownImages(markdown: string, bySrc: ReadonlyMap<string, number>): string {
+  if (!markdown || bySrc.size === 0) return markdown;
+
+  let result = markdown;
+  for (const [src, id] of bySrc) {
+    if (!src) continue;
+    result = result.split(src).join(`${DOC_IMAGE_PREFIX}${id}`);
+  }
+  return result;
 }
 
 /**
