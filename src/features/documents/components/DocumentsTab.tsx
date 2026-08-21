@@ -59,6 +59,18 @@ function fileNameForContentType(contentType: string) {
   return `image.${extension}`;
 }
 
+function dataUriToFile(dataUri: string, contentType: string) {
+  const [, base64 = ''] = dataUri.split(',');
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new File([bytes], fileNameForContentType(contentType), { type: contentType });
+}
+
 export default function DocumentsTab() {
   const [documents, setDocuments] = useState<KnowledgeDocumentSummaryDto[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocumentDto | null>(null);
@@ -84,6 +96,9 @@ export default function DocumentsTab() {
    */
   const hydratedImageSrcByIdRef = useRef<Map<string, number>>(new Map());
 
+  /** Data URI shown temporarily in the editor -> original File to upload as multipart. */
+  const pendingImageFilesByDataUriRef = useRef<Map<string, File>>(new Map());
+
   const filteredDocuments = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLocaleLowerCase('vi-VN');
     if (!normalizedKeyword) return documents;
@@ -104,6 +119,7 @@ export default function DocumentsTab() {
   const hydrateDocument = async (document: KnowledgeDocumentDto): Promise<KnowledgeDocumentDto> => {
     savedPlaceholderContentRef.current = document.contentMarkdown;
     hydratedImageSrcByIdRef.current = new Map();
+    pendingImageFilesByDataUriRef.current = new Map();
     if (!document.contentMarkdown.includes(DOC_IMAGE_PREFIX)) return document;
 
     try {
@@ -171,6 +187,7 @@ export default function DocumentsTab() {
     setSelectedDocument(null);
     savedPlaceholderContentRef.current = '';
     hydratedImageSrcByIdRef.current = new Map();
+    pendingImageFilesByDataUriRef.current = new Map();
     setIsCreating(true);
     setIsEditing(true);
   };
@@ -242,12 +259,13 @@ export default function DocumentsTab() {
       // this is required (not just an optimization) once R2-backed images are in play.
       let content = dehydrateKnownImages(draft.contentMarkdown, hydratedImageSrcByIdRef.current);
       for (const pendingImage of extractDataUriImages(content)) {
-        const uploadedImage = await documentsService.uploadImage(documentId, {
-          fileName: fileNameForContentType(pendingImage.contentType),
-          contentType: pendingImage.contentType,
-          base64Data: pendingImage.base64,
-        });
+        const uploadedImage = await documentsService.uploadImage(
+          documentId,
+          pendingImageFilesByDataUriRef.current.get(pendingImage.dataUri) ??
+            dataUriToFile(pendingImage.dataUri, pendingImage.contentType),
+        );
         content = replaceDataUri(content, pendingImage.dataUri, uploadedImage.id);
+        pendingImageFilesByDataUriRef.current.delete(pendingImage.dataUri);
       }
 
       const referencedImageIds = new Set(extractPlaceholderIds(content));
@@ -270,9 +288,8 @@ export default function DocumentsTab() {
       });
 
       savedPlaceholderContentRef.current = savedDocument.contentMarkdown;
-      // `draft.contentMarkdown` is already the hydrated equivalent of the content we just
-      // saved, so it is reused for display instead of re-downloading every image.
-      setSelectedDocument({ ...savedDocument, contentMarkdown: draft.contentMarkdown });
+      const hydratedSavedDocument = await hydrateDocument(savedDocument);
+      setSelectedDocument(hydratedSavedDocument);
       setIsEditing(false);
       await refreshDocuments();
       toast.success(wasCreating ? 'Đã tạo tài liệu.' : 'Đã lưu thay đổi.');
@@ -422,6 +439,9 @@ export default function DocumentsTab() {
                 <MarkdownEditor
                   value={draft.contentMarkdown}
                   onChange={contentMarkdown => setDraft(current => ({ ...current, contentMarkdown }))}
+                  onImageInserted={(dataUri, file) => {
+                    pendingImageFilesByDataUriRef.current.set(dataUri, file);
+                  }}
                 />
               </div>
             </div>

@@ -37,6 +37,7 @@ import {
 type MarkdownEditorProps = {
   value: string;
   onChange: (value: string) => void;
+  onImageInserted?: (dataUri: string, file: File) => void;
 };
 
 type ToolbarButtonProps = {
@@ -99,7 +100,7 @@ function getImageFiles(dataTransfer: DataTransfer | null | undefined): File[] {
     .filter((file): file is File => file !== null);
 }
 
-export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps) {
+export default function MarkdownEditor({ value, onChange, onImageInserted }: MarkdownEditorProps) {
   const editorRef = useRef<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -123,6 +124,8 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
         const currentEditor = editorRef.current;
         if (!currentEditor) return;
 
+        onImageInserted?.(dataUri, file);
+
         // The document may have changed while the file was being read.
         const safePosition = Math.min(position, currentEditor.state.doc.content.size);
         currentEditor
@@ -139,7 +142,7 @@ export default function MarkdownEditor({ value, onChange }: MarkdownEditorProps)
         toast.error(`Không thể đọc tệp ảnh ${file.name}.`);
       }
     }
-  }, []);
+  }, [onImageInserted]);
 
   const editor = useEditor({
     extensions: createKnowledgeDocumentExtensions(),

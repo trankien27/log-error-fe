@@ -349,12 +349,6 @@ export interface KnowledgeDocumentImageSummaryDto {
   createdAt: string;
 }
 
-export interface UploadKnowledgeDocumentImageRequest {
-  fileName: string;
-  contentType: string;
-  base64Data: string;
-}
-
 export interface WorkScheduleDto {
   id: number;
   workDate: string;

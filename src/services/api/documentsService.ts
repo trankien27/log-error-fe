@@ -4,9 +4,8 @@ import {
   KnowledgeDocumentImageSummaryDto,
   KnowledgeDocumentSummaryDto,
   SaveKnowledgeDocumentRequest,
-  UploadKnowledgeDocumentImageRequest,
 } from '../../types';
-import { apiClient } from './apiClient';
+import { apiClient, API_BASE_URL, AUTH_TOKEN_KEY } from './apiClient';
 
 export const documentsService = {
   getAll: (keyword?: string) => {
@@ -27,8 +26,30 @@ export const documentsService = {
   listImages: (documentId: number) =>
     apiClient.get<KnowledgeDocumentImageDto[]>(`/api/documents/${documentId}/images`),
 
-  uploadImage: (documentId: number, request: UploadKnowledgeDocumentImageRequest) =>
-    apiClient.post<KnowledgeDocumentImageSummaryDto>(`/api/documents/${documentId}/images`, request),
+  uploadImage: async (documentId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers = new Headers();
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/documents/${documentId}/images`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.message || payload?.Message || `Không thể tải ảnh lên Cloudflare R2. Status: ${response.status}`);
+    }
+
+    return (payload?.data ?? payload) as KnowledgeDocumentImageSummaryDto;
+  },
 
   deleteImage: (documentId: number, imageId: number) =>
     apiClient.delete<boolean>(`/api/documents/${documentId}/images/${imageId}`),
