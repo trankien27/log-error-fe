@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarDays,
   Check,
+  Clock,
   Cloud,
   CloudFog,
   CloudLightning,
@@ -288,7 +289,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   const userMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const timer = window.setInterval(() => setCurrentDate(new Date()), 60 * 1000);
+    const timer = window.setInterval(() => setCurrentDate(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -380,6 +381,12 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
     day: '2-digit',
     month: '2-digit',
   }).format(currentDate);
+  const currentTimeText = new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(currentDate);
   const lunarDateText = `${lunarDate.day}/${lunarDate.month}${lunarDate.isLeap ? ' nhuận' : ''}`;
   const calendarTitle = `${new Intl.DateTimeFormat('vi-VN', { dateStyle: 'full' }).format(currentDate)} · Âm lịch ${lunarDate.day}/${lunarDate.month}/${lunarDate.year}${lunarDate.isLeap ? ' nhuận' : ''} (${getLunarYearName(lunarDate.year)})`;
 
@@ -413,6 +420,14 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
       <div className="flex-1 max-w-sm min-w-0" />
 
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div
+          className="flex h-9 items-center gap-1.5 rounded-full border border-outline-variant bg-surface-2 px-2.5 text-xs font-bold text-on-surface shadow-sm sm:px-3"
+          title={`Giờ hiện tại: ${currentTimeText}`}
+        >
+          <Clock className="h-4 w-4 shrink-0 text-primary" />
+          <span className="tabular-nums tracking-wide">{currentTimeText}</span>
+        </div>
+
         <div
           className="hidden md:flex h-9 items-center gap-2 rounded-full border border-outline-variant bg-surface-2 px-3 text-xs font-bold text-on-surface shadow-sm"
           title={calendarTitle}

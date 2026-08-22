@@ -33,14 +33,14 @@ import { ListDictionarySidebarDto, TabType } from '../../types';
 const navButtonClass = (isActive: boolean) =>
   `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
     isActive
-      ? 'bg-secondary-container text-primary border-l-4 border-primary font-bold'
+      ? 'bg-secondary-container text-on-secondary-container border-l-4 border-primary font-bold'
       : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
   }`;
 
 const dictionaryNavButtonClass = (isActive: boolean) =>
   `w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold transition-colors ${
     isActive
-      ? 'bg-primary/10 text-primary'
+      ? 'bg-secondary-container text-on-secondary-container ring-1 ring-primary/30'
       : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
   }`;
 
