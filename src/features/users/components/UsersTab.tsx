@@ -589,8 +589,9 @@ export default function UsersTab() {
                           )}
                           <button
                             onClick={() => handleOpenUserModal(user)}
-                            className="p-1 px-1.5 border rounded hover:bg-primary/10 hover:text-primary transition-colors border-outline-variant cursor-pointer"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant bg-secondary-container text-on-secondary-container shadow-sm transition-[border-color,filter] hover:border-primary/50 hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
                             title="Chỉnh sửa chi tiết"
+                            aria-label={`Chỉnh sửa người dùng ${user.name}`}
                           >
                             <Edit2 className="w-3 h-3" />
                           </button>

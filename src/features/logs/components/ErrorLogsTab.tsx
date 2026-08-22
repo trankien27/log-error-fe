@@ -817,7 +817,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 font-bold text-primary hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="inline-flex items-center gap-1 rounded-full bg-secondary-container px-2 py-1 font-bold text-on-secondary-container transition-[filter] hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Xem tệp đính kèm"
                         >
                           <Paperclip className="h-3.5 w-3.5" />
@@ -832,7 +832,7 @@ export default function ErrorLogsTab() {
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary/25 bg-secondary-container text-primary shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/15 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-secondary-container text-on-secondary-container shadow-sm transition-[border-color,filter] hover:border-primary/50 hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           title="Xem chi tiết"
                           aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
                         >
