@@ -157,13 +157,18 @@ export interface Task {
 
 export interface SystemNotification {
   id: string;
+  notificationId?: string;
   type: 'warning' | 'update' | 'success';
+  category?: string;
   title: string;
   content: string;
   time: string;
   tagName: string;
   tagType: 'Urgent' | 'Info' | 'None';
   isRead: boolean;
+  entityType?: string | null;
+  entityId?: string | null;
+  actionUrl?: string | null;
 }
 
 export interface Activity {

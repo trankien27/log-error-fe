@@ -19,7 +19,7 @@ import {
   Sun,
   UserCog,
 } from 'lucide-react';
-import { useNotificationStore } from '../../stores/useNotificationStore';
+import { formatNotificationTime, useNotificationStore } from '../../stores/useNotificationStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLogsStore } from '../../stores/useLogsStore';
 import { useUsersStore } from '../../stores/useUsersStore';
@@ -250,11 +250,13 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   const { 
     notifications, 
     toggleReadState, 
+    markAllRead,
     setSelectedNotification, 
     setIsNotificationModalOpen 
   } = useNotificationStore();
   const { logout, hasAnyRole } = useAuthStore();
   const isAdmin = hasAnyRole([1, 'Admin']);
+  const canBroadcast = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
 
   // Search queries for all views
   const logSearch = useLogsStore(s => s.searchQuery);
@@ -478,11 +480,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                 {notifications.some(n => !n.isRead) && (
                   <button
                     type="button"
-                    onClick={() => {
-                      notifications.forEach(n => {
-                        if (!n.isRead) toggleReadState(n.id);
-                      });
-                    }}
+                    onClick={() => markAllRead().catch(() => undefined)}
                     className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer"
                   >
                     <Check className="w-3 h-3" /> Đánh dấu đọc hết
@@ -505,7 +503,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                         if (!notif.isRead) {
                           toggleReadState(notif.id);
                         }
-                        setSelectedNotification(notif);
+                        setSelectedNotification(notif.isRead ? notif : { ...notif, isRead: true });
                         setIsQuickNotifModalOpen(false);
                       }}
                       className={`p-3 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden flex gap-3 ${
@@ -531,7 +529,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                           <p className={`text-xs truncate ${notif.isRead ? 'text-on-surface-variant font-normal' : 'text-on-surface font-extrabold'}`}>
                             {notif.title}
                           </p>
-                          <span className="text-[9px] text-on-surface-variant font-mono tabular-nums whitespace-nowrap shrink-0">{notif.time}</span>
+                          <span className="text-[9px] text-on-surface-variant font-mono tabular-nums whitespace-nowrap shrink-0">{formatNotificationTime(notif.time)}</span>
                         </div>
                         <p className="text-[10px] text-on-surface-variant line-clamp-2 mt-0.5 whitespace-pre-wrap">{notif.content}</p>
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -563,16 +561,18 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
                 </button>
 
                 <div className="flex gap-1.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsQuickNotifModalOpen(false);
-                      setIsNotificationModalOpen(true);
-                    }}
-                    className="bg-primary text-on-primary hover:bg-primary-hover active:bg-primary-active px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-brand cursor-pointer"
-                  >
-                    <Send className="w-3 h-3" /> Gửi phát thanh
-                  </button>
+                  {canBroadcast && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsQuickNotifModalOpen(false);
+                        setIsNotificationModalOpen(true);
+                      }}
+                      className="bg-primary text-on-primary hover:bg-primary-hover active:bg-primary-active px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all active:scale-95 shadow-brand cursor-pointer"
+                    >
+                      <Send className="w-3 h-3" /> Gửi phát thanh
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setIsQuickNotifModalOpen(false)}

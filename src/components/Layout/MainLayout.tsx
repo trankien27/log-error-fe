@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 /// <reference types="react" />
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Bell, Clock, CheckCircle, Check, Trash2, Users, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import Sidebar from './Sidebar';
 import TopHeader from './TopHeader';
-import { useNotificationStore } from '../../stores/useNotificationStore';
+import { formatNotificationTime, useNotificationStore } from '../../stores/useNotificationStore';
 import { useLogsStore } from '../../stores/useLogsStore';
 import { useTasksStore } from '../../stores/useTasksStore';
 import { useUsersStore } from '../../stores/useUsersStore';
@@ -13,6 +13,7 @@ import { useBoothsStore } from '../../stores/useBoothsStore';
 import { useScheduleStore } from '../../stores/useScheduleStore';
 
 export default function MainLayout() {
+  const navigate = useNavigate();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { 
     isNotificationModalOpen, 
@@ -22,7 +23,10 @@ export default function MainLayout() {
     toggleReadState,
     deleteNotification,
     sendBroadcast,
-    isLoading
+    isLoading,
+    fetchNotifications,
+    startConnection,
+    stopConnection,
   } = useNotificationStore();
 
   const { users, fetchUsersAndRoles } = useUsersStore();
@@ -38,6 +42,12 @@ export default function MainLayout() {
     fetchTasks();
     fetchBooths();
     fetchShifts();
+    fetchNotifications().catch(() => undefined);
+    startConnection().catch(() => undefined);
+
+    return () => {
+      stopConnection().catch(() => undefined);
+    };
   }, []);
 
   // Form states for broadcasting warning/alert
@@ -60,9 +70,14 @@ export default function MainLayout() {
       return;
     }
 
-    const audience = notifAllUsers ? 'Toàn thể user' : notifSelectedUsers.join(', ');
     try {
-      await sendBroadcast(notifTitle, notifContent, notifClass, notifTag, audience);
+      await sendBroadcast(
+        notifTitle,
+        notifContent,
+        notifClass,
+        notifTag,
+        notifAllUsers ? null : notifSelectedUsers,
+      );
       toast.success('Đã gửi thông báo.');
       setIsNotificationModalOpen(false);
       setNotifTitle('');
@@ -169,7 +184,7 @@ export default function MainLayout() {
                   {selectedNotification.title}
                 </h3>
                 <p className="text-[11px] text-on-surface-variant mt-1 flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> Gửi lúc: {selectedNotification.time}
+                  <Clock className="w-3 h-3" /> Gửi lúc: {formatNotificationTime(selectedNotification.time)}
                 </p>
               </div>
 
@@ -211,6 +226,18 @@ export default function MainLayout() {
                 </button>
 
                 <div className="flex gap-2">
+                  {selectedNotification.actionUrl && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate(selectedNotification.actionUrl!);
+                        setSelectedNotification(null);
+                      }}
+                      className="btn-primary"
+                    >
+                      Xem mục liên quan
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteNotification(selectedNotification.id)}
                     disabled={isLoading}
@@ -288,7 +315,7 @@ export default function MainLayout() {
                       <div className="flex gap-2">
                         <button
                           type="button"
-                          onClick={() => setNotifSelectedUsers(users.map(u => u.name))}
+                          onClick={() => setNotifSelectedUsers(users.map(u => u.id))}
                           className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
                         >
                           Chọn tất cả
@@ -308,7 +335,7 @@ export default function MainLayout() {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto pr-1">
                         {users.map(u => {
-                          const isChecked = notifSelectedUsers.includes(u.name);
+                          const isChecked = notifSelectedUsers.includes(u.id);
                           return (
                             <label key={u.id} className={`flex items-center gap-2 p-2 rounded-lg border text-xs cursor-pointer transition-colors ${
                               isChecked ? 'bg-primary/5 border-primary/40 text-on-primary-container' : 'bg-surface border-outline-variant hover:bg-surface-2'
@@ -318,9 +345,9 @@ export default function MainLayout() {
                                 checked={isChecked}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    setNotifSelectedUsers([...notifSelectedUsers, u.name]);
+                                    setNotifSelectedUsers([...notifSelectedUsers, u.id]);
                                   } else {
-                                    setNotifSelectedUsers(notifSelectedUsers.filter(name => name !== u.name));
+                                    setNotifSelectedUsers(notifSelectedUsers.filter(id => id !== u.id));
                                   }
                                 }}
                                 className="rounded border-outline-variant text-primary focus:ring-primary h-3.5 w-3.5"
