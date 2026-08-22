@@ -332,7 +332,7 @@ export default function DocumentsTab() {
 
   return (
     <div className="mx-auto min-h-[calc(100dvh-112px)] w-full max-w-[1280px] p-3 sm:p-5">
-      {!selectedDocument && !isEditing ? (
+      {!selectedDocument && !isEditing && !isLoadingDocument ? (
         <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card">
           <div className="border-b border-outline-variant px-4 py-4 sm:px-6">
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
