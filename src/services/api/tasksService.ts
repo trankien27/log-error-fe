@@ -49,7 +49,30 @@ function normalizeTask(task: any): Task {
     assigneeName: task.assigneeName || task.assignedToName || task.userName || '',
     commentsCount: task.commentsCount ?? 0,
     isOverdue: Boolean(task.isOverdue),
-    attachments: task.attachments || [],
+    attachments: Array.isArray(task.attachments)
+      ? task.attachments.map(normalizeTaskAttachment)
+      : [],
+  };
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes >= 1024 * 1024) {
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+}
+
+function normalizeTaskAttachment(attachment: any): TaskAttachment {
+  const sizeBytes = Number(attachment.fileSize ?? attachment.sizeBytes ?? 0);
+
+  return {
+    id: String(attachment.id ?? ''),
+    name: attachment.fileName ?? attachment.name ?? '',
+    type: attachment.contentType ?? attachment.type ?? 'application/octet-stream',
+    sizeBytes,
+    size: attachment.size || formatFileSize(sizeBytes),
+    createdAt: attachment.createdAt,
   };
 }
 
@@ -144,18 +167,28 @@ export const tasksService = {
     return normalizeTask(updated);
   },
 
-  addAttachment: async (id: string, attachment: TaskAttachment): Promise<Task> => {
+  addAttachments: async (id: string, files: File[]): Promise<Task> => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+
     const updated = await apiClient.post<Task>(
       `/api/tasks/${encodeURIComponent(id)}/attachments`,
-      attachment,
+      formData,
     );
     return normalizeTask(updated);
   },
 
-  deleteAttachment: async (id: string, attachmentName: string): Promise<Task> => {
+  deleteAttachment: async (id: string, attachmentId: string): Promise<Task> => {
     const updated = await apiClient.delete<Task>(
-      `/api/tasks/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentName)}`,
+      `/api/tasks/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}`,
     );
     return normalizeTask(updated);
+  },
+
+  getAttachmentDownloadUrl: async (id: string, attachmentId: string): Promise<string> => {
+    const result = await apiClient.get<{ url: string }>(
+      `/api/tasks/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attachmentId)}/download-url`,
+    );
+    return result.url;
   }
 };

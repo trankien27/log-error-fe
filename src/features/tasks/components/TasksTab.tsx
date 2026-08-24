@@ -6,6 +6,14 @@ import { useUsersStore } from '../../../stores/useUsersStore';
 import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
 import { Task, TaskAttachment } from '../../../types';
 
+const MAX_ATTACHMENT_FILES_PER_UPLOAD = 10;
+const MAX_ATTACHMENT_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_ATTACHMENT_UPLOAD_SIZE = 50 * 1024 * 1024;
+
+const formatAttachmentSize = (sizeBytes: number) => sizeBytes >= 1024 * 1024
+  ? `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+  : `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+
 export default function TasksTab() {
   const {
     tasks,
@@ -13,8 +21,9 @@ export default function TasksTab() {
     saveTask,
     updateTaskStatus,
     updateTaskNotes,
-    addAttachment,
+    addAttachments,
     deleteAttachment,
+    getAttachmentDownloadUrl,
     isTaskModalOpen,
     setIsTaskModalOpen,
     currentEditingTask,
@@ -41,6 +50,7 @@ export default function TasksTab() {
   const [taskAssigneeId, setTaskAssigneeId] = useState('');
   const [taskAssignee, setTaskAssignee] = useState('');
   const [taskAttachments, setTaskAttachments] = useState<TaskAttachment[]>([]);
+  const [pendingTaskFiles, setPendingTaskFiles] = useState<File[]>([]);
   const [taskNotesInput, setTaskNotesInput] = useState('');
   const [activeTaskView, setActiveTaskView] = useState<'kanban' | 'calendar' | 'month'>('calendar');
   const [calendarZoom, setCalendarZoom] = useState(1);
@@ -127,6 +137,7 @@ export default function TasksTab() {
       setTaskAssigneeId(assigneeUser?.id || t.assigneeId || '');
       setTaskAssignee(assigneeUser?.name || t.assigneeName);
       setTaskAttachments(t.attachments || []);
+      setPendingTaskFiles([]);
     } else {
       const defaultAssignee = getDefaultAssignee();
       setCurrentEditingTask(null);
@@ -137,6 +148,7 @@ export default function TasksTab() {
       setTaskAssigneeId(defaultAssignee?.id || '');
       setTaskAssignee(defaultAssignee?.name || '');
       setTaskAttachments([]);
+      setPendingTaskFiles([]);
     }
     setIsTaskModalOpen(true);
   };
@@ -169,12 +181,22 @@ export default function TasksTab() {
     };
 
     try {
-      if (currentEditingTask) {
-        await saveTask({ ...payload, id: currentEditingTask.id });
-        toast.success('Cập nhật tác vụ thành công.');
-      } else {
-        await saveTask(payload);
-        toast.success('Tạo tác vụ thành công.');
+      const savedTask = currentEditingTask
+        ? await saveTask({ ...payload, id: currentEditingTask.id })
+        : await saveTask(payload);
+
+      let attachmentUploadFailed = false;
+      if (pendingTaskFiles.length > 0) {
+        try {
+          await addAttachments(savedTask.id, pendingTaskFiles);
+        } catch (err: any) {
+          attachmentUploadFailed = true;
+          toast.error(err.message || 'Tác vụ đã lưu nhưng không thể tải tệp lên R2.');
+        }
+      }
+
+      if (!attachmentUploadFailed) {
+        toast.success(currentEditingTask ? 'Cập nhật tác vụ thành công.' : 'Tạo tác vụ thành công.');
       }
       setIsTaskModalOpen(false);
       setCurrentEditingTask(null);
@@ -186,6 +208,7 @@ export default function TasksTab() {
       setTaskAssigneeId(defaultAssignee?.id || '');
       setTaskAssignee(defaultAssignee?.name || '');
       setTaskAttachments([]);
+      setPendingTaskFiles([]);
     } catch (err: any) {
       toast.error(err.message || 'Không thể lưu tác vụ.');
     }
@@ -194,40 +217,69 @@ export default function TasksTab() {
   const handleAddAttachmentClick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
-    const file = fileList[0];
-    const newFile: TaskAttachment = {
-      name: file.name,
-      size: (file.size / 1024 > 1024) 
-        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` 
-        : `${(file.size / 1024).toFixed(0)} KB`,
-      type: file.type,
-      url: URL.createObjectURL(file)
-    };
+    const files = Array.from(fileList);
+    e.target.value = '';
+
+    if (files.length > MAX_ATTACHMENT_FILES_PER_UPLOAD) {
+      toast.error(`Mỗi lần chỉ được tải tối đa ${MAX_ATTACHMENT_FILES_PER_UPLOAD} tệp.`);
+      return;
+    }
+
+    const oversizedFile = files.find(file => file.size <= 0 || file.size > MAX_ATTACHMENT_FILE_SIZE);
+    if (oversizedFile) {
+      toast.error(`Tệp "${oversizedFile.name}" phải có dung lượng từ 1 byte đến 20 MB.`);
+      return;
+    }
+
+    if (files.reduce((total, file) => total + file.size, 0) > MAX_ATTACHMENT_UPLOAD_SIZE) {
+      toast.error('Tổng dung lượng một lần tải không được vượt quá 50 MB.');
+      return;
+    }
 
     if (selectedTaskDetails) {
       try {
-        await addAttachment(selectedTaskDetails.id, newFile);
-        toast.success('Đã thêm tệp đính kèm.');
+        await addAttachments(selectedTaskDetails.id, files);
+        toast.success(`Đã tải ${files.length} tệp lên R2.`);
       } catch (err: any) {
-        toast.error(err.message || 'Không thể thêm tệp đính kèm.');
+        toast.error(err.message || 'Không thể tải tệp lên R2.');
       }
     } else {
-      setTaskAttachments(prev => [...prev, newFile]);
-      toast.success('Đã thêm tệp vào form.');
+      if (pendingTaskFiles.length + files.length > MAX_ATTACHMENT_FILES_PER_UPLOAD) {
+        toast.error(`Mỗi lần lưu task chỉ được tải tối đa ${MAX_ATTACHMENT_FILES_PER_UPLOAD} tệp.`);
+        return;
+      }
+
+      const pendingSize = pendingTaskFiles.reduce((total, file) => total + file.size, 0);
+      const selectedSize = files.reduce((total, file) => total + file.size, 0);
+      if (pendingSize + selectedSize > MAX_ATTACHMENT_UPLOAD_SIZE) {
+        toast.error('Tổng dung lượng tệp chờ tải không được vượt quá 50 MB.');
+        return;
+      }
+
+      setPendingTaskFiles(prev => [...prev, ...files]);
+      toast.success(`Đã chọn ${files.length} tệp. Tệp sẽ được tải lên R2 khi lưu task.`);
     }
   };
 
-  const handleDeleteAttachmentClick = async (fileName: string) => {
-    if (selectedTaskDetails) {
-      try {
-        await deleteAttachment(selectedTaskDetails.id, fileName);
-        toast.success('Đã xóa tệp đính kèm.');
-      } catch (err: any) {
-        toast.error(err.message || 'Không thể xóa tệp đính kèm.');
-      }
-    } else {
-      setTaskAttachments(prev => prev.filter(att => att.name !== fileName));
-      toast.success('Đã xóa tệp khỏi form.');
+  const handleDeleteAttachmentClick = async (attachmentId: string) => {
+    const taskId = selectedTaskDetails?.id || currentEditingTask?.id;
+    if (!taskId) return;
+
+    try {
+      await deleteAttachment(taskId, attachmentId);
+      setTaskAttachments(prev => prev.filter(att => att.id !== attachmentId));
+      toast.success('Đã xóa tệp khỏi R2.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa tệp đính kèm.');
+    }
+  };
+
+  const handleOpenAttachment = async (taskId: string, attachment: TaskAttachment) => {
+    try {
+      const url = await getAttachmentDownloadUrl(taskId, attachment.id);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể mở tệp từ R2.');
     }
   };
 
@@ -1225,34 +1277,59 @@ export default function TasksTab() {
               {/* Attachments Section */}
               <div className="border border-outline-variant rounded-xl p-3 bg-surface-2 text-left">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-on-surface-variant text-xs">Đính kèm tài liệu hỗ trợ ({taskAttachments.length})</span>
+                  <span className="font-bold text-on-surface-variant text-xs">Đính kèm tài liệu hỗ trợ ({taskAttachments.length + pendingTaskFiles.length})</span>
                   <label className="text-[10px] text-primary hover:underline font-bold cursor-pointer select-none bg-surface border border-outline-variant px-2 py-1 rounded shadow-sm hover:bg-surface-2 flex items-center gap-1">
                     <Plus className="w-3 h-3" />
                     <span>Thêm tệp</span>
                     <input
                       type="file"
+                      multiple
+                      disabled={isLoading}
                       className="hidden"
                       onChange={handleAddAttachmentClick}
                     />
                   </label>
                 </div>
-                {taskAttachments.length === 0 ? (
+                {taskAttachments.length === 0 && pendingTaskFiles.length === 0 ? (
                   <p className="text-[10px] text-on-surface-variant italic text-center py-2">Chưa đính kèm tài liệu nào.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
-                    {taskAttachments.map((att, idx) => (
-                      <div key={idx} className="flex items-center justify-between bg-surface border border-outline-variant p-1.5 rounded-lg text-xs">
+                    {taskAttachments.map(att => (
+                      <div key={att.id} className="flex items-center justify-between bg-surface border border-outline-variant p-1.5 rounded-lg text-xs">
                         <div className="flex items-center gap-1.5 truncate max-w-[80%]">
                           <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span className="truncate font-medium text-on-surface-variant">{att.name}</span>
+                          <button
+                            type="button"
+                            disabled={!currentEditingTask}
+                            onClick={() => currentEditingTask && handleOpenAttachment(currentEditingTask.id, att)}
+                            className="truncate font-medium text-primary hover:underline disabled:text-on-surface-variant disabled:no-underline text-left cursor-pointer disabled:cursor-default"
+                          >
+                            {att.name}
+                          </button>
                           <span className="text-[9px] text-on-surface-variant">({att.size})</span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleDeleteAttachmentClick(att.name)}
+                          onClick={() => handleDeleteAttachmentClick(att.id)}
                           className="text-[10px] text-error hover:text-error font-bold px-1.5 py-0.5 rounded hover:bg-error-container cursor-pointer"
                         >
                           Xóa
+                        </button>
+                      </div>
+                    ))}
+                    {pendingTaskFiles.map((file, index) => (
+                      <div key={`${file.name}-${file.lastModified}-${index}`} className="flex items-center justify-between bg-primary-container/30 border border-primary/20 p-1.5 rounded-lg text-xs">
+                        <div className="flex items-center gap-1.5 truncate max-w-[80%]">
+                          <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span className="truncate font-medium text-on-surface-variant">{file.name}</span>
+                          <span className="text-[9px] text-on-surface-variant">({formatAttachmentSize(file.size)} · chờ tải)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPendingTaskFiles(prev => prev.filter((_, pendingIndex) => pendingIndex !== index))}
+                          className="text-[10px] text-error hover:text-error font-bold px-1.5 py-0.5 rounded hover:bg-error-container cursor-pointer"
+                        >
+                          Bỏ
                         </button>
                       </div>
                     ))}
@@ -1427,6 +1504,8 @@ export default function TasksTab() {
                     <Plus className="w-3 h-3" /> Gửi tệp mới
                     <input
                       type="file"
+                      multiple
+                      disabled={isLoading}
                       className="hidden"
                       onChange={handleAddAttachmentClick}
                     />
@@ -1438,15 +1517,21 @@ export default function TasksTab() {
                     <p className="text-[11px] text-on-surface-variant italic text-center py-2">Không có tệp đính kèm nào.</p>
                   ) : (
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                      {selectedTaskDetails.attachments.map((att, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-surface border border-outline-variant p-2 rounded-xl text-xs">
+                      {selectedTaskDetails.attachments.map(att => (
+                        <div key={att.id} className="flex items-center justify-between bg-surface border border-outline-variant p-2 rounded-xl text-xs">
                           <div className="flex items-center gap-2 truncate max-w-[80%]">
                             <PaperclipIcon className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <span className="truncate font-semibold text-on-surface">{att.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenAttachment(selectedTaskDetails.id, att)}
+                              className="truncate font-semibold text-primary hover:underline text-left cursor-pointer"
+                            >
+                              {att.name}
+                            </button>
                             <span className="text-[10px] text-on-surface-variant">({att.size})</span>
                           </div>
                           <button
-                            onClick={() => handleDeleteAttachmentClick(att.name)}
+                            onClick={() => handleDeleteAttachmentClick(att.id)}
                             className="text-[10px] text-error hover:text-error font-bold px-2 py-1 rounded hover:bg-error-container cursor-pointer"
                           >
                             Xóa tệp

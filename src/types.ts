@@ -131,10 +131,12 @@ export interface PagedResult<T> {
 }
 
 export interface TaskAttachment {
+  id: string;
   name: string;
-  url?: string;
-  size?: string;
-  type?: string;
+  size: string;
+  sizeBytes: number;
+  type: string;
+  createdAt?: string;
 }
 
 export interface Task {

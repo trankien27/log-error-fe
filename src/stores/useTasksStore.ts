@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Task, TaskAttachment } from "../types";
+import { Task } from "../types";
 import { tasksService } from "../services/api/tasksService";
 
 interface TasksState {
@@ -20,14 +20,15 @@ interface TasksState {
   fetchTasks: () => Promise<void>;
   saveTask: (
     task: Omit<Task, "id" | "commentsCount"> & { id?: string },
-  ) => Promise<void>;
+  ) => Promise<Task>;
   updateTaskStatus: (
     id: string,
     newStatus: "pending" | "progress" | "done",
   ) => Promise<void>;
   updateTaskNotes: (id: string, notes: string) => Promise<void>;
-  addAttachment: (id: string, file: TaskAttachment) => Promise<void>;
-  deleteAttachment: (id: string, fileName: string) => Promise<void>;
+  addAttachments: (id: string, files: File[]) => Promise<Task>;
+  deleteAttachment: (id: string, attachmentId: string) => Promise<void>;
+  getAttachmentDownloadUrl: (id: string, attachmentId: string) => Promise<string>;
 }
 
 export const useTasksStore = create<TasksState>((set, get) => ({
@@ -66,6 +67,7 @@ export const useTasksStore = create<TasksState>((set, get) => ({
           isLoading: false,
         };
       });
+      return saved;
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
       throw err;
@@ -133,10 +135,29 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     }
   },
 
-  addAttachment: async (id, file) => {
+  addAttachments: async (id, files) => {
     set({ isLoading: true, error: null });
     try {
-      const updated = await tasksService.addAttachment(id, file);
+      const updated = await tasksService.addAttachments(id, files);
+      set((state) => ({
+        tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
+        selectedTaskDetails:
+          state.selectedTaskDetails?.id === id
+            ? updated
+            : state.selectedTaskDetails,
+        isLoading: false,
+      }));
+      return updated;
+    } catch (err: any) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  deleteAttachment: async (id, attachmentId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updated = await tasksService.deleteAttachment(id, attachmentId);
       set((state) => ({
         tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
         selectedTaskDetails:
@@ -151,21 +172,6 @@ export const useTasksStore = create<TasksState>((set, get) => ({
     }
   },
 
-  deleteAttachment: async (id, fileName) => {
-    set({ isLoading: true, error: null });
-    try {
-      const updated = await tasksService.deleteAttachment(id, fileName);
-      set((state) => ({
-        tasks: state.tasks.map((t) => (t.id === id ? updated : t)),
-        selectedTaskDetails:
-          state.selectedTaskDetails?.id === id
-            ? updated
-            : state.selectedTaskDetails,
-        isLoading: false,
-      }));
-    } catch (err: any) {
-      set({ error: err.message, isLoading: false });
-      throw err;
-    }
-  },
+  getAttachmentDownloadUrl: (id, attachmentId) =>
+    tasksService.getAttachmentDownloadUrl(id, attachmentId),
 }));
