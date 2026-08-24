@@ -62,7 +62,13 @@ function buildUserPayload(user: Omit<User, 'id'> & { id?: string; password?: str
 }
 
 export const usersService = {
-  getUsers: async (params: { role?: string | number } = {}): Promise<User[]> => {
+  getUsers: async (params: {
+    role?: string | number;
+    search?: string;
+    isActive?: boolean;
+    pageIndex?: number;
+    pageSize?: number;
+  } = {}): Promise<User[]> => {
     const result = await apiClient.get<UsersResponse>(`/api/users${buildQuery(params)}`);
 
     if (Array.isArray(result)) {

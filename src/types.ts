@@ -296,13 +296,16 @@ export interface ListDictionarySidebarDto {
 }
 
 export type KnowledgeDocumentVisibility = 1 | 2;
+export type KnowledgeDocumentEditAccess = 1 | 2 | 3;
 
 export interface KnowledgeDocumentSummaryDto {
   id: number;
   title: string;
   preview: string;
   visibility: KnowledgeDocumentVisibility;
+  editAccess: KnowledgeDocumentEditAccess;
   canEdit: boolean;
+  canManageAccess: boolean;
   createdBy: string;
   createdAt: string;
   updatedAt?: string | null;
@@ -313,7 +316,10 @@ export interface KnowledgeDocumentDto {
   title: string;
   contentMarkdown: string;
   visibility: KnowledgeDocumentVisibility;
+  editAccess: KnowledgeDocumentEditAccess;
   canEdit: boolean;
+  canManageAccess: boolean;
+  editorIds: string[];
   createdBy: string;
   createdAt: string;
   updatedBy?: string | null;
@@ -324,6 +330,8 @@ export interface SaveKnowledgeDocumentRequest {
   title: string;
   contentMarkdown: string;
   visibility: KnowledgeDocumentVisibility;
+  editAccess: KnowledgeDocumentEditAccess;
+  editorIds: string[];
 }
 
 export interface KnowledgeDocumentImageDto {

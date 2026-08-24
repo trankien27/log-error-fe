@@ -12,15 +12,20 @@ import {
   Save,
   Search,
   Trash2,
+  Users,
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { documentsService } from '../../../services/api/documentsService';
+import { usersService } from '../../../services/api/usersService';
+import { useAuthStore } from '../../../stores/useAuthStore';
 import {
   KnowledgeDocumentDto,
+  KnowledgeDocumentEditAccess,
   KnowledgeDocumentSummaryDto,
   KnowledgeDocumentVisibility,
   SaveKnowledgeDocumentRequest,
+  User,
 } from '../../../types';
 import MarkdownEditor from './MarkdownEditor';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -38,6 +43,8 @@ const EMPTY_DRAFT: SaveKnowledgeDocumentRequest = {
   title: '',
   contentMarkdown: '',
   visibility: 2,
+  editAccess: 1,
+  editorIds: [],
 };
 
 function formatDateTime(value?: string | null) {
@@ -48,6 +55,12 @@ function formatDateTime(value?: string | null) {
 
 function visibilityLabel(visibility: KnowledgeDocumentVisibility) {
   return visibility === 1 ? 'Global' : 'Personal';
+}
+
+function editAccessLabel(editAccess: KnowledgeDocumentEditAccess) {
+  if (editAccess === 3) return 'Mọi người có thể sửa';
+  if (editAccess === 2) return 'Người được chọn có thể sửa';
+  return 'Chỉ chủ tài liệu có thể sửa';
 }
 
 /**
@@ -72,6 +85,7 @@ function dataUriToFile(dataUri: string, contentType: string) {
 }
 
 export default function DocumentsTab() {
+  const currentUser = useAuthStore(state => state.currentUser);
   const [documents, setDocuments] = useState<KnowledgeDocumentSummaryDto[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocumentDto | null>(null);
   const [draft, setDraft] = useState<SaveKnowledgeDocumentRequest>(EMPTY_DRAFT);
@@ -81,6 +95,9 @@ export default function DocumentsTab() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [availableEditors, setAvailableEditors] = useState<User[]>([]);
+  const [editorSearch, setEditorSearch] = useState('');
+  const [isLoadingEditors, setIsLoadingEditors] = useState(false);
 
   /**
    * The last content we know the server holds. Older documents may still contain
@@ -106,6 +123,38 @@ export default function DocumentsTab() {
       document.preview.toLocaleLowerCase('vi-VN').includes(normalizedKeyword),
     );
   }, [documents, keyword]);
+
+  const filteredEditors = useMemo(() => {
+    const normalizedSearch = editorSearch.trim().toLocaleLowerCase('vi-VN');
+    return availableEditors.filter(user => {
+      if (user.id === currentUser?.id) return false;
+      if (!normalizedSearch) return true;
+      return user.name.toLocaleLowerCase('vi-VN').includes(normalizedSearch) ||
+        user.email.toLocaleLowerCase('vi-VN').includes(normalizedSearch);
+    });
+  }, [availableEditors, currentUser?.id, editorSearch]);
+
+  const loadAvailableEditors = async () => {
+    if (availableEditors.length > 0 || isLoadingEditors) return;
+    setIsLoadingEditors(true);
+    try {
+      const users = await usersService.getUsers({ isActive: true, pageSize: 200 });
+      setAvailableEditors(users);
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể tải danh sách người dùng.');
+    } finally {
+      setIsLoadingEditors(false);
+    }
+  };
+
+  const toggleEditor = (userId: string) => {
+    setDraft(current => ({
+      ...current,
+      editorIds: current.editorIds.includes(userId)
+        ? current.editorIds.filter(id => id !== userId)
+        : [...current.editorIds, userId],
+    }));
+  };
 
   /**
    * Records the server's placeholder content as the orphan-diff baseline and swaps every
@@ -185,6 +234,8 @@ export default function DocumentsTab() {
     pendingImageFilesByDataUriRef.current = new Map();
     setIsCreating(true);
     setIsEditing(true);
+    setEditorSearch('');
+    void loadAvailableEditors();
   };
 
   const startEditing = () => {
@@ -193,9 +244,13 @@ export default function DocumentsTab() {
       title: selectedDocument.title,
       contentMarkdown: selectedDocument.contentMarkdown,
       visibility: selectedDocument.visibility,
+      editAccess: selectedDocument.editAccess,
+      editorIds: selectedDocument.editorIds,
     });
     setIsCreating(false);
     setIsEditing(true);
+    setEditorSearch('');
+    if (selectedDocument.canManageAccess) void loadAvailableEditors();
   };
 
   const cancelEditing = async () => {
@@ -240,6 +295,11 @@ export default function DocumentsTab() {
       return;
     }
 
+    if ((isCreating || selectedDocument?.canManageAccess) && draft.editAccess === 2 && draft.editorIds.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một người được chỉnh sửa tài liệu.');
+      return;
+    }
+
     const wasCreating = isCreating;
     if (!wasCreating && !selectedDocument) return;
 
@@ -252,6 +312,8 @@ export default function DocumentsTab() {
           title,
           contentMarkdown: stripImageMarkdown(draft.contentMarkdown),
           visibility: draft.visibility,
+          editAccess: draft.editAccess,
+          editorIds: draft.editorIds,
         });
         documentId = createdDocument.id;
         savedPlaceholderContentRef.current = createdDocument.contentMarkdown;
@@ -301,6 +363,8 @@ export default function DocumentsTab() {
         title,
         contentMarkdown: content,
         visibility: draft.visibility,
+        editAccess: draft.editAccess,
+        editorIds: draft.editorIds,
       });
 
       savedPlaceholderContentRef.current = savedDocument.contentMarkdown;
@@ -317,7 +381,7 @@ export default function DocumentsTab() {
   };
 
   const deleteDocument = async () => {
-    if (!selectedDocument?.canEdit) return;
+    if (!selectedDocument?.canManageAccess) return;
     if (!window.confirm(`Xoá tài liệu “${selectedDocument.title}”?`)) return;
 
     try {
@@ -426,18 +490,40 @@ export default function DocumentsTab() {
                     <button type="button" onClick={goBackToList} disabled={isSaving} className="btn-secondary h-9 px-3">
                       <ArrowLeft className="h-4 w-4" /> Danh sách
                     </button>
-                    <select
-                      value={draft.visibility}
-                      onChange={event => setDraft(current => ({
-                        ...current,
-                        visibility: Number(event.target.value) as KnowledgeDocumentVisibility,
-                      }))}
-                      className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
-                      aria-label="Phạm vi tài liệu"
-                    >
-                      <option value={2}>Personal - chỉ mình tôi</option>
-                      <option value={1}>Global - tất cả người dùng</option>
-                    </select>
+                    {(isCreating || selectedDocument?.canManageAccess) ? (
+                      <>
+                        <select
+                          value={draft.visibility}
+                          onChange={event => setDraft(current => ({
+                            ...current,
+                            visibility: Number(event.target.value) as KnowledgeDocumentVisibility,
+                          }))}
+                          className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
+                          aria-label="Phạm vi xem tài liệu"
+                        >
+                          <option value={2}>Chỉ người được cấp quyền xem</option>
+                          <option value={1}>Tất cả người dùng có thể xem</option>
+                        </select>
+                        <select
+                          value={draft.editAccess}
+                          onChange={event => setDraft(current => ({
+                            ...current,
+                            editAccess: Number(event.target.value) as KnowledgeDocumentEditAccess,
+                            editorIds: Number(event.target.value) === 2 ? current.editorIds : [],
+                          }))}
+                          className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
+                          aria-label="Quyền chỉnh sửa tài liệu"
+                        >
+                          <option value={1}>Chỉ mình tôi được sửa</option>
+                          <option value={2}>Chọn người được sửa</option>
+                          <option value={3}>Tất cả người dùng được sửa</option>
+                        </select>
+                      </>
+                    ) : (
+                      <span className="inline-flex h-9 items-center rounded-lg bg-primary-subtle px-3 text-xs font-extrabold text-primary">
+                        {editAccessLabel(draft.editAccess)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -451,6 +537,56 @@ export default function DocumentsTab() {
                   </div>
                 </div>
 
+                {(isCreating || selectedDocument?.canManageAccess) && draft.editAccess === 2 && (
+                  <div className="mb-4 rounded-xl border border-outline-variant bg-surface-2 p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="flex items-center gap-2 text-sm font-extrabold text-on-surface">
+                          <Users className="h-4 w-4 text-primary" /> Chọn người được chỉnh sửa
+                        </p>
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          Đã chọn {draft.editorIds.length} người. Họ có thể sửa nội dung và ảnh nhưng không thể xoá tài liệu hay đổi quyền.
+                        </p>
+                      </div>
+                      <input
+                        value={editorSearch}
+                        onChange={event => setEditorSearch(event.target.value)}
+                        placeholder="Tìm theo tên hoặc email..."
+                        className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs text-on-surface outline-none focus:border-primary sm:w-72"
+                      />
+                    </div>
+
+                    <div className="max-h-52 overflow-y-auto rounded-lg border border-outline-variant bg-surface">
+                      {isLoadingEditors ? (
+                        <div className="flex items-center justify-center gap-2 px-4 py-8 text-xs font-semibold text-on-surface-variant">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Đang tải người dùng...
+                        </div>
+                      ) : filteredEditors.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-xs font-semibold text-on-surface-variant">
+                          Không tìm thấy người dùng phù hợp.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-outline-variant/70">
+                          {filteredEditors.map(user => (
+                            <label key={user.id} className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-primary/5">
+                              <input
+                                type="checkbox"
+                                checked={draft.editorIds.includes(user.id)}
+                                onChange={() => toggleEditor(user.id)}
+                                className="h-4 w-4 rounded border-outline-variant accent-primary"
+                              />
+                              <span className="min-w-0">
+                                <span className="block truncate text-sm font-bold text-on-surface">{user.name}</span>
+                                <span className="block truncate text-xs text-on-surface-variant">{user.email}</span>
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <input
                   autoFocus
                   value={draft.title}
@@ -460,7 +596,11 @@ export default function DocumentsTab() {
                   className="w-full border-none bg-transparent py-2 text-3xl font-black tracking-tight text-on-surface outline-none placeholder:text-on-surface-variant/40 sm:text-4xl"
                 />
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  Soạn thảo trực quan; hệ thống tự lưu dưới dạng Markdown. {draft.visibility === 1 ? 'Tất cả tài khoản có thể xem.' : 'Chỉ tài khoản của bạn có thể xem.'}
+                  Soạn thảo trực quan; hệ thống tự lưu dưới dạng Markdown. {draft.visibility === 1
+                    ? 'Tất cả tài khoản có thể xem.'
+                    : draft.editAccess === 1
+                      ? 'Chỉ tài khoản của bạn có thể xem.'
+                      : 'Chủ tài liệu và người có quyền chỉnh sửa có thể xem.'}
                 </p>
               </div>
             </div>
@@ -494,13 +634,18 @@ export default function DocumentsTab() {
                       {selectedDocument.visibility === 1 ? <Globe2 className="h-3.5 w-3.5" /> : <LockKeyhole className="h-3.5 w-3.5" />}
                       {visibilityLabel(selectedDocument.visibility)}
                     </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-subtle px-2.5 py-1 text-[11px] font-extrabold text-primary">
+                      <Users className="h-3.5 w-3.5" /> {editAccessLabel(selectedDocument.editAccess)}
+                    </span>
                   </div>
 
                   {selectedDocument.canEdit && (
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => void deleteDocument()} className="btn-danger h-9 px-3">
-                        <Trash2 className="h-4 w-4" /> Xoá
-                      </button>
+                      {selectedDocument.canManageAccess && (
+                        <button type="button" onClick={() => void deleteDocument()} className="btn-danger h-9 px-3">
+                          <Trash2 className="h-4 w-4" /> Xoá
+                        </button>
+                      )}
                       <button type="button" onClick={startEditing} className="btn-primary h-9 px-4">
                         <Edit3 className="h-4 w-4" /> Chỉnh sửa
                       </button>
@@ -512,7 +657,8 @@ export default function DocumentsTab() {
                 <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-on-surface-variant">
                   <Clock3 className="h-3.5 w-3.5" />
                   Cập nhật {formatDateTime(selectedDocument.updatedAt || selectedDocument.createdAt)}
-                  {!selectedDocument.canEdit && <span>• Tài liệu được chia sẻ toàn hệ thống</span>}
+                  {selectedDocument.canEdit && !selectedDocument.canManageAccess && <span>• Bạn được cấp quyền chỉnh sửa</span>}
+                  {!selectedDocument.canEdit && <span>• Bạn chỉ có quyền xem</span>}
                 </p>
               </div>
             </header>
