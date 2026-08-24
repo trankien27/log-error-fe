@@ -19,6 +19,7 @@ import {
   dashboardService,
 } from '../../../services/api/dashboardService';
 import { ErrorLog, OvertimeRequestDto, RecentActivity, WorkScheduleDto } from '../../../types';
+import ServerMonitoringPanel from './ServerMonitoringPanel';
 
 type RangePreset = 'today' | 'week' | 'month' | 'custom';
 
@@ -280,6 +281,8 @@ export default function OverviewTab() {
           {error}
         </div>
       )}
+
+      <ServerMonitoringPanel />
 
       {isLoading && !summary ? (
         <div className="flex h-[420px] items-center justify-center rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface-variant">
