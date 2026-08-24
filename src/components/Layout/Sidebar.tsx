@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Bell,
+  Building2,
   Calendar,
   ChevronDown,
   Clock3,
@@ -106,6 +107,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/chat') return 'chat';
     if (path === '/users') return 'users';
     if (path === '/roles') return 'roles';
+    if (path === '/stores') return 'stores';
     if (path === '/booths') return 'booths';
     if (path === '/remote-booth') return 'remote_booth';
     if (path === '/print-image') return 'print_image';
@@ -141,6 +143,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'chat': navigate('/chat'); break;
       case 'users': navigate('/users'); break;
       case 'roles': navigate('/roles'); break;
+      case 'stores': navigate('/stores'); break;
       case 'booths': navigate('/booths'); break;
       case 'remote_booth': navigate('/remote-booth'); break;
       case 'print_image': navigate('/print-image'); break;
@@ -263,6 +266,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 </li>
               </>
             )}
+            <li>
+              <button onClick={() => navigateTo('stores')} className={navButtonClass(activeTab === 'stores')}>
+                <Building2 className="w-4 h-4" />
+                <span>Cửa hàng</span>
+              </button>
+            </li>
             <li>
               <button onClick={() => navigateTo('booths')} className={navButtonClass(activeTab === 'booths')}>
                 <Store className="w-4 h-4" />

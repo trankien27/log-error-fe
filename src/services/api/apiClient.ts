@@ -108,6 +108,11 @@ export const apiClient = {
     const executeRequest = async () => {
       const headers = new Headers(options.headers);
       const isFormData = options.body instanceof FormData;
+      const body: BodyInit | undefined = options.body === undefined
+        ? undefined
+        : isFormData
+          ? options.body as FormData
+          : JSON.stringify(options.body);
 
       if (!headers.has('Content-Type') && options.body !== undefined && !isFormData) {
         headers.set('Content-Type', 'application/json');
@@ -121,9 +126,7 @@ export const apiClient = {
       return fetch(`${API_BASE_URL}${path}`, {
         ...options,
         headers,
-        body: options.body !== undefined
-          ? (isFormData ? options.body : JSON.stringify(options.body))
-          : undefined,
+        body,
       });
     };
 

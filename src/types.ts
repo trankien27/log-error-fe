@@ -111,6 +111,12 @@ export interface Booth {
   relatedStores: string;
 }
 
+export interface Store {
+  id: number;
+  name: string;
+  lastSyncedAt: string;
+}
+
 export interface LookupItem {
   id: string | number;
   code?: string;
@@ -652,6 +658,7 @@ export type TabType =
   | 'chat'
   | 'users'
   | 'roles'
+  | 'stores'
   | 'booths'
   | 'remote_booth'
   | 'print_image'
