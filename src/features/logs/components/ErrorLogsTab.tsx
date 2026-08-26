@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -124,6 +124,42 @@ function getStorageProviderLabel(attachment: ErrorLogAttachment) {
 
 const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 48 * 1024 * 1024;
+const SPEECH_RECOGNITION_LANGUAGE = 'vi-VN';
+
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
+
+type SpeechRecognitionLike = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+};
+
+type SpeechRecognitionErrorEventLike = {
+  error: string;
+};
+
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
 
 function getStatusClass(status: ErrorLogStatus) {
   if (status === 1) return 'badge-info';
@@ -202,6 +238,8 @@ export default function ErrorLogsTab() {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
+  const [isListeningDescription, setIsListeningDescription] = useState(false);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const filteredLogs = getFilteredLogs();
   const selectedLogIdSet = new Set(selectedLogIds);
@@ -247,6 +285,100 @@ export default function ErrorLogsTab() {
   const loadFormBooths = useCallback((query: { search: string; pageIndex: number; pageSize: number }) => {
     return lookupService.searchBooths({ ...query, storeId });
   }, [storeId]);
+
+  const appendDescriptionTranscript = useCallback((transcript: string) => {
+    const normalizedTranscript = transcript.trim();
+
+    if (!normalizedTranscript) {
+      return;
+    }
+
+    setDescription(currentDescription => {
+      const separator = currentDescription.trim().length > 0 ? ' ' : '';
+      return `${currentDescription}${separator}${normalizedTranscript}`;
+    });
+  }, []);
+
+  const stopDescriptionDictation = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setIsListeningDescription(false);
+  }, []);
+
+  const toggleDescriptionDictation = useCallback(() => {
+    if (isListeningDescription) {
+      stopDescriptionDictation();
+      return;
+    }
+
+    const SpeechRecognition =
+      (window as SpeechRecognitionWindow).SpeechRecognition
+      ?? (window as SpeechRecognitionWindow).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      toast.error('Trình duyệt hiện tại chưa hỗ trợ nhập giọng nói.');
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = SPEECH_RECOGNITION_LANGUAGE;
+
+    recognition.onresult = event => {
+      let finalTranscript = '';
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        }
+      }
+
+      appendDescriptionTranscript(finalTranscript);
+    };
+
+    recognition.onerror = event => {
+      setIsListeningDescription(false);
+      recognitionRef.current = null;
+
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        toast.error('Trình duyệt đang chặn quyền micro.');
+        return;
+      }
+
+      toast.error('Không thể nhận giọng nói, vui lòng thử lại.');
+    };
+
+    recognition.onend = () => {
+      setIsListeningDescription(false);
+      recognitionRef.current = null;
+    };
+
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsListeningDescription(true);
+      toast.success('Đang nghe mô tả lỗi.');
+    } catch {
+      setIsListeningDescription(false);
+      recognitionRef.current = null;
+      toast.error('Không thể bật nhập giọng nói.');
+    }
+  }, [appendDescriptionTranscript, isListeningDescription, stopDescriptionDictation]);
+
+  useEffect(() => {
+    if (!isModalOpen) {
+      stopDescriptionDictation();
+    }
+  }, [isModalOpen, stopDescriptionDictation]);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
 
   const handleOpenModal = (log: ErrorLog | null = null) => {
     setAttachmentFiles([]);
@@ -1055,7 +1187,23 @@ export default function ErrorLogsTab() {
               </div>
 
               <div>
-                <label className="block font-medium mb-1">Mô tả lỗi *</label>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <label className="block font-medium">Mô tả lỗi *</label>
+                  <button
+                    type="button"
+                    onClick={toggleDescriptionDictation}
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold transition ${
+                      isListeningDescription
+                        ? 'border-error bg-error/10 text-error'
+                        : 'border-outline-variant text-on-surface-variant hover:bg-surface-2'
+                    }`}
+                    title={isListeningDescription ? 'Dừng nhập giọng nói' : 'Nhập mô tả bằng giọng nói'}
+                    aria-pressed={isListeningDescription}
+                  >
+                    {isListeningDescription ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    {isListeningDescription ? 'Đang nghe' : 'Voice'}
+                  </button>
+                </div>
                 <textarea
                   rows={3}
                   required
