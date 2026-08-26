@@ -19,7 +19,10 @@ import {
   UserCheck,
   AlertCircle,
   KeyRound,
-  Loader2
+  Loader2,
+  Clock,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
@@ -46,6 +49,38 @@ function getRoleLabel(role: User['role']) {
   return 'IT support';
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return 'Chưa ghi nhận';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Chưa ghi nhận';
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function formatRelativeTime(value?: string | null) {
+  if (!value) return 'Chưa ghi nhận';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Chưa ghi nhận';
+
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 60_000) return 'Vừa xong';
+
+  const diffMinutes = Math.floor(diffMs / 60_000);
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} giờ trước`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} ngày trước`;
+}
+
 export default function UsersTab() {
   const canCreateUser = useAuthStore(state => state.hasAnyRole([1]));
   const {
@@ -63,7 +98,8 @@ export default function UsersTab() {
     setCurrentEditingUser,
     saveUser,
     deleteUser,
-    getFilteredUsers
+    getFilteredUsers,
+    fetchUsersAndRoles
   } = useUsersStore();
 
   // Local Form states for edit user (or create)
@@ -92,6 +128,14 @@ export default function UsersTab() {
       setProfileDept(selectedUserProfileUser.department || 'IT Operations');
     }
   }, [selectedUserProfileUser]);
+
+  useEffect(() => {
+    const refreshTimer = window.setInterval(() => {
+      fetchUsersAndRoles().catch(() => undefined);
+    }, 60_000);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [fetchUsersAndRoles]);
 
   const filteredUsers = getFilteredUsers();
 
@@ -274,9 +318,9 @@ export default function UsersTab() {
           <div className="flex-1 space-y-3 text-center md:text-left">
             <div className="flex flex-col md:flex-row items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-on-surface font-sans break-words">{selectedUserProfileUser.name}</h2>
-              <span className="badge-success">
-                <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></span>
-                Hoạt động
+              <span className={selectedUserProfileUser.isOnline ? 'badge-success' : 'badge-info'}>
+                <span className={`w-1.5 h-1.5 rounded-full ${selectedUserProfileUser.isOnline ? 'bg-success animate-pulse' : 'bg-on-surface-variant'}`}></span>
+                {selectedUserProfileUser.isOnline ? 'Đang online' : 'Offline'}
               </span>
             </div>
             <p className="text-on-surface-variant text-xs font-semibold">
@@ -397,17 +441,28 @@ export default function UsersTab() {
             <div className="card-surface p-5 shadow-sm space-y-4">
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="w-4 h-4 text-success" />
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-on-surface-variant font-sans">Thống kê tháng này</h4>
+                <h4 className="text-xs font-extrabold uppercase tracking-widest text-on-surface-variant font-sans">Theo dõi đăng nhập</h4>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-surface-2 rounded-xl p-4 border border-outline-variant text-center">
-                  <p className="text-2xl font-black text-on-surface font-mono tabular-nums">124</p>
-                  <p className="text-[10px] font-bold text-on-surface-variant mt-1">Ticket xử lý</p>
+                  <p className="text-2xl font-black text-on-surface font-mono tabular-nums">{selectedUserProfileUser.loginCount ?? 0}</p>
+                  <p className="text-[10px] font-bold text-on-surface-variant mt-1">Lượt đăng nhập</p>
                 </div>
                 <div className="bg-success-container rounded-xl p-3 border border-success/20 text-center">
-                  <p className="text-2xl font-black text-on-success-container font-mono tabular-nums">98%</p>
-                  <p className="text-[10px] font-bold text-success mt-1">Đạt SLA</p>
+                  <p className="text-sm font-black text-on-success-container tabular-nums">{formatRelativeTime(selectedUserProfileUser.lastSeenAt)}</p>
+                  <p className="text-[10px] font-bold text-success mt-1">Hoạt động cuối</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-2 p-3 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-bold text-on-surface-variant">Đăng nhập cuối</span>
+                  <span className="text-right font-semibold text-on-surface">{formatDateTime(selectedUserProfileUser.lastLoginAt)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-bold text-on-surface-variant">Online cuối</span>
+                  <span className="text-right font-semibold text-on-surface">{formatDateTime(selectedUserProfileUser.lastSeenAt)}</span>
                 </div>
               </div>
             </div>
@@ -511,25 +566,26 @@ export default function UsersTab() {
         {/* User table lists */}
         <div className="card-surface overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-xs border-collapse">
+            <table className="w-full min-w-[920px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold select-none font-sans">
                   <th className="py-4 px-5">Họ và Tên</th>
                   <th className="py-4 px-5">Email</th>
                   <th className="py-4 px-5">Vai trò (Role)</th>
+                  <th className="py-4 px-5">Online / đăng nhập</th>
                   <th className="py-4 px-5 text-right font-bold w-24">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/40">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={4} className="py-10 text-center font-sans font-bold text-on-surface-variant">
+                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
                       Đang tải dữ liệu người dùng...
                     </td>
                   </tr>
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-10 text-center font-sans font-bold text-on-surface-variant">
+                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
                       Không tìm thấy nhân viên nào khớp với điều kiện lọc.
                     </td>
                   </tr>
@@ -574,6 +630,21 @@ export default function UsersTab() {
                         }>
                           {getRoleLabel(user.role)}
                         </span>
+                      </td>
+                      <td className="py-4 px-5">
+                        <div className="space-y-1.5">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${user.isOnline ? 'bg-success-container text-success' : 'bg-surface-2 text-on-surface-variant border border-outline-variant'}`}>
+                            {user.isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                            {user.isOnline ? 'Đang online' : 'Offline'}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+                            <Clock className="w-3 h-3" />
+                            <span>{user.isOnline ? formatRelativeTime(user.lastSeenAt) : `Cuối: ${formatRelativeTime(user.lastSeenAt)}`}</span>
+                          </div>
+                          <p className="text-[11px] text-on-surface-variant">
+                            {user.loginCount ?? 0} lượt đăng nhập
+                          </p>
+                        </div>
                       </td>
                       <td className="py-4 px-5 text-right w-24">
                         <div className="flex justify-end gap-1.5">

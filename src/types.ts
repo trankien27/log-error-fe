@@ -62,6 +62,10 @@ export interface User {
   avatar?: string;
   phone?: string;
   department?: string;
+  lastLoginAt?: string | null;
+  lastSeenAt?: string | null;
+  loginCount?: number;
+  isOnline?: boolean;
 }
 
 export interface ChatUser {

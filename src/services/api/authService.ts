@@ -64,6 +64,10 @@ function normalizeUser(user: BackendUser): User {
     avatar: user.avatar,
     phone: user.phone,
     department: user.department,
+    lastLoginAt: user.lastLoginAt,
+    lastSeenAt: user.lastSeenAt,
+    loginCount: user.loginCount,
+    isOnline: user.isOnline,
   };
 }
 

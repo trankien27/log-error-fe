@@ -78,9 +78,14 @@ export const useUsersStore = create<UsersState>((set, get) => ({
         usersService.getRoles(),
       ]);
 
-      set({
-        users: usersResult.status === 'fulfilled' ? usersResult.value : [],
+      const nextUsers = usersResult.status === 'fulfilled' ? usersResult.value : [];
+
+      set((state) => ({
+        users: nextUsers,
         roles: rolesResult.status === 'fulfilled' ? rolesResult.value : [],
+        selectedUserProfileUser: state.selectedUserProfileUser
+          ? nextUsers.find(user => user.id === state.selectedUserProfileUser?.id) ?? state.selectedUserProfileUser
+          : null,
         error:
           usersResult.status === 'rejected'
             ? usersResult.reason?.message || 'Không thể tải danh sách người dùng.'
@@ -88,7 +93,7 @@ export const useUsersStore = create<UsersState>((set, get) => ({
             ? rolesResult.reason?.message || 'Không thể tải danh sách vai trò.'
             : null,
         isLoading: false,
-      });
+      }));
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
     }
