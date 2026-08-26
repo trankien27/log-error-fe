@@ -438,6 +438,30 @@ export interface MonthlyWorkScheduleStats {
   shiftBreakdowns: MonthlyWorkScheduleShiftBreakdown[];
 }
 
+export interface WorkScheduleBalanceWarning {
+  type: string;
+  severity: string;
+  blocking: boolean;
+  message: string;
+  userId?: string | null;
+  userFullName?: string | null;
+  workDate?: string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  shiftId?: number | null;
+  shiftCode?: string | null;
+  shiftName?: string | null;
+  value?: number | null;
+  threshold?: number | null;
+}
+
+export interface WorkScheduleBalanceWarningsResponse {
+  year: number;
+  month: number;
+  totalWarnings: number;
+  warnings: WorkScheduleBalanceWarning[];
+}
+
 export type OvertimeStatus = 1 | 2 | 3 | 4;
 
 export interface OvertimeRequestDto {

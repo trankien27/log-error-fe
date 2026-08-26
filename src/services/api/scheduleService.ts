@@ -15,6 +15,7 @@ import {
   MonthlySuggestionApplyResponse,
   MonthlySuggestionPreviewRequest,
   MonthlySuggestionPreviewResponse,
+  WorkScheduleBalanceWarningsResponse,
   WorkScheduleWeekResponse,
   WorkScheduleDto,
 } from '../../types';
@@ -94,6 +95,14 @@ export const scheduleService = {
     userId?: string;
   }): Promise<MonthlyWorkScheduleStats[]> => {
     return apiClient.get<MonthlyWorkScheduleStats[]>(`/api/work-schedules/monthly-stats${buildQuery(params)}`);
+  },
+
+  getBalanceWarnings: (params: {
+    year: number;
+    month: number;
+    userId?: string;
+  }): Promise<WorkScheduleBalanceWarningsResponse> => {
+    return apiClient.get<WorkScheduleBalanceWarningsResponse>(`/api/work-schedules/balance-warnings${buildQuery(params)}`);
   },
 
   bulkCreateWorkSchedules: (request: BulkCreateWorkScheduleRequest): Promise<BulkCreateResponse> => {

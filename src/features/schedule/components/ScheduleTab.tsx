@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   BarChart3,
   Calendar,
   CalendarDays,
@@ -30,6 +31,8 @@ import {
   OvertimeStatus,
   ShiftDto,
   User,
+  WorkScheduleBalanceWarning,
+  WorkScheduleBalanceWarningsResponse,
   WorkScheduleDto,
   WorkScheduleWeekUserDto,
   WorkScheduleWeekResponse,
@@ -285,6 +288,7 @@ export default function ScheduleTab() {
   const [statsMonth, setStatsMonth] = useState(() => getYearMonth(weekStart).month);
   const [statsUserId, setStatsUserId] = useState('');
   const [monthlyStats, setMonthlyStats] = useState<MonthlyWorkScheduleStats[]>([]);
+  const [balanceWarnings, setBalanceWarnings] = useState<WorkScheduleBalanceWarningsResponse | null>(null);
   const [cellDrafts, setCellDrafts] = useState<Record<string, CellDraft>>({});
   const [overtimeDraft, setOvertimeDraft] = useState<OvertimeDraft | null>(null);
   const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequestDto[]>([]);
@@ -705,6 +709,33 @@ export default function ScheduleTab() {
 
     return Array.from(statsByUser.values()).sort((a, b) => a.userFullName.localeCompare(b.userFullName, 'vi'));
   }, [monthlyStats]);
+
+  const warningTypeLabels: Record<string, string> = {
+    TooManyConsecutiveDays: 'Làm liên tiếp',
+    MonthlyHoursTooHigh: 'Quá giờ tháng',
+    HoursAboveTeamAverage: 'Lệch giờ',
+    ShiftCountAboveTeamAverage: 'Lệch số ca',
+    TooManyExtraShifts: 'Ca tăng cường',
+    TooManyNightShifts: 'Ca đêm',
+    TooManyNightShiftsInWeek: 'Ca đêm trong tuần',
+    RestTimeTooShort: 'Nghỉ ngắn',
+    DailyHoursTooHigh: 'Quá giờ ngày',
+    InactiveUserHasFutureSchedule: 'Nhân viên đã tắt',
+    OverlappingShifts: 'Trùng giờ',
+    ActiveShiftHasNoCoverage: 'Thiếu người',
+  };
+
+  const getWarningTypeLabel = (warning: WorkScheduleBalanceWarning) => {
+    return warningTypeLabels[warning.type] || warning.type;
+  };
+
+  const balanceWarningRows = useMemo(() => {
+    return [...(balanceWarnings?.warnings || [])].sort((a, b) => {
+      const dateA = a.workDate || a.fromDate || '';
+      const dateB = b.workDate || b.fromDate || '';
+      return dateA.localeCompare(dateB) || (a.userFullName || '').localeCompare(b.userFullName || '', 'vi');
+    });
+  }, [balanceWarnings]);
 
   useEffect(() => {
     fetchWeekSchedule(selectedDate, {
@@ -1341,12 +1372,17 @@ export default function ScheduleTab() {
 
     setIsStatsLoading(true);
     try {
-      const result = await scheduleService.getMonthlyStats({
+      const query = {
         year: statsYear,
         month: statsMonth,
         userId: statsUserId || undefined,
-      });
+      };
+      const [result, warnings] = await Promise.all([
+        scheduleService.getMonthlyStats(query),
+        scheduleService.getBalanceWarnings(query),
+      ]);
       setMonthlyStats(result);
+      setBalanceWarnings(warnings);
       toast.success('Đã tải thống kê lịch.');
     } catch (err: any) {
       toast.error(err.message || 'Không thể tải thống kê lịch.');
@@ -2740,6 +2776,51 @@ export default function ScheduleTab() {
                       <p className="text-xs font-semibold text-on-surface-variant">Tổng giờ</p>
                       <p className="mt-2 text-2xl font-black text-success">{formatNumber(monthlyStatsSummary.totalPlannedHours)}h</p>
                     </div>
+                  </div>
+
+                  <div className="rounded-md border border-outline-variant bg-surface p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h4 className="flex items-center gap-2 text-sm font-black text-on-surface">
+                          <AlertTriangle className="h-4 w-4 text-warning" />
+                          Cảnh báo chia ca
+                        </h4>
+                        <p className="mt-1 text-xs text-on-surface-variant">
+                          Chỉ hiển thị để tham khảo, không chặn lưu hoặc đổi ca.
+                        </p>
+                      </div>
+                      <span className="rounded border border-warning/40 bg-warning/10 px-3 py-1 text-xs font-black text-warning">
+                        {balanceWarnings?.totalWarnings ?? 0} cảnh báo
+                      </span>
+                    </div>
+
+                    {balanceWarningRows.length > 0 ? (
+                      <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+                        {balanceWarningRows.map((warning, index) => (
+                          <div
+                            key={`${warning.type}-${warning.userId || 'coverage'}-${warning.workDate || warning.fromDate || index}-${warning.shiftId || ''}-${index}`}
+                            className="rounded-md border border-outline-variant bg-surface-2 px-3 py-2"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded border border-outline-variant bg-surface px-2 py-0.5 text-[11px] font-black text-on-surface">
+                                {getWarningTypeLabel(warning)}
+                              </span>
+                              {warning.userFullName && (
+                                <span className="text-xs font-bold text-on-surface-variant">{warning.userFullName}</span>
+                              )}
+                              {warning.workDate && (
+                                <span className="text-xs font-bold text-on-surface-variant">{formatDate(warning.workDate)}</span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-sm font-semibold text-on-surface">{warning.message}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-md border border-dashed border-outline-variant py-6 text-center text-sm font-semibold text-on-surface-variant">
+                        Chưa có cảnh báo cho điều kiện đang chọn.
+                      </div>
+                    )}
                   </div>
 
                   <div className="rounded-md border border-outline-variant overflow-x-auto">
