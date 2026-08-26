@@ -40,6 +40,12 @@ export type DashboardStoreRanking = {
   errorCount: number;
 };
 
+export type DashboardUserErrorRanking = {
+  userId?: string | null;
+  userName: string;
+  errorCount: number;
+};
+
 export type DashboardSummary = {
   today: string;
   fromDate: string;
@@ -52,6 +58,7 @@ export type DashboardSummary = {
   recentActivities: RecentActivity[];
   errorGroups: DashboardGroupCount[];
   storeRanking: DashboardStoreRanking[];
+  userErrorRanking: DashboardUserErrorRanking[];
 };
 
 function buildQuery(params: Record<string, string | undefined>) {
@@ -109,6 +116,7 @@ function normalizeDashboardSummary(payload: any): DashboardSummary {
     recentActivities: asArray<RecentActivity>(pick(source, 'recentActivities')),
     errorGroups: asArray<DashboardGroupCount>(pick(source, 'errorGroups')),
     storeRanking: asArray<DashboardStoreRanking>(pick(source, 'storeRanking')),
+    userErrorRanking: asArray<DashboardUserErrorRanking>(pick(source, 'userErrorRanking')),
   };
 }
 

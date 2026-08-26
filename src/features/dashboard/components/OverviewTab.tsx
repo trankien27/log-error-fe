@@ -12,6 +12,7 @@ import {
   Search,
   ShieldAlert,
   TimerReset,
+  UserRound,
 } from 'lucide-react';
 import {
   DashboardActionItem,
@@ -176,6 +177,7 @@ export default function OverviewTab() {
 
   const maxGroupCount = Math.max(...(summary?.errorGroups.map(item => item.count) || [0]), 1);
   const maxStoreCount = Math.max(...(summary?.storeRanking.map(item => item.errorCount) || [0]), 1);
+  const maxUserErrorCount = Math.max(...(summary?.userErrorRanking.map(item => item.errorCount) || [0]), 1);
 
   const fetchSummary = async () => {
     setIsLoading(true);
@@ -443,6 +445,28 @@ export default function OverviewTab() {
                   ))
                 ) : (
                   <EmptyState text="Chưa có dữ liệu ranking cửa hàng." />
+                )}
+              </div>
+            </Panel>
+
+            <Panel title="Log lỗi theo người" subtitle="Đếm theo người phụ trách trong khoảng lọc." action={<UserRound className="h-5 w-5 text-on-surface-variant" />}>
+              <div className="space-y-3 p-4">
+                {summary?.userErrorRanking.length ? (
+                  summary.userErrorRanking.map((item, index) => (
+                    <div key={`${item.userId || item.userName}-${index}`}>
+                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+                        <span className="min-w-0 truncate font-bold text-on-surface-variant">
+                          #{index + 1} {item.userName}
+                        </span>
+                        <span className="font-black text-on-surface tabular-nums">{item.errorCount}</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
+                        <div className="h-full rounded-full bg-secondary" style={{ width: `${Math.max((item.errorCount / maxUserErrorCount) * 100, 8)}%` }} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <EmptyState text="Chưa có dữ liệu log lỗi theo người." />
                 )}
               </div>
             </Panel>
