@@ -21,6 +21,7 @@ interface AuthState {
   setAuthMode: (mode: 'login' | 'register') => void;
   login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<User>;
+  questionAuth: (answer: string, email: string, password: string, fullName?: string) => Promise<User>;
   logout: () => void;
   getCurrentUserName: () => string;
   getCurrentRoleNumber: () => number | null;
@@ -64,6 +65,8 @@ function resolveRoleNumber(role: unknown) {
     'IT Support': 2,
     Manager: 3,
     ITSupportManager: 3,
+    Guest: 4,
+    guest: 4,
   };
 
   if (typeof role === 'string' && roleMap[role] !== undefined) {
@@ -125,6 +128,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const [firstName, ...lastNameParts] = name.trim().split(/\s+/);
       const user = await authService.register(firstName, lastNameParts.join(' '), email, password);
+      set({
+        isLoggedIn: true,
+        currentUser: user,
+        currentRoleNumber: resolveRoleNumber(user.role) ?? getTokenRoleNumber(),
+        isLoading: false,
+      });
+      return user;
+    } catch (err: any) {
+      set({ error: err.message, isLoading: false });
+      throw err;
+    }
+  },
+
+  questionAuth: async (answer, email, password, fullName) => {
+    set({ isLoading: true, error: null });
+    try {
+      const user = await authService.questionAuth(answer, email, password, fullName);
       set({
         isLoggedIn: true,
         currentUser: user,

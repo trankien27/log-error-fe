@@ -8,6 +8,8 @@ const BOOTH_GUEST_SESSION_KEY = 'booth_guest_session';
 type BoothGuestSession = {
   boothCode: string;
   verifiedAt: string;
+  role?: 'guest';
+  source?: 'pin' | 'question';
 };
 
 function readStoredSession(): BoothGuestSession | null {
@@ -16,7 +18,12 @@ function readStoredSession(): BoothGuestSession | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<BoothGuestSession>;
     if (!parsed?.verifiedAt) return null;
-    return { boothCode: String(parsed.boothCode ?? ''), verifiedAt: String(parsed.verifiedAt) };
+    return {
+      boothCode: String(parsed.boothCode ?? ''),
+      verifiedAt: String(parsed.verifiedAt),
+      role: 'guest',
+      source: parsed.source === 'question' ? 'question' : 'pin',
+    };
   } catch {
     return null;
   }
@@ -27,6 +34,7 @@ interface BoothGuestState {
   isBoothGuest: boolean;
   isVerifying: boolean;
   verifyPin: (pinCode: string) => Promise<void>;
+  continueAsQuestionGuest: () => void;
   exit: () => void;
 }
 
@@ -57,6 +65,8 @@ export const useBoothGuestStore = create<BoothGuestState>((set) => {
         const session: BoothGuestSession = {
           boothCode,
           verifiedAt: new Date().toISOString(),
+          role: 'guest',
+          source: 'pin',
         };
 
         try {
@@ -69,6 +79,23 @@ export const useBoothGuestStore = create<BoothGuestState>((set) => {
       } finally {
         set({ isVerifying: false });
       }
+    },
+
+    continueAsQuestionGuest: () => {
+      const session: BoothGuestSession = {
+        boothCode: '',
+        verifiedAt: new Date().toISOString(),
+        role: 'guest',
+        source: 'question',
+      };
+
+      try {
+        sessionStorage.setItem(BOOTH_GUEST_SESSION_KEY, JSON.stringify(session));
+      } catch {
+        // sessionStorage bi chan thi phien chi song trong bo nho.
+      }
+
+      set({ session, isBoothGuest: true });
     },
 
     exit: () => {

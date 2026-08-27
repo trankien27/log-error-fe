@@ -27,7 +27,11 @@ export default function BoothGuestLayout() {
             <div className="min-w-0">
               <p className="text-sm font-bold text-on-surface truncate">Chế độ booth</p>
               <p className="text-[11px] text-on-surface-variant truncate">
-                {session?.boothCode ? `Booth ${session.boothCode}` : 'Đã xác thực bằng mã PIN'}
+                {session?.boothCode
+                  ? `Booth ${session.boothCode}`
+                  : session?.source === 'question'
+                  ? 'Đang dùng vai trò khách'
+                  : 'Đã xác thực bằng mã PIN'}
               </p>
             </div>
           </div>

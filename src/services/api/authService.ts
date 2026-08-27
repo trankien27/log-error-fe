@@ -45,7 +45,7 @@ function normalizeUser(user: BackendUser): User {
   const normalizedRole =
     Number.isFinite(numericRole) && numericRole > 0
       ? (numericRole as User['role'])
-      : roleClaim === 'Admin' || roleClaim === 'ITSupport' || roleClaim === 'IT Support' || roleClaim === 'ITSupportManager' || roleClaim === 'Manager'
+      : roleClaim === 'Admin' || roleClaim === 'ITSupport' || roleClaim === 'IT Support' || roleClaim === 'ITSupportManager' || roleClaim === 'Manager' || roleClaim === 'Guest' || roleClaim === 'guest'
       ? roleClaim
       : 'ITSupport';
 
@@ -115,6 +115,16 @@ export const authService = {
       lastName,
       email,
       password,
+    });
+    return normalizeAuthResponse(response);
+  },
+
+  questionAuth: async (answer: string, email: string, password: string, fullName?: string): Promise<User> => {
+    const response = await apiClient.post<AuthResponse>('/api/auth/question-auth', {
+      answer,
+      email,
+      password,
+      fullName,
     });
     return normalizeAuthResponse(response);
   },
