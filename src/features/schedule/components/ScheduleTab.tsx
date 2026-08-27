@@ -49,6 +49,7 @@ type DraftPanel = {
   endTime: string;
   endDayOffset: 0 | 1;
   paidWorkingHours: number;
+  shiftCoefficient: number;
   userIds: string[];
   note: string;
   schedule?: WorkScheduleDto;
@@ -180,6 +181,25 @@ function getScheduleTitle(schedule: WorkScheduleDto) {
   return `${schedule.shiftCode} - ${schedule.shiftName}`;
 }
 
+function getScheduleBaseHours(schedule: WorkScheduleDto) {
+  return schedule.paidWorkingHours || schedule.workingHours || 0;
+}
+
+function getScheduleCoefficient(schedule: WorkScheduleDto) {
+  return schedule.shiftCoefficient && schedule.shiftCoefficient > 0 ? schedule.shiftCoefficient : 1;
+}
+
+function getScheduleEffectiveHours(schedule: WorkScheduleDto) {
+  return schedule.effectiveWorkingHours ?? getScheduleBaseHours(schedule) * getScheduleCoefficient(schedule);
+}
+
+function getScheduleHoursLabel(schedule: WorkScheduleDto) {
+  const baseHours = getScheduleBaseHours(schedule);
+  const coefficient = getScheduleCoefficient(schedule);
+  if (coefficient === 1) return getScheduleHours(schedule);
+  return `${getScheduleHours(schedule)} | ${baseHours}h x ${coefficient} = ${getScheduleEffectiveHours(schedule)}h`;
+}
+
 function getUserInitials(name: string) {
   return name
     .split(/\s+/)
@@ -206,7 +226,7 @@ function getSchedulesForDate(row: WorkScheduleWeekUserDto, workDate: string) {
 
 function getSchedulesTotalHours(schedules: WorkScheduleDto[]) {
   return schedules.reduce((total, schedule) => (
-    total + (schedule.paidWorkingHours || schedule.workingHours || 0)
+    total + getScheduleEffectiveHours(schedule)
   ), 0);
 }
 
@@ -485,7 +505,7 @@ export default function ScheduleTab() {
     const totals = new Map<string, { userId: string; userName: string; hours: number }>();
     monthlySchedules.forEach(schedule => {
       if (!isAllowed(schedule.userId)) return;
-      const hours = schedule.paidWorkingHours || schedule.workingHours || 0;
+      const hours = getScheduleEffectiveHours(schedule);
       const userName = schedule.userName || userById.get(schedule.userId)?.name || 'Chưa rõ';
       const current = totals.get(schedule.userId) || { userId: schedule.userId, userName, hours: 0 };
       current.hours += hours;
@@ -519,7 +539,8 @@ export default function ScheduleTab() {
 
         if (draft) {
           const draftShift = activeShifts.find(shift => String(shift.id) === draft.shiftId);
-          return rowSum + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
+          const coefficient = draft.originalSchedule?.shiftCoefficient || 1;
+          return rowSum + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0) * coefficient;
         }
 
         return rowSum + getSchedulesTotalHours(schedules);
@@ -604,6 +625,7 @@ export default function ScheduleTab() {
     payload: {
       workDate: string;
       shiftId: number;
+      shiftCoefficient: number;
       note: string | null;
     },
     id: number,
@@ -624,6 +646,8 @@ export default function ScheduleTab() {
       endTime: selectedShift?.endTime || previous?.endTime || toApiTime(panel?.endTime || ''),
       endDayOffset: selectedShift?.endDayOffset || previous?.endDayOffset || panel?.endDayOffset || 0,
       paidWorkingHours: selectedShift?.paidWorkingHours || previous?.paidWorkingHours || panel?.paidWorkingHours || 0,
+      shiftCoefficient: payload.shiftCoefficient,
+      effectiveWorkingHours: (selectedShift?.paidWorkingHours || previous?.paidWorkingHours || panel?.paidWorkingHours || 0) * payload.shiftCoefficient,
       workingHours: selectedShift?.paidWorkingHours || selectedShift?.workingHours || previous?.workingHours || previous?.paidWorkingHours || panel?.paidWorkingHours || 0,
       status: previous?.status || 1,
       statusName: previous?.statusName || 'Scheduled',
@@ -815,6 +839,7 @@ export default function ScheduleTab() {
       endTime: toInputTime(shift.endTime),
       endDayOffset: shift.endDayOffset ? 1 : 0,
       paidWorkingHours: shift.paidWorkingHours || shift.workingHours || 0,
+      shiftCoefficient: current.shiftCoefficient || 1,
     }) : current);
   };
 
@@ -836,6 +861,7 @@ export default function ScheduleTab() {
       endTime,
       endDayOffset,
       paidWorkingHours: defaultShift?.paidWorkingHours || defaultShift?.workingHours || 0,
+      shiftCoefficient: 1,
       userIds: userId ? [userId] : [],
       note: '',
     });
@@ -854,6 +880,7 @@ export default function ScheduleTab() {
       endTime: toInputTime(schedule.endTime),
       endDayOffset: schedule.endDayOffset ? 1 : 0,
       paidWorkingHours: schedule.paidWorkingHours || schedule.workingHours || 0,
+      shiftCoefficient: schedule.shiftCoefficient || 1,
       userIds: [user.userId],
       note: schedule.note || '',
       schedule,
@@ -1072,6 +1099,7 @@ export default function ScheduleTab() {
             endTime: op.schedule.endTime,
             endDayOffset: op.schedule.endDayOffset || 0,
             paidWorkingHours: op.schedule.paidWorkingHours || op.schedule.workingHours || 0,
+            shiftCoefficient: op.schedule.shiftCoefficient || 1,
             userId: op.targetUserId,
             status: op.schedule.status,
             note: op.schedule.note || null,
@@ -1096,6 +1124,7 @@ export default function ScheduleTab() {
             shiftId: Number(draft.shiftId),
             userId: draft.userId,
             status: draft.originalSchedule.status,
+            shiftCoefficient: draft.originalSchedule.shiftCoefficient || 1,
             note: draft.originalSchedule.note || null,
           });
         } else if (draft.shiftId) {
@@ -1103,6 +1132,7 @@ export default function ScheduleTab() {
             workDate: draft.workDate,
             shiftId: Number(draft.shiftId),
             userId: draft.userId,
+            shiftCoefficient: 1,
             note: null,
           });
         }
@@ -1162,10 +1192,15 @@ export default function ScheduleTab() {
       toast.error('Số giờ tính công phải lớn hơn 0.');
       return;
     }
+    if (panel.shiftCoefficient <= 0) {
+      toast.error('Hệ số ca trực phải lớn hơn 0.');
+      return;
+    }
 
     const schedulePayload = {
       workDate: panel.workDate,
       shiftId: Number(panel.shiftId),
+      shiftCoefficient: panel.shiftCoefficient,
       note: panel.note || null,
     };
 
@@ -1576,7 +1611,8 @@ export default function ScheduleTab() {
 
       if (draft) {
         const draftShift = activeShifts.find(shift => String(shift.id) === draft.shiftId);
-        return total + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0);
+        const coefficient = draft.originalSchedule?.shiftCoefficient || 1;
+        return total + (draftShift?.paidWorkingHours || draftShift?.workingHours || 0) * coefficient;
       }
 
       return total + getSchedulesTotalHours(schedules);
@@ -1685,7 +1721,7 @@ export default function ScheduleTab() {
         type="button"
         disabled={isSaving}
         draggable={canManageSchedule && !isSaving}
-        title={`${getScheduleTitle(schedule)} | ${getScheduleHours(schedule)}`}
+        title={`${getScheduleTitle(schedule)} | ${getScheduleHoursLabel(schedule)}`}
         onClick={() => openEditPanel(schedule, row)}
         onContextMenu={event => openScheduleContextMenu(event, schedule, row)}
         onDragStart={event => {
@@ -1711,7 +1747,7 @@ export default function ScheduleTab() {
         } ${canManageSchedule ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
       >
         <Edit2 className="absolute right-1.5 top-1.5 h-3 w-3 text-on-surface-variant" />
-        {renderShiftBadgeText(schedule.shiftCode, getScheduleTitle(schedule), getScheduleHours(schedule), 'pr-5')}
+        {renderShiftBadgeText(schedule.shiftCode, getScheduleTitle(schedule), getScheduleHoursLabel(schedule), 'pr-5')}
         {renderScheduleNote(schedule, 'pr-5')}
       </button>
     );
@@ -1728,7 +1764,7 @@ export default function ScheduleTab() {
       <div
         key={schedule.id}
         draggable={canManageSchedule && !isSaving}
-        title={`${getScheduleTitle(schedule)} | ${getScheduleHours(schedule)}`}
+        title={`${getScheduleTitle(schedule)} | ${getScheduleHoursLabel(schedule)}`}
         onContextMenu={event => openScheduleContextMenu(event, schedule, row)}
         onDragStart={event => {
           if (isSaving) return;
@@ -1751,7 +1787,7 @@ export default function ScheduleTab() {
         } ${canManageSchedule ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
       >
         <span className="block truncate">{schedule.shiftName || schedule.shiftCode}</span>
-        <span className="mt-0.5 block truncate text-[9px] font-bold">{getScheduleHours(schedule)}</span>
+        <span className="mt-0.5 block truncate text-[9px] font-bold">{getScheduleHoursLabel(schedule)}</span>
         {renderScheduleNote(schedule)}
       </div>
     );
@@ -1814,7 +1850,7 @@ export default function ScheduleTab() {
                   canManageSchedule ? 'cursor-pointer' : 'cursor-default'
                 }`}
               >
-                {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHours(item), 'pr-7')}
+                {renderShiftBadgeText(item.shiftCode, getScheduleTitle(item), getScheduleHoursLabel(item), 'pr-7')}
                 {renderScheduleNote(item, 'pr-7')}
                 {canManageSchedule && <Edit2 className="absolute right-2 top-2 h-3.5 w-3.5 text-on-surface-variant" />}
               </button>
@@ -1940,7 +1976,7 @@ export default function ScheduleTab() {
               className={`block w-full rounded border px-1.5 py-1 text-left text-[10px] font-black leading-tight ${getShiftClass(item.shiftCode)}`}
             >
               <span className="block truncate">{item.shiftName || item.shiftCode}</span>
-              <span className="mt-0.5 block truncate text-[9px] font-bold">{getScheduleHours(item)}</span>
+              <span className="mt-0.5 block truncate text-[9px] font-bold">{getScheduleHoursLabel(item)}</span>
               {renderScheduleNote(item)}
             </div>
           ))}
@@ -2535,7 +2571,7 @@ export default function ScheduleTab() {
                   Tổng giờ của tuần:
                   <span className="ml-3">{visibleTotalWorkingHours.toFixed(1)}h</span>
                 </p>
-                <p className="text-xs text-on-surface-variant mt-1">(Tính theo giờ làm việc của shift)</p>
+                <p className="text-xs text-on-surface-variant mt-1">(Đã nhân hệ số ca trực từng ngày)</p>
               </div>
             </div>
 
@@ -2587,6 +2623,29 @@ export default function ScheduleTab() {
                     ))}
                   </select>
                 </label>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-medium">
+                    Hệ số ca trực
+                    <input
+                      type="number"
+                      min={0.1}
+                      step={0.1}
+                      value={panel.shiftCoefficient}
+                      onChange={event => {
+                        const value = Number(event.target.value);
+                        setPanel(current => current ? { ...current, shiftCoefficient: Number.isFinite(value) ? value : 1 } : current);
+                      }}
+                      className="mt-2 h-10 w-full rounded-md border border-outline-variant px-3 text-sm"
+                    />
+                  </label>
+                  <div className="rounded-md border border-outline-variant bg-surface-2 px-3 py-2 text-sm">
+                    <p className="font-semibold text-on-surface-variant">Giờ quy đổi</p>
+                    <p className="mt-1 text-base font-black text-primary">
+                      {(panel.paidWorkingHours * (panel.shiftCoefficient || 1)).toFixed(1)}h
+                    </p>
+                  </div>
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium">Nhân viên</label>
@@ -3098,7 +3157,7 @@ export default function ScheduleTab() {
                 {scheduleViewPreview.schedules.map(item => (
                   <div key={item.id} className="rounded-lg border border-outline-variant bg-surface-2 px-3 py-3">
                     <p className="font-bold text-on-surface">{item.shiftName || item.shiftCode}</p>
-                    <p className="mt-1 text-xs font-bold text-on-surface-variant">{getScheduleHours(item)}</p>
+                    <p className="mt-1 text-xs font-bold text-on-surface-variant">{getScheduleHoursLabel(item)}</p>
                     {item.note?.trim() && (
                       <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-6 text-on-surface-variant">
                         Ghi chú: {item.note}

@@ -386,6 +386,8 @@ export interface WorkScheduleDto {
   endTime: string;
   endDayOffset?: number;
   paidWorkingHours?: number;
+  shiftCoefficient?: number;
+  effectiveWorkingHours?: number;
   workingHours?: number;
   status: number;
   statusName: string;
@@ -533,6 +535,7 @@ export interface CreateWorkScheduleRequest {
   endTime?: string | null;
   endDayOffset?: number;
   paidWorkingHours?: number;
+  shiftCoefficient?: number;
   workingHours?: number;
   note?: string | null;
 }
@@ -568,6 +571,7 @@ export interface UpdateWorkScheduleRequest {
   endTime?: string | null;
   endDayOffset?: number;
   paidWorkingHours?: number;
+  shiftCoefficient?: number;
   workingHours?: number;
   status?: number;
   note?: string | null;
