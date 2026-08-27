@@ -187,6 +187,8 @@ export default function ErrorLogsTab() {
     logBoothFilter,
     logStatusFilter,
     logMonthFilter,
+    logFromDateFilter,
+    logToDateFilter,
     logErrorGroupFilter,
     logProcessingFlowFilter,
     logSeverityFilter,
@@ -196,6 +198,8 @@ export default function ErrorLogsTab() {
     setLogBoothFilter,
     setLogStatusFilter,
     setLogMonthFilter,
+    setLogFromDateFilter,
+    setLogToDateFilter,
     setLogErrorGroupFilter,
     setLogProcessingFlowFilter,
     setLogSeverityFilter,
@@ -249,23 +253,27 @@ export default function ErrorLogsTab() {
   useEffect(() => {
     fetchLogs({
       store: logStoreFilter || undefined,
-      booth: logBoothFilter || undefined,
-      status: logStatusFilter || undefined,
-      month: logMonthFilter || undefined,
-      errorGroup: logErrorGroupFilter || undefined,
+	      booth: logBoothFilter || undefined,
+	      status: logStatusFilter || undefined,
+	      month: logMonthFilter || undefined,
+	      fromDate: logFromDateFilter || undefined,
+	      toDate: logToDateFilter || undefined,
+	      errorGroup: logErrorGroupFilter || undefined,
       processingFlow: logProcessingFlowFilter || undefined,
       severity: logSeverityFilter || undefined,
       pageIndex: logPageIndex,
       pageSize: logPageSize,
     });
-  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
+	  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logFromDateFilter, logToDateFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
 
   const getFilterQuery = () => ({
     store: logStoreFilter || undefined,
-    booth: logBoothFilter || undefined,
-    status: logStatusFilter || undefined,
-    month: logMonthFilter || undefined,
-    errorGroup: logErrorGroupFilter || undefined,
+	    booth: logBoothFilter || undefined,
+	    status: logStatusFilter || undefined,
+	    month: logMonthFilter || undefined,
+	    fromDate: logFromDateFilter || undefined,
+	    toDate: logToDateFilter || undefined,
+	    errorGroup: logErrorGroupFilter || undefined,
     processingFlow: logProcessingFlowFilter || undefined,
     severity: logSeverityFilter || undefined,
   });
@@ -750,7 +758,7 @@ export default function ErrorLogsTab() {
       )}
 
       <div className="bg-surface rounded-xl border border-outline-variant p-4 shadow-sm text-left">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-8 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-10 gap-3">
           <div>
             <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cửa hàng</label>
             <LazySearchDropdown
@@ -799,6 +807,30 @@ export default function ErrorLogsTab() {
                 <option key={month} value={month}>Tháng {month}</option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-from-date-filter">Từ ngày</label>
+            <input
+              type="date"
+              id="log-from-date-filter"
+              value={logFromDateFilter}
+              max={logToDateFilter || undefined}
+              onChange={e => setLogFromDateFilter(e.target.value)}
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-to-date-filter">Đến ngày</label>
+            <input
+              type="date"
+              id="log-to-date-filter"
+              value={logToDateFilter}
+              min={logFromDateFilter || undefined}
+              onChange={e => setLogToDateFilter(e.target.value)}
+              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
           </div>
 
           <div>

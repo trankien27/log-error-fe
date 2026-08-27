@@ -4,6 +4,8 @@ import { apiClient, API_BASE_URL, AUTH_TOKEN_KEY } from './apiClient';
 export type ErrorLogQuery = {
   status?: ErrorLogStatus;
   month?: number;
+  fromDate?: string;
+  toDate?: string;
   store?: string;
   booth?: string;
   errorGroup?: ErrorGroup;

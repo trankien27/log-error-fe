@@ -18,6 +18,8 @@ interface LogsState {
   logBoothFilter: string;
   logStatusFilter: '' | ErrorLogStatus;
   logMonthFilter: '' | number;
+  logFromDateFilter: string;
+  logToDateFilter: string;
   logErrorGroupFilter: '' | ErrorGroup;
   logProcessingFlowFilter: '' | ProcessingFlow;
   logSeverityFilter: '' | Severity;
@@ -30,6 +32,8 @@ interface LogsState {
   setLogBoothFilter: (booth: string) => void;
   setLogStatusFilter: (status: '' | ErrorLogStatus) => void;
   setLogMonthFilter: (month: '' | number) => void;
+  setLogFromDateFilter: (fromDate: string) => void;
+  setLogToDateFilter: (toDate: string) => void;
   setLogErrorGroupFilter: (group: '' | ErrorGroup) => void;
   setLogProcessingFlowFilter: (flow: '' | ProcessingFlow) => void;
   setLogSeverityFilter: (severity: '' | Severity) => void;
@@ -65,6 +69,8 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   logBoothFilter: '',
   logStatusFilter: '',
   logMonthFilter: '',
+  logFromDateFilter: '',
+  logToDateFilter: '',
   logErrorGroupFilter: '',
   logProcessingFlowFilter: '',
   logSeverityFilter: '',
@@ -77,6 +83,8 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   setLogBoothFilter: (logBoothFilter) => set({ logBoothFilter, logPageIndex: 1 }),
   setLogStatusFilter: (logStatusFilter) => set({ logStatusFilter, logPageIndex: 1 }),
   setLogMonthFilter: (logMonthFilter) => set({ logMonthFilter, logPageIndex: 1 }),
+  setLogFromDateFilter: (logFromDateFilter) => set({ logFromDateFilter, logPageIndex: 1 }),
+  setLogToDateFilter: (logToDateFilter) => set({ logToDateFilter, logPageIndex: 1 }),
   setLogErrorGroupFilter: (logErrorGroupFilter) => set({ logErrorGroupFilter, logPageIndex: 1 }),
   setLogProcessingFlowFilter: (logProcessingFlowFilter) => set({ logProcessingFlowFilter, logPageIndex: 1 }),
   setLogSeverityFilter: (logSeverityFilter) => set({ logSeverityFilter, logPageIndex: 1 }),
@@ -197,6 +205,8 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       logBoothFilter,
       logStatusFilter,
       logMonthFilter,
+      logFromDateFilter,
+      logToDateFilter,
       logErrorGroupFilter,
       logProcessingFlowFilter,
       logSeverityFilter,
@@ -213,11 +223,14 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       const boothMatch = logBoothFilter ? log.booth === logBoothFilter : true;
       const statusMatch = logStatusFilter ? log.status === logStatusFilter : true;
       const monthMatch = logMonthFilter ? log.month === logMonthFilter : true;
+      const receivedDate = log.receivedDate ? log.receivedDate.slice(0, 10) : '';
+      const fromDateMatch = logFromDateFilter ? receivedDate >= logFromDateFilter : true;
+      const toDateMatch = logToDateFilter ? receivedDate <= logToDateFilter : true;
       const groupMatch = logErrorGroupFilter ? log.errorGroup === logErrorGroupFilter : true;
       const processingFlowMatch = logProcessingFlowFilter ? log.processingFlow === logProcessingFlowFilter : true;
       const severityMatch = logSeverityFilter ? log.severity === logSeverityFilter : true;
 
-      return searchMatch && storeMatch && boothMatch && statusMatch && monthMatch && groupMatch && processingFlowMatch && severityMatch;
+      return searchMatch && storeMatch && boothMatch && statusMatch && monthMatch && fromDateMatch && toDateMatch && groupMatch && processingFlowMatch && severityMatch;
     });
   },
 }));
