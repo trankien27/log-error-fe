@@ -186,7 +186,6 @@ export default function ErrorLogsTab() {
     logStoreFilter,
     logBoothFilter,
     logStatusFilter,
-    logMonthFilter,
     logFromDateFilter,
     logToDateFilter,
     logErrorGroupFilter,
@@ -197,7 +196,6 @@ export default function ErrorLogsTab() {
     setLogStoreFilter,
     setLogBoothFilter,
     setLogStatusFilter,
-    setLogMonthFilter,
     setLogFromDateFilter,
     setLogToDateFilter,
     setLogErrorGroupFilter,
@@ -255,7 +253,6 @@ export default function ErrorLogsTab() {
       store: logStoreFilter || undefined,
 	      booth: logBoothFilter || undefined,
 	      status: logStatusFilter || undefined,
-	      month: logMonthFilter || undefined,
 	      fromDate: logFromDateFilter || undefined,
 	      toDate: logToDateFilter || undefined,
 	      errorGroup: logErrorGroupFilter || undefined,
@@ -264,13 +261,12 @@ export default function ErrorLogsTab() {
       pageIndex: logPageIndex,
       pageSize: logPageSize,
     });
-	  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logMonthFilter, logFromDateFilter, logToDateFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
+	  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logFromDateFilter, logToDateFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
 
   const getFilterQuery = () => ({
     store: logStoreFilter || undefined,
 	    booth: logBoothFilter || undefined,
 	    status: logStatusFilter || undefined,
-	    month: logMonthFilter || undefined,
 	    fromDate: logFromDateFilter || undefined,
 	    toDate: logToDateFilter || undefined,
 	    errorGroup: logErrorGroupFilter || undefined,
@@ -757,165 +753,12 @@ export default function ErrorLogsTab() {
       </div>
       )}
 
-      <div className="bg-surface rounded-xl border border-outline-variant p-4 shadow-sm text-left">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-10 gap-3">
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cửa hàng</label>
-            <LazySearchDropdown
-              ariaLabel="Lọc log theo cửa hàng"
-              value={logStoreFilter}
-              placeholder="Tất cả cửa hàng"
-              emptyText="Không tìm thấy cửa hàng."
-              loadOptions={loadStores}
-              pageSize={20}
-              onSelect={item => {
-                setLogStoreFilter(item.name);
-                setLogStoreFilterId(item.id);
-                setLogBoothFilter('');
-              }}
-              onClear={() => {
-                setLogStoreFilter('');
-                setLogStoreFilterId(undefined);
-                setLogBoothFilter('');
-              }}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Booth</label>
-            <LazySearchDropdown
-              ariaLabel="Lọc log theo booth"
-              value={logBoothFilter}
-              placeholder="Tất cả Booth"
-              emptyText="Không tìm thấy Booth."
-              loadOptions={loadFilteredBooths}
-              onSelect={item => setLogBoothFilter(item.name)}
-              onClear={() => setLogBoothFilter('')}
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-month-filter">Tháng</label>
-            <select
-              id="log-month-filter"
-              value={logMonthFilter}
-              onChange={e => setLogMonthFilter(e.target.value ? Number(e.target.value) : '')}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              {Array.from({ length: 12 }, (_, index) => index + 1).map(month => (
-                <option key={month} value={month}>Tháng {month}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-from-date-filter">Từ ngày</label>
-            <input
-              type="date"
-              id="log-from-date-filter"
-              value={logFromDateFilter}
-              max={logToDateFilter || undefined}
-              onChange={e => setLogFromDateFilter(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-to-date-filter">Đến ngày</label>
-            <input
-              type="date"
-              id="log-to-date-filter"
-              value={logToDateFilter}
-              min={logFromDateFilter || undefined}
-              onChange={e => setLogToDateFilter(e.target.value)}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-error-group-filter">Nhóm lỗi</label>
-            <select
-              id="log-error-group-filter"
-              value={logErrorGroupFilter}
-              onChange={e => setLogErrorGroupFilter(e.target.value ? Number(e.target.value) as ErrorGroup : '')}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              {errorGroupOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-status-filter">Trạng thái</label>
-            <select
-              id="log-status-filter"
-              value={logStatusFilter}
-              onChange={e => setLogStatusFilter(e.target.value ? Number(e.target.value) as ErrorLogStatus : '')}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              {statusOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-processing-flow-filter">Luồng xử lý</label>
-            <select
-              id="log-processing-flow-filter"
-              value={logProcessingFlowFilter}
-              onChange={e => setLogProcessingFlowFilter(e.target.value ? Number(e.target.value) as ProcessingFlow : '')}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              {processingFlowOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-severity-filter">Mức độ</label>
-            <select
-              id="log-severity-filter"
-              value={logSeverityFilter}
-              onChange={e => setLogSeverityFilter(e.target.value ? Number(e.target.value) as Severity : '')}
-              className="w-full text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              {severityOptions.map(option => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1" htmlFor="log-search-input">Tìm kiếm</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-              <input
-                type="text"
-                id="log-search-input"
-                placeholder="Mã lỗi, cửa hàng..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-outline-variant rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary placeholder:text-on-surface-variant"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-xs border-collapse">
+          <table className="w-full min-w-[1380px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant select-none font-sans">
-                <th className="py-4 px-5 font-bold w-12">
+                <th className="py-3 px-4 font-bold w-12">
                   <input
                     type="checkbox"
                     checked={isAllCurrentPageSelected}
@@ -925,26 +768,155 @@ export default function ErrorLogsTab() {
                     aria-label="Chọn tất cả log lỗi trên trang hiện tại"
                   />
                 </th>
-                <th className="py-4 px-5 font-bold">Ngày tiếp nhận</th>
-                <th className="py-4 px-5 font-bold">Cửa hàng</th>
-                <th className="py-4 px-5 font-bold">Mô tả lỗi</th>
-                <th className="py-4 px-5 font-bold">Nhóm lỗi</th>
-                <th className="py-4 px-5 font-bold">Trạng thái</th>
-                <th className="py-4 px-5 font-bold">Mức độ</th>
-                <th className="py-4 px-5 font-bold text-center">Tệp</th>
-                <th className="py-4 px-5 font-bold text-right">Tùy biến</th>
+                <th className="py-3 px-4 font-bold min-w-[220px]">Ngày tiếp nhận</th>
+                <th className="py-3 px-4 font-bold min-w-[220px]">Cửa hàng</th>
+                <th className="py-3 px-4 font-bold min-w-[180px]">Booth</th>
+                <th className="py-3 px-4 font-bold min-w-[240px]">Mô tả lỗi</th>
+                <th className="py-3 px-4 font-bold min-w-[140px]">Nhóm lỗi</th>
+                <th className="py-3 px-4 font-bold min-w-[150px]">Trạng thái</th>
+                <th className="py-3 px-4 font-bold min-w-[160px]">Luồng xử lý</th>
+                <th className="py-3 px-4 font-bold min-w-[130px]">Mức độ</th>
+                <th className="py-3 px-4 font-bold text-center w-20">Tệp</th>
+                <th className="py-3 px-4 font-bold text-right w-32">Tùy biến</th>
+              </tr>
+              <tr className="bg-surface border-b border-outline-variant">
+                <th className="py-3 px-4" />
+                <th className="py-3 px-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="date"
+                      id="log-from-date-filter"
+                      value={logFromDateFilter}
+                      max={logToDateFilter || undefined}
+                      onChange={e => setLogFromDateFilter(e.target.value)}
+                      aria-label="Lọc từ ngày tiếp nhận"
+                      className="h-9 min-w-0 rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                    <input
+                      type="date"
+                      id="log-to-date-filter"
+                      value={logToDateFilter}
+                      min={logFromDateFilter || undefined}
+                      onChange={e => setLogToDateFilter(e.target.value)}
+                      aria-label="Lọc đến ngày tiếp nhận"
+                      className="h-9 min-w-0 rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-4">
+                  <LazySearchDropdown
+                    ariaLabel="Lọc log theo cửa hàng"
+                    value={logStoreFilter}
+                    placeholder="Tất cả"
+                    emptyText="Không tìm thấy cửa hàng."
+                    loadOptions={loadStores}
+                    pageSize={20}
+                    onSelect={item => {
+                      setLogStoreFilter(item.name);
+                      setLogStoreFilterId(item.id);
+                      setLogBoothFilter('');
+                    }}
+                    onClear={() => {
+                      setLogStoreFilter('');
+                      setLogStoreFilterId(undefined);
+                      setLogBoothFilter('');
+                    }}
+                  />
+                </th>
+                <th className="py-3 px-4">
+                  <LazySearchDropdown
+                    ariaLabel="Lọc log theo booth"
+                    value={logBoothFilter}
+                    placeholder="Tất cả"
+                    emptyText="Không tìm thấy Booth."
+                    loadOptions={loadFilteredBooths}
+                    onSelect={item => setLogBoothFilter(item.name)}
+                    onClear={() => setLogBoothFilter('')}
+                  />
+                </th>
+                <th className="py-3 px-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
+                    <input
+                      type="text"
+                      id="log-search-input"
+                      placeholder="Mã lỗi, mô tả..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="h-9 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-4">
+                  <select
+                    id="log-error-group-filter"
+                    value={logErrorGroupFilter}
+                    onChange={e => setLogErrorGroupFilter(e.target.value ? Number(e.target.value) as ErrorGroup : '')}
+                    aria-label="Lọc theo nhóm lỗi"
+                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Tất cả</option>
+                    {errorGroupOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 px-4">
+                  <select
+                    id="log-status-filter"
+                    value={logStatusFilter}
+                    onChange={e => setLogStatusFilter(e.target.value ? Number(e.target.value) as ErrorLogStatus : '')}
+                    aria-label="Lọc theo trạng thái"
+                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Tất cả</option>
+                    {statusOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 px-4">
+                  <select
+                    id="log-processing-flow-filter"
+                    value={logProcessingFlowFilter}
+                    onChange={e => setLogProcessingFlowFilter(e.target.value ? Number(e.target.value) as ProcessingFlow : '')}
+                    aria-label="Lọc theo luồng xử lý"
+                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Tất cả</option>
+                    {processingFlowOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 px-4">
+                  <select
+                    id="log-severity-filter"
+                    value={logSeverityFilter}
+                    onChange={e => setLogSeverityFilter(e.target.value ? Number(e.target.value) as Severity : '')}
+                    aria-label="Lọc theo mức độ"
+                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
+                  >
+                    <option value="">Tất cả</option>
+                    {severityOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </th>
+                <th className="py-3 px-4" />
+                <th className="py-3 px-4" />
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center font-bold text-on-surface-variant">
+                  <td colSpan={11} className="py-10 text-center font-bold text-on-surface-variant">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center font-bold text-on-surface-variant">
+                  <td colSpan={11} className="py-10 text-center font-bold text-on-surface-variant">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
@@ -960,23 +932,25 @@ export default function ErrorLogsTab() {
                         aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
                       />
                     </td>
-                    <td className="py-4 px-5 text-on-surface-variant font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
-                    <td className="py-4 px-5 font-semibold text-on-surface">{log.store}</td>
-                    <td className="py-4 px-5 text-on-surface-variant max-w-xs">
+                    <td className="py-4 px-4 text-on-surface-variant font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
+                    <td className="py-4 px-4 font-semibold text-on-surface">{log.store}</td>
+                    <td className="py-4 px-4 text-on-surface-variant">{log.booth || 'N/A'}</td>
+                    <td className="py-4 px-4 text-on-surface-variant max-w-xs">
                       <span className="line-clamp-2">{log.description || 'N/A'}</span>
                     </td>
-                    <td className="py-4 px-5 text-on-surface-variant">{errorGroupLabels[log.errorGroup]}</td>
-                    <td className="py-4 px-5">
+                    <td className="py-4 px-4 text-on-surface-variant">{errorGroupLabels[log.errorGroup]}</td>
+                    <td className="py-4 px-4">
                       <span className={getStatusClass(log.status)}>
                         {statusLabels[log.status]}
                       </span>
                     </td>
-                    <td className="py-4 px-5">
+                    <td className="py-4 px-4 text-on-surface-variant">{processingFlowLabels[log.processingFlow]}</td>
+                    <td className="py-4 px-4">
                       <span className={getSeverityClass(log.severity)}>
                         {severityLabels[log.severity]}
                       </span>
                     </td>
-                    <td className="py-4 px-5 text-center">
+                    <td className="py-4 px-4 text-center">
                       {(log.attachments?.length ?? 0) > 0 ? (
                         <button
                           type="button"
@@ -991,7 +965,7 @@ export default function ErrorLogsTab() {
                         <span className="text-on-surface-variant/60">—</span>
                       )}
                     </td>
-                    <td className="py-4 px-5 text-right whitespace-nowrap">
+                    <td className="py-4 px-4 text-right whitespace-nowrap">
                       <div className="flex justify-end gap-1.5">
                         <button
                           type="button"
