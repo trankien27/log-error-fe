@@ -703,13 +703,10 @@ export default function ErrorLogsTab() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div>
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+        <div className="flex w-full flex-col gap-3 xl:max-w-xl">
           <h1 className="text-xl font-bold text-on-surface font-sans">Danh sách log lỗi hệ thống</h1>
-          <p className="text-xs text-on-surface-variant mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
-        </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative w-full lg:w-80 xl:w-96">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
             <input
               type="text"
@@ -720,7 +717,8 @@ export default function ErrorLogsTab() {
               className="h-10 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </div>
-        <div className="flex flex-wrap gap-2">
+        </div>
+        <div className="flex flex-wrap justify-end gap-2 xl:ml-auto">
           <button
             type="button"
             onClick={() => setIsUploadModalOpen(true)}
@@ -765,7 +763,6 @@ export default function ErrorLogsTab() {
           >
             <Plus className="w-4 h-4" /> Log lỗi
           </button>
-        </div>
         </div>
       </div>
 
