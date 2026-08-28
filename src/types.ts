@@ -536,12 +536,14 @@ export interface CreateWorkScheduleRequest {
   endDayOffset?: number;
   paidWorkingHours?: number;
   shiftCoefficient?: number;
+  maxWorkingHoursPerDay?: number;
   workingHours?: number;
   note?: string | null;
 }
 
 export interface BulkCreateWorkScheduleRequest {
   items: CreateWorkScheduleRequest[];
+  maxWorkingHoursPerDay?: number;
 }
 
 export interface BulkAssignWorkScheduleRequest {
@@ -572,6 +574,7 @@ export interface UpdateWorkScheduleRequest {
   endDayOffset?: number;
   paidWorkingHours?: number;
   shiftCoefficient?: number;
+  maxWorkingHoursPerDay?: number;
   workingHours?: number;
   status?: number;
   note?: string | null;

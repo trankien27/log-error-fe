@@ -101,6 +101,7 @@ export const scheduleService = {
     year: number;
     month: number;
     userId?: string;
+    maxWorkingHoursPerDay?: number;
   }): Promise<WorkScheduleBalanceWarningsResponse> => {
     return apiClient.get<WorkScheduleBalanceWarningsResponse>(`/api/work-schedules/balance-warnings${buildQuery(params)}`);
   },

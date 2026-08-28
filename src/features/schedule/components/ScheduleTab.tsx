@@ -326,6 +326,7 @@ export default function ScheduleTab() {
   const [scheduleNotePreview, setScheduleNotePreview] = useState<ScheduleNotePreview | null>(null);
   const [scheduleViewPreview, setScheduleViewPreview] = useState<ScheduleViewPreview | null>(null);
   const [scheduleContextMenu, setScheduleContextMenu] = useState<ScheduleContextMenuState | null>(null);
+  const [maxWorkingHoursPerDay, setMaxWorkingHoursPerDay] = useState(10);
 
   const activeShifts = useMemo(
     () => shiftDefinitions.filter(shift => shift.isActive),
@@ -1100,6 +1101,7 @@ export default function ScheduleTab() {
             endDayOffset: op.schedule.endDayOffset || 0,
             paidWorkingHours: op.schedule.paidWorkingHours || op.schedule.workingHours || 0,
             shiftCoefficient: op.schedule.shiftCoefficient || 1,
+            maxWorkingHoursPerDay,
             userId: op.targetUserId,
             status: op.schedule.status,
             note: op.schedule.note || null,
@@ -1125,6 +1127,7 @@ export default function ScheduleTab() {
             userId: draft.userId,
             status: draft.originalSchedule.status,
             shiftCoefficient: draft.originalSchedule.shiftCoefficient || 1,
+            maxWorkingHoursPerDay,
             note: draft.originalSchedule.note || null,
           });
         } else if (draft.shiftId) {
@@ -1133,6 +1136,7 @@ export default function ScheduleTab() {
             shiftId: Number(draft.shiftId),
             userId: draft.userId,
             shiftCoefficient: 1,
+            maxWorkingHoursPerDay,
             note: null,
           });
         }
@@ -1201,6 +1205,7 @@ export default function ScheduleTab() {
       workDate: panel.workDate,
       shiftId: Number(panel.shiftId),
       shiftCoefficient: panel.shiftCoefficient,
+      maxWorkingHoursPerDay,
       note: panel.note || null,
     };
 
@@ -1250,6 +1255,7 @@ export default function ScheduleTab() {
         setPanel(null);
 
         const result = await scheduleService.batchCreateWorkSchedules({
+          maxWorkingHoursPerDay,
           items: panel.userIds.map(userId => ({
             ...schedulePayload,
             userId,
@@ -1412,9 +1418,13 @@ export default function ScheduleTab() {
         month: statsMonth,
         userId: statsUserId || undefined,
       };
+      const warningQuery = {
+        ...query,
+        maxWorkingHoursPerDay,
+      };
       const [result, warnings] = await Promise.all([
         scheduleService.getMonthlyStats(query),
-        scheduleService.getBalanceWarnings(query),
+        scheduleService.getBalanceWarnings(warningQuery),
       ]);
       setMonthlyStats(result);
       setBalanceWarnings(warnings);
@@ -2532,6 +2542,18 @@ export default function ScheduleTab() {
 
             <div className="px-4 py-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:flex-wrap">
+                <label className="flex h-10 items-center gap-2 rounded-md border border-outline-variant bg-surface px-3 text-xs font-semibold text-on-surface">
+                  <span className="whitespace-nowrap">Giới hạn giờ/ngày</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    step={0.5}
+                    value={maxWorkingHoursPerDay}
+                    onChange={event => setMaxWorkingHoursPerDay(Math.min(24, Math.max(1, Number(event.target.value) || 1)))}
+                    className="w-16 bg-transparent text-right font-bold outline-none"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => openOvertimeModal(selectedDate)}
