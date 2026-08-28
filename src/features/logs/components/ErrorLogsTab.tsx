@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -241,6 +241,9 @@ export default function ErrorLogsTab() {
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
   const [isListeningDescription, setIsListeningDescription] = useState(false);
+  const [isReceivedDateFilterOpen, setIsReceivedDateFilterOpen] = useState(false);
+  const [pendingFromDateFilter, setPendingFromDateFilter] = useState(logFromDateFilter);
+  const [pendingToDateFilter, setPendingToDateFilter] = useState(logToDateFilter);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const filteredLogs = getFilteredLogs();
@@ -248,6 +251,9 @@ export default function ErrorLogsTab() {
   const selectedLogCloudflareImages = selectedLogDetails?.attachments?.filter(canPreviewCloudflareImage) ?? [];
   const currentPageLogIds = filteredLogs.map(log => log.id);
   const isAllCurrentPageSelected = currentPageLogIds.length > 0 && currentPageLogIds.every(id => selectedLogIdSet.has(id));
+  const receivedDateFilterLabel = logFromDateFilter || logToDateFilter
+    ? `${logFromDateFilter || '...'} - ${logToDateFilter || '...'}`
+    : 'Chọn ngày';
   useEffect(() => {
     fetchLogs({
       store: logStoreFilter || undefined,
@@ -555,6 +561,20 @@ export default function ErrorLogsTab() {
     });
   };
 
+  const handleApplyReceivedDateFilter = () => {
+    setLogFromDateFilter(pendingFromDateFilter);
+    setLogToDateFilter(pendingToDateFilter);
+    setIsReceivedDateFilterOpen(false);
+  };
+
+  const handleClearReceivedDateFilter = () => {
+    setPendingFromDateFilter('');
+    setPendingToDateFilter('');
+    setLogFromDateFilter('');
+    setLogToDateFilter('');
+    setIsReceivedDateFilterOpen(false);
+  };
+
   const handleExport = async () => {
     try {
       await exportLogs(getFilterQuery());
@@ -781,26 +801,64 @@ export default function ErrorLogsTab() {
               </tr>
               <tr className="bg-surface border-b border-outline-variant">
                 <th className="py-3 px-4" />
-                <th className="py-3 px-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="date"
-                      id="log-from-date-filter"
-                      value={logFromDateFilter}
-                      max={logToDateFilter || undefined}
-                      onChange={e => setLogFromDateFilter(e.target.value)}
-                      aria-label="Lọc từ ngày tiếp nhận"
-                      className="h-9 min-w-0 rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                    />
-                    <input
-                      type="date"
-                      id="log-to-date-filter"
-                      value={logToDateFilter}
-                      min={logFromDateFilter || undefined}
-                      onChange={e => setLogToDateFilter(e.target.value)}
-                      aria-label="Lọc đến ngày tiếp nhận"
-                      className="h-9 min-w-0 rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                    />
+                <th className="py-3 px-4 align-top">
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingFromDateFilter(logFromDateFilter);
+                        setPendingToDateFilter(logToDateFilter);
+                        setIsReceivedDateFilterOpen(current => !current);
+                      }}
+                      className="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface px-3 text-left text-xs font-semibold text-on-surface transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      aria-expanded={isReceivedDateFilterOpen}
+                      aria-controls="received-date-filter-panel"
+                    >
+                      <span className="truncate">{receivedDateFilterLabel}</span>
+                      <Calendar className="h-4 w-4 shrink-0 text-on-surface-variant" />
+                    </button>
+
+                    {isReceivedDateFilterOpen && (
+                      <div
+                        id="received-date-filter-panel"
+                        className="space-y-2 rounded-lg border border-outline-variant bg-surface-2 p-2 shadow-sm"
+                      >
+                        <input
+                          type="date"
+                          id="log-from-date-filter"
+                          value={pendingFromDateFilter}
+                          max={pendingToDateFilter || undefined}
+                          onChange={e => setPendingFromDateFilter(e.target.value)}
+                          aria-label="Lọc từ ngày tiếp nhận"
+                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                        />
+                        <input
+                          type="date"
+                          id="log-to-date-filter"
+                          value={pendingToDateFilter}
+                          min={pendingFromDateFilter || undefined}
+                          onChange={e => setPendingToDateFilter(e.target.value)}
+                          aria-label="Lọc đến ngày tiếp nhận"
+                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={handleClearReceivedDateFilter}
+                            className="h-8 rounded-lg border border-outline-variant bg-surface text-xs font-bold text-on-surface-variant hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            Xóa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleApplyReceivedDateFilter}
+                            className="h-8 rounded-lg bg-primary text-xs font-bold text-on-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            Xác nhận
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </th>
                 <th className="py-3 px-4">
