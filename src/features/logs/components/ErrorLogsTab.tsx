@@ -703,11 +703,23 @@ export default function ErrorLogsTab() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
         <div>
           <h1 className="text-xl font-bold text-on-surface font-sans">Danh sách log lỗi hệ thống</h1>
           <p className="text-xs text-on-surface-variant mt-1">Theo dõi lỗi theo ngày tiếp nhận, cửa hàng, nhóm lỗi, trạng thái và mức độ.</p>
         </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative w-full lg:w-80 xl:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
+            <input
+              type="text"
+              id="log-search-input"
+              placeholder="Tìm mã lỗi, mô tả..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="h-10 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -753,6 +765,7 @@ export default function ErrorLogsTab() {
           >
             <Plus className="w-4 h-4" /> Log lỗi
           </button>
+        </div>
         </div>
       </div>
 
@@ -924,19 +937,7 @@ export default function ErrorLogsTab() {
                     )}
                   </div>
                 </th>
-                <th className="py-3 px-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-                    <input
-                      type="text"
-                      id="log-search-input"
-                      placeholder="Mã lỗi, mô tả..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                    />
-                  </div>
-                </th>
+                <th className="py-3 px-4" />
                 <th className="py-3 px-4">
                   <LazySearchDropdown
                     ariaLabel="Lọc log theo cửa hàng"
