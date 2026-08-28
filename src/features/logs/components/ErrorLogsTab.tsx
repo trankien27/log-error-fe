@@ -86,6 +86,12 @@ function formatDate(date: string) {
   }).format(new Date(date));
 }
 
+function formatDateFilterLabel(date: string) {
+  if (!date) return '';
+  const [year, month, day] = date.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : date;
+}
+
 function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -244,7 +250,10 @@ export default function ErrorLogsTab() {
   const [isReceivedDateFilterOpen, setIsReceivedDateFilterOpen] = useState(false);
   const [pendingFromDateFilter, setPendingFromDateFilter] = useState(logFromDateFilter);
   const [pendingToDateFilter, setPendingToDateFilter] = useState(logToDateFilter);
+  const [receivedDateFilterPosition, setReceivedDateFilterPosition] = useState({ left: 0, top: 0 });
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const receivedDateFilterRef = useRef<HTMLDivElement | null>(null);
+  const receivedDateFilterButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const filteredLogs = getFilteredLogs();
   const selectedLogIdSet = new Set(selectedLogIds);
@@ -252,8 +261,45 @@ export default function ErrorLogsTab() {
   const currentPageLogIds = filteredLogs.map(log => log.id);
   const isAllCurrentPageSelected = currentPageLogIds.length > 0 && currentPageLogIds.every(id => selectedLogIdSet.has(id));
   const receivedDateFilterLabel = logFromDateFilter || logToDateFilter
-    ? `${logFromDateFilter || '...'} - ${logToDateFilter || '...'}`
+    ? `${formatDateFilterLabel(logFromDateFilter) || '...'} - ${formatDateFilterLabel(logToDateFilter) || '...'}`
     : 'Chọn ngày';
+
+  const updateReceivedDateFilterPosition = useCallback(() => {
+    const rect = receivedDateFilterButtonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setReceivedDateFilterPosition({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - 296)),
+      top: rect.bottom + 8,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isReceivedDateFilterOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!receivedDateFilterRef.current?.contains(event.target as Node)) {
+        setIsReceivedDateFilterOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsReceivedDateFilterOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', updateReceivedDateFilterPosition);
+    window.addEventListener('scroll', updateReceivedDateFilterPosition, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', updateReceivedDateFilterPosition);
+      window.removeEventListener('scroll', updateReceivedDateFilterPosition, true);
+    };
+  }, [isReceivedDateFilterOpen, updateReceivedDateFilterPosition]);
   useEffect(() => {
     fetchLogs({
       store: logStoreFilter || undefined,
@@ -773,9 +819,9 @@ export default function ErrorLogsTab() {
       </div>
       )}
 
-      <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1380px] text-left text-xs border-collapse">
+      <div className="bg-surface border border-outline-variant rounded-xl shadow-sm">
+        <div className="overflow-x-auto overflow-y-visible">
+          <table className="w-full min-w-[1500px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant select-none font-sans">
                 <th className="py-3 px-4 font-bold w-12">
@@ -789,6 +835,7 @@ export default function ErrorLogsTab() {
                   />
                 </th>
                 <th className="py-3 px-4 font-bold min-w-[220px]">Ngày tiếp nhận</th>
+                <th className="py-3 px-4 font-bold min-w-[150px]">Mã lỗi</th>
                 <th className="py-3 px-4 font-bold min-w-[220px]">Cửa hàng</th>
                 <th className="py-3 px-4 font-bold min-w-[180px]">Booth</th>
                 <th className="py-3 px-4 font-bold min-w-[240px]">Mô tả lỗi</th>
@@ -802,15 +849,21 @@ export default function ErrorLogsTab() {
               <tr className="bg-surface border-b border-outline-variant">
                 <th className="py-3 px-4" />
                 <th className="py-3 px-4 align-top">
-                  <div className="space-y-2">
+                  <div ref={receivedDateFilterRef} className="relative">
                     <button
                       type="button"
+                      ref={receivedDateFilterButtonRef}
                       onClick={() => {
                         setPendingFromDateFilter(logFromDateFilter);
                         setPendingToDateFilter(logToDateFilter);
+                        updateReceivedDateFilterPosition();
                         setIsReceivedDateFilterOpen(current => !current);
                       }}
-                      className="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface px-3 text-left text-xs font-semibold text-on-surface transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-xs font-semibold transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+                        logFromDateFilter || logToDateFilter
+                          ? 'border-primary/50 bg-secondary-container text-on-secondary-container'
+                          : 'border-outline-variant bg-surface text-on-surface'
+                      }`}
                       aria-expanded={isReceivedDateFilterOpen}
                       aria-controls="received-date-filter-panel"
                     >
@@ -821,8 +874,17 @@ export default function ErrorLogsTab() {
                     {isReceivedDateFilterOpen && (
                       <div
                         id="received-date-filter-panel"
-                        className="space-y-2 rounded-lg border border-outline-variant bg-surface-2 p-2 shadow-sm"
+                        style={{
+                          left: receivedDateFilterPosition.left,
+                          top: receivedDateFilterPosition.top,
+                        }}
+                        className="fixed z-50 w-72 space-y-2 rounded-lg border border-outline-variant bg-surface p-3 shadow-elevated"
                       >
+                        <div className="grid grid-cols-2 gap-2 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                          <span>Từ ngày</span>
+                          <span>Đến ngày</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
                         <input
                           type="date"
                           id="log-from-date-filter"
@@ -830,7 +892,7 @@ export default function ErrorLogsTab() {
                           max={pendingToDateFilter || undefined}
                           onChange={e => setPendingFromDateFilter(e.target.value)}
                           aria-label="Lọc từ ngày tiếp nhận"
-                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface-2 px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                         />
                         <input
                           type="date"
@@ -839,8 +901,9 @@ export default function ErrorLogsTab() {
                           min={pendingFromDateFilter || undefined}
                           onChange={e => setPendingToDateFilter(e.target.value)}
                           aria-label="Lọc đến ngày tiếp nhận"
-                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface-2 px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                         />
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
@@ -859,6 +922,19 @@ export default function ErrorLogsTab() {
                         </div>
                       </div>
                     )}
+                  </div>
+                </th>
+                <th className="py-3 px-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
+                    <input
+                      type="text"
+                      id="log-search-input"
+                      placeholder="Mã lỗi, mô tả..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="h-9 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    />
                   </div>
                 </th>
                 <th className="py-3 px-4">
@@ -892,19 +968,7 @@ export default function ErrorLogsTab() {
                     onClear={() => setLogBoothFilter('')}
                   />
                 </th>
-                <th className="py-3 px-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-                    <input
-                      type="text"
-                      id="log-search-input"
-                      placeholder="Mã lỗi, mô tả..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-xs text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                    />
-                  </div>
-                </th>
+                <th className="py-3 px-4" />
                 <th className="py-3 px-4">
                   <select
                     id="log-error-group-filter"
@@ -968,13 +1032,13 @@ export default function ErrorLogsTab() {
             <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={11} className="py-10 text-center font-bold text-on-surface-variant">
+                  <td colSpan={12} className="py-10 text-center font-bold text-on-surface-variant">
                     Đang tải dữ liệu log lỗi...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="py-10 text-center font-bold text-on-surface-variant">
+                  <td colSpan={12} className="py-10 text-center font-bold text-on-surface-variant">
                     Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
                   </td>
                 </tr>
@@ -991,6 +1055,7 @@ export default function ErrorLogsTab() {
                       />
                     </td>
                     <td className="py-4 px-4 text-on-surface-variant font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
+                    <td className="py-4 px-4 font-mono text-xs font-bold text-primary whitespace-nowrap">{log.errorCode || 'N/A'}</td>
                     <td className="py-4 px-4 font-semibold text-on-surface">{log.store}</td>
                     <td className="py-4 px-4 text-on-surface-variant">{log.booth || 'N/A'}</td>
                     <td className="py-4 px-4 text-on-surface-variant max-w-xs">
