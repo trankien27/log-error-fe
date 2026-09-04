@@ -690,6 +690,7 @@ export type TabType =
   | 'transaction_error_queue'
   | 'tasks'
   | 'recent_activities'
+  | 'api_audit_logs'
   | 'chat'
   | 'users'
   | 'roles'

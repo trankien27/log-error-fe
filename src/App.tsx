@@ -24,6 +24,7 @@ import SettingsTab from './features/settings/components/SettingsTab';
 import AppearanceSettingsTab from './features/settings/components/AppearanceSettingsTab';
 import DocumentsTab from './features/documents/components/DocumentsTab';
 import R2UsageTab from './features/r2-usage/components/R2UsageTab';
+import ApiAuditLogsTab from './features/api-audit/components/ApiAuditLogsTab';
 import BoothGuestLayout from './features/booth-guest/components/BoothGuestLayout';
 import BoothPinPage from './features/booth-guest/components/BoothPinPage';
 import { useAuthStore } from './stores/useAuthStore';
@@ -103,6 +104,14 @@ export default function App() {
           element={(
             <AdminRoute>
               <RecentActivities />
+            </AdminRoute>
+          )}
+        />
+        <Route
+          path="api-audit-logs"
+          element={(
+            <AdminRoute>
+              <ApiAuditLogsTab />
             </AdminRoute>
           )}
         />

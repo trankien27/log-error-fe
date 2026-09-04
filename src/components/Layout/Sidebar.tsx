@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Printer,
   RadioTower,
+  ScrollText,
   Shield,
   Store,
   TimerReset,
@@ -104,6 +105,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/transaction-error-queue') return 'transaction_error_queue';
     if (path === '/tasks') return 'tasks';
     if (path === '/recent-activities') return 'recent_activities';
+    if (path === '/api-audit-logs') return 'api_audit_logs';
     if (path === '/chat') return 'chat';
     if (path === '/users') return 'users';
     if (path === '/roles') return 'roles';
@@ -140,6 +142,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'transaction_error_queue': navigate('/transaction-error-queue'); break;
       case 'tasks': navigate('/tasks'); break;
       case 'recent_activities': navigate('/recent-activities'); break;
+      case 'api_audit_logs': navigate('/api-audit-logs'); break;
       case 'chat': navigate('/chat'); break;
       case 'users': navigate('/users'); break;
       case 'roles': navigate('/roles'); break;
@@ -241,6 +244,14 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 <button onClick={() => navigateTo('recent_activities')} className={navButtonClass(activeTab === 'recent_activities')}>
                   <History className="w-4 h-4" />
                   <span>Hoạt động gần đây</span>
+                </button>
+              </li>
+            )}
+            {isAdmin && (
+              <li>
+                <button onClick={() => navigateTo('api_audit_logs')} className={navButtonClass(activeTab === 'api_audit_logs')}>
+                  <ScrollText className="w-4 h-4" />
+                  <span>Audit API</span>
                 </button>
               </li>
             )}
