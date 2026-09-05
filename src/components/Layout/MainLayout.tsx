@@ -11,7 +11,6 @@ import { useTasksStore } from '../../stores/useTasksStore';
 import { useUsersStore } from '../../stores/useUsersStore';
 import { useBoothsStore } from '../../stores/useBoothsStore';
 import { useScheduleStore } from '../../stores/useScheduleStore';
-import { accountService } from '../../services/api/accountService';
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -45,13 +44,8 @@ export default function MainLayout() {
     fetchShifts();
     fetchNotifications().catch(() => undefined);
     startConnection().catch(() => undefined);
-    accountService.heartbeat().catch(() => undefined);
-    const heartbeatTimer = window.setInterval(() => {
-      accountService.heartbeat().catch(() => undefined);
-    }, 60_000);
 
     return () => {
-      window.clearInterval(heartbeatTimer);
       stopConnection().catch(() => undefined);
     };
   }, []);
