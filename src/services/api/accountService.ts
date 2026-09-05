@@ -47,9 +47,4 @@ export const accountService = {
     });
     return normalizeAccountUser(response);
   },
-
-  heartbeat: async (): Promise<User> => {
-    const response = await apiClient.post<AccountUserResponse>('/api/account/heartbeat');
-    return normalizeAccountUser(response);
-  },
 };
