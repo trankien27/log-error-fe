@@ -13,6 +13,7 @@ interface BoothsState {
   boothPageSize: number;
   boothTotalItems: number;
   boothTotalPages: number;
+  latestBoothSyncedAt: string | null;
 
   // Modals & Form editing states
   isBoothModalOpen: boolean;
@@ -43,6 +44,7 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
   boothPageSize: 20,
   boothTotalItems: 0,
   boothTotalPages: 0,
+  latestBoothSyncedAt: null,
   isBoothModalOpen: false,
   currentEditingBooth: null,
 
@@ -56,17 +58,21 @@ export const useBoothsStore = create<BoothsState>((set, get) => ({
     const { searchQuery, boothPageIndex, boothPageSize } = get();
     set({ isLoading: true, error: null });
     try {
-      const result = await boothsService.getPage({
-        search: searchQuery,
-        pageIndex: boothPageIndex,
-        pageSize: boothPageSize,
-      });
+      const [result, latestBoothSyncedAt] = await Promise.all([
+        boothsService.getPage({
+          search: searchQuery,
+          pageIndex: boothPageIndex,
+          pageSize: boothPageSize,
+        }),
+        boothsService.getLatestSync(),
+      ]);
       set({
         booths: result.items,
         boothTotalItems: result.totalItems,
         boothTotalPages: result.totalPages,
         boothPageIndex: result.pageIndex,
         boothPageSize: result.pageSize,
+        latestBoothSyncedAt,
         isLoading: false,
       });
     } catch (err: any) {

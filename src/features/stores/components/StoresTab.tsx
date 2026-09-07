@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, Building2, ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react';
+import { AlertTriangle, Building2, ChevronLeft, ChevronRight, Clock, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { storesService } from '../../../services/api/storesService';
 import { useStoresStore } from '../../../stores/useStoresStore';
@@ -10,7 +10,9 @@ const syncedAtFormatter = new Intl.DateTimeFormat('vi-VN', {
   timeStyle: 'short',
 });
 
-function formatSyncedAt(value: string) {
+function formatSyncedAt(value?: string | null) {
+  if (!value) return '—';
+
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '—' : syncedAtFormatter.format(date);
 }
@@ -25,6 +27,7 @@ export default function StoresTab() {
     storePageSize,
     storeTotalItems,
     storeTotalPages,
+    latestStoreSyncedAt,
     setSearchQuery,
     setStorePageIndex,
     setStorePageSize,
@@ -56,11 +59,17 @@ export default function StoresTab() {
 
   return (
     <div className="space-y-6 text-left animate-fadeIn">
-      <div>
-        <h2 className="text-xl font-bold text-on-surface font-sans">Quản lý cửa hàng</h2>
-        <p className="text-xs text-on-surface-variant mt-1">
-          Danh sách cửa hàng và chi nhánh được đồng bộ từ hệ thống FunStudio.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-on-surface font-sans">Quản lý cửa hàng</h2>
+          <p className="text-xs text-on-surface-variant mt-1">
+            Danh sách cửa hàng và chi nhánh được đồng bộ từ hệ thống FunStudio.
+          </p>
+        </div>
+        <div className="inline-flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+          <Clock className="w-4 h-4 text-primary" />
+          <span>Cập nhật gần nhất: {formatSyncedAt(latestStoreSyncedAt)}</span>
+        </div>
       </div>
 
       <div className="card-surface p-4 flex flex-col md:flex-row gap-4 items-center justify-between">

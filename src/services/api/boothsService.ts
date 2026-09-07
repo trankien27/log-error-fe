@@ -82,6 +82,10 @@ export const boothsService = {
     return apiClient.post<SyncBoothsResponse>('/api/booths/sync');
   },
 
+  getLatestSync: async (): Promise<string | null> => {
+    return apiClient.get<string | null>('/api/booths/latest-sync');
+  },
+
   search: async (name: string, pageIndex = 0, pageSize = 20): Promise<PagedResult<LookupItem>> => {
     const params = new URLSearchParams({
       pageIndex: String(pageIndex),

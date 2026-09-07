@@ -11,6 +11,7 @@ interface StoresState {
   storePageSize: number;
   storeTotalItems: number;
   storeTotalPages: number;
+  latestStoreSyncedAt: string | null;
   setSearchQuery: (query: string) => void;
   setStorePageIndex: (pageIndex: number) => void;
   setStorePageSize: (pageSize: number) => void;
@@ -28,6 +29,7 @@ export const useStoresStore = create<StoresState>((set, get) => ({
   storePageSize: 20,
   storeTotalItems: 0,
   storeTotalPages: 0,
+  latestStoreSyncedAt: null,
 
   setSearchQuery: searchQuery => set({ searchQuery, storePageIndex: 0 }),
   setStorePageIndex: storePageIndex => set({ storePageIndex }),
@@ -39,11 +41,14 @@ export const useStoresStore = create<StoresState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const result = await storesService.getPage({
-        search: searchQuery,
-        pageIndex: storePageIndex,
-        pageSize: storePageSize,
-      });
+      const [result, latestStoreSyncedAt] = await Promise.all([
+        storesService.getPage({
+          search: searchQuery,
+          pageIndex: storePageIndex,
+          pageSize: storePageSize,
+        }),
+        storesService.getLatestSync(),
+      ]);
 
       if (requestId !== latestRequestId) return;
 
@@ -53,6 +58,7 @@ export const useStoresStore = create<StoresState>((set, get) => ({
         storeTotalPages: result.totalPages,
         storePageIndex: result.pageIndex,
         storePageSize: result.pageSize,
+        latestStoreSyncedAt,
         isLoading: false,
       });
     } catch (error) {

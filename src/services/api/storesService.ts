@@ -35,4 +35,8 @@ export const storesService = {
   syncStores: (): Promise<SyncStoresResponse> => {
     return apiClient.post<SyncStoresResponse>('/api/stores/sync');
   },
+
+  getLatestSync: (): Promise<string | null> => {
+    return apiClient.get<string | null>('/api/stores/latest-sync');
+  },
 };

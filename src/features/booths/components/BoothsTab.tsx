@@ -1,12 +1,24 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, Search, Copy, Edit2, KeyRound, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock, Plus, Search, Copy, Edit2, KeyRound, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { boothsService } from '../../../services/api/boothsService';
 import { lookupService } from '../../../services/api/lookupService';
 import { useBoothsStore } from '../../../stores/useBoothsStore';
 import { Booth } from '../../../types';
+
+const syncedAtFormatter = new Intl.DateTimeFormat('vi-VN', {
+  dateStyle: 'short',
+  timeStyle: 'short',
+});
+
+function formatSyncedAt(value?: string | null) {
+  if (!value) return '—';
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : syncedAtFormatter.format(date);
+}
 
 export default function BoothsTab() {
   const {
@@ -16,6 +28,7 @@ export default function BoothsTab() {
     boothPageSize,
     boothTotalItems,
     boothTotalPages,
+    latestBoothSyncedAt,
     error,
     isLoading,
     isBoothModalOpen,
@@ -188,12 +201,18 @@ export default function BoothsTab() {
           <h2 className="text-xl font-bold text-on-surface font-sans">Quản trị danh sách Trạm Booth hỗ trợ</h2>
           <p className="text-xs text-on-surface-variant mt-1">Danh sách điều kiểm mẫu máy tại hiện trường. Đi kèm ID đăng nhập UltraView để nhân viên kỹ thuật kết nối lập tức.</p>
         </div>
-        <button
-          onClick={() => handleOpenBoothModal()}
-          className="btn-primary"
-        >
-          <Plus className="w-4 h-4" /> Thêm Booth
-        </button>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
+            <Clock className="w-4 h-4 text-primary" />
+            <span>Cập nhật gần nhất: {formatSyncedAt(latestBoothSyncedAt)}</span>
+          </div>
+          <button
+            onClick={() => handleOpenBoothModal()}
+            className="btn-primary"
+          >
+            <Plus className="w-4 h-4" /> Thêm Booth
+          </button>
+        </div>
       </div>
 
       {/* Page Filters or search */}
@@ -243,26 +262,27 @@ export default function BoothsTab() {
       {/* Data table booths */}
       <div className="card-surface overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left text-xs border-collapse">
+          <table className="w-full min-w-[900px] text-left text-xs border-collapse">
             <thead>
               <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold select-none font-sans">
                 <th className="py-4 px-5">Mã Trạm Booth</th>
                 <th className="py-4 px-5">Tên Trạm Kỹ Thuật</th>
                 <th className="py-4 px-5">ID Kết Nối Từ Xa</th>
                 <th className="py-4 px-5">Cửa hàng/Chi nhánh liên quan</th>
+                <th className="py-4 px-5 w-56">Đồng bộ lần cuối</th>
                 <th className="py-4 px-5 text-right w-36">Tác vụ</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/40">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
+                  <td colSpan={6} className="py-10 text-center font-sans font-bold text-on-surface-variant">
                     Đang tải dữ liệu Booth...
                   </td>
                 </tr>
               ) : booths.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
+                  <td colSpan={6} className="py-10 text-center font-sans font-bold text-on-surface-variant">
                     Không tìm thấy booth nào khớp với điều kiện tìm kiếm.
                   </td>
                 </tr>
@@ -289,6 +309,9 @@ export default function BoothsTab() {
                       </div>
                     </td>
                     <td className="py-4 px-5 text-on-surface-variant font-medium">{b.relatedStores}</td>
+                    <td className="py-4 px-5 text-on-surface-variant font-medium tabular-nums">
+                      {formatSyncedAt(b.lastSyncedAt)}
+                    </td>
                     <td className="py-4 px-5 text-right w-36">
                       <div className="flex justify-end gap-1.5">
                         <button
