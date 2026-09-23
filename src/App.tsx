@@ -30,6 +30,10 @@ import BoothPinPage from './features/booth-guest/components/BoothPinPage';
 import { useAuthStore } from './stores/useAuthStore';
 import { useBoothGuestStore } from './stores/useBoothGuestStore';
 
+const ThemeImageToolsTab = React.lazy(
+  () => import('./features/theme-image-tools/components/ThemeImageToolsTab'),
+);
+
 // ProtectedRoute helper to guard routes
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoggedIn } = useAuthStore();
@@ -137,6 +141,14 @@ export default function App() {
         <Route path="remote-booth" element={<RemoteBoothTab />} />
         <Route path="print-image" element={<PrintImageTab />} />
         <Route path="recreate-image" element={<RecreateImageTab />} />
+        <Route
+          path="theme-image-tools"
+          element={(
+            <React.Suspense fallback={<div className="p-6 text-sm font-bold text-on-surface-variant">Đang tải công cụ ảnh...</div>}>
+              <ThemeImageToolsTab />
+            </React.Suspense>
+          )}
+        />
         <Route
           path="shifts"
           element={(

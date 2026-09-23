@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Database,
   History,
+  Images,
   LayoutDashboard,
   LibraryBig,
   NotebookTabs,
@@ -114,6 +115,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/remote-booth') return 'remote_booth';
     if (path === '/print-image') return 'print_image';
     if (path === '/recreate-image') return 'recreate_image';
+    if (path === '/theme-image-tools') return 'theme_image_tools';
     if (path === '/shifts') return 'shifts';
     if (path.startsWith('/list-dictionaries')) return 'list_dictionaries';
     if (path === '/documents') return 'documents';
@@ -151,6 +153,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'remote_booth': navigate('/remote-booth'); break;
       case 'print_image': navigate('/print-image'); break;
       case 'recreate_image': navigate('/recreate-image'); break;
+      case 'theme_image_tools': navigate('/theme-image-tools'); break;
       case 'shifts': navigate('/shifts'); break;
       case 'list_dictionaries': navigate('/list-dictionaries'); break;
       case 'documents': navigate('/documents'); break;
@@ -311,6 +314,12 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               <button onClick={() => navigateTo('recreate_image')} className={navButtonClass(activeTab === 'recreate_image')}>
                 <Wand2 className="w-4 h-4" />
                 <span>Tạo lại ảnh</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => navigateTo('theme_image_tools')} className={navButtonClass(activeTab === 'theme_image_tools')}>
+                <Images className="w-4 h-4" />
+                <span>Resize ảnh Theme</span>
               </button>
             </li>
             {canViewShifts && (
