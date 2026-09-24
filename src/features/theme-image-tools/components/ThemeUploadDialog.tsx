@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Check, Save, Trash2, Upload, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Save, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { themeToolsService } from '../../../services/api/themeToolsService';
 import type { SaveThemeUploadProfile, ThemeCategory, ThemeList, ThemeUploadProfile, ThemeUploadValues } from '../types';
@@ -29,6 +29,13 @@ function readProfiles(): Record<string, UploadProfile> {
   }
 }
 
+function normalizeSearch(value: string) {
+  return value.toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+}
+
 export default function ThemeUploadDialog({
   open,
   loading,
@@ -38,10 +45,15 @@ export default function ThemeUploadDialog({
   onClose,
   onSubmit,
 }: ThemeUploadDialogProps) {
+  const categoryPickerRef = useRef<HTMLDivElement>(null);
+  const categoryButtonRef = useRef<HTMLButtonElement>(null);
+  const categorySearchRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [color, setColor] = useState('#f16d94');
   const [categoryId, setCategoryId] = useState(0);
   const [categorySearch, setCategorySearch] = useState('');
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState(0);
   const [selectedThemeListIds, setSelectedThemeListIds] = useState<number[]>([]);
   const [orderNo, setOrderNo] = useState('');
   const [layoutListId, setLayoutListId] = useState('61');
@@ -55,7 +67,11 @@ export default function ThemeUploadDialog({
   const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setCategoryPickerOpen(false);
+      setCategorySearch('');
+      return;
+    }
     let active = true;
     const loadProfiles = async () => {
       setLoadingProfiles(true);
@@ -121,13 +137,32 @@ export default function ThemeUploadDialog({
     return () => { active = false; };
   }, [open]);
 
+  useEffect(() => {
+    if (!categoryPickerOpen) return;
+    categorySearchRef.current?.focus();
+    const onOutsideClick = (event: MouseEvent) => {
+      if (!categoryPickerRef.current?.contains(event.target as Node)) {
+        setCategoryPickerOpen(false);
+        setCategorySearch('');
+      }
+    };
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, [categoryPickerOpen]);
+
   const visibleCategories = useMemo(() => {
-    const query = categorySearch.trim().toLocaleLowerCase('vi');
+    const query = normalizeSearch(categorySearch.trim());
     if (!query) return categories;
-    return categories.filter(item =>
-      item.id === categoryId || item.name.toLocaleLowerCase('vi').includes(query),
-    );
-  }, [categories, categoryId, categorySearch]);
+    return categories.filter(item => normalizeSearch(item.name).includes(query));
+  }, [categories, categorySearch]);
+
+  useEffect(() => {
+    if (!categoryPickerOpen) return;
+    const activeCategory = visibleCategories[activeCategoryIndex];
+    if (activeCategory) {
+      document.getElementById(`theme-category-option-${activeCategory.id}`)?.scrollIntoView?.({ block: 'nearest' });
+    }
+  }, [categoryPickerOpen, activeCategoryIndex, visibleCategories]);
 
   const visibleThemeLists = useMemo(() => {
     const query = themeListSearch.trim().toLocaleLowerCase('vi');
@@ -190,6 +225,8 @@ export default function ThemeUploadDialog({
     setNewProfileName(profile.name);
     setColor(profile.color);
     setCategoryId(profile.themeCategoryId);
+    setCategoryPickerOpen(false);
+    setCategorySearch('');
     setSelectedThemeListIds(profile.themeListIds);
     setOrderNo(profile.orderNo?.toString() || '');
     setLayoutListId(profile.layoutListId?.toString() || '');
@@ -218,6 +255,31 @@ export default function ThemeUploadDialog({
     setSelectedThemeListIds(current =>
       current.includes(id) ? current.filter(item => item !== id) : [...current, id],
     );
+  };
+
+  const chooseCategory = (id: number) => {
+    setCategoryId(id);
+    setCategoryPickerOpen(false);
+    setCategorySearch('');
+    categoryButtonRef.current?.focus();
+  };
+
+  const handleCategorySearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown' && visibleCategories.length > 0) {
+      event.preventDefault();
+      setActiveCategoryIndex(index => Math.min(index + 1, visibleCategories.length - 1));
+    } else if (event.key === 'ArrowUp' && visibleCategories.length > 0) {
+      event.preventDefault();
+      setActiveCategoryIndex(index => Math.max(index - 1, 0));
+    } else if (event.key === 'Enter' && visibleCategories[activeCategoryIndex]) {
+      event.preventDefault();
+      chooseCategory(visibleCategories[activeCategoryIndex].id);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setCategoryPickerOpen(false);
+      setCategorySearch('');
+      categoryButtonRef.current?.focus();
+    }
   };
 
   const submit = async () => {
@@ -299,30 +361,79 @@ export default function ThemeUploadDialog({
               </div>
             </label>
 
-            <label>
-              <span className="mb-1.5 block text-sm font-bold text-on-surface">Danh mục *</span>
-              <input
-                type="search"
-                value={categorySearch}
-                onChange={event => setCategorySearch(event.target.value)}
-                placeholder="Tìm danh mục..."
-                className="mb-2 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface"
-              />
-              <select
-                value={categoryId}
-                onChange={event => {
-                  setCategoryId(Number(event.target.value));
+            <div
+              ref={categoryPickerRef}
+              onBlur={event => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                  setCategoryPickerOpen(false);
                   setCategorySearch('');
+                }
+              }}
+              className="sm:col-span-2"
+            >
+              <span id="theme-category-label" className="mb-1.5 block text-sm font-bold text-on-surface">Danh mục *</span>
+              <button
+                ref={categoryButtonRef}
+                type="button"
+                aria-labelledby="theme-category-label theme-category-value"
+                aria-haspopup="listbox"
+                aria-expanded={categoryPickerOpen}
+                onClick={() => {
+                  setCategoryPickerOpen(current => !current);
+                  setCategorySearch('');
+                  setActiveCategoryIndex(0);
                 }}
-                className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface"
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-left text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
-                <option value={0}>Chọn danh mục</option>
-                {visibleCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
-              </select>
-              {visibleCategories.length === 0 && (
-                <span className="mt-1 block text-xs text-on-surface-variant">Không tìm thấy danh mục.</span>
+                <span id="theme-category-value" className={categoryId ? 'truncate' : 'truncate text-on-surface-variant'}>
+                  {categories.find(category => category.id === categoryId)?.name ||
+                    (categoryId ? `Danh mục #${categoryId} không còn khả dụng` : 'Chọn danh mục')}
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-on-surface-variant" />
+              </button>
+              {categoryPickerOpen && (
+                <div className="mt-1 overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-lg">
+                  <div className="relative border-b border-outline-variant p-2">
+                    <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
+                    <input
+                      ref={categorySearchRef}
+                      type="search"
+                      role="combobox"
+                      aria-label="Tìm danh mục"
+                      aria-autocomplete="list"
+                      aria-expanded="true"
+                      aria-controls="theme-category-options"
+                      aria-activedescendant={visibleCategories[activeCategoryIndex] ? `theme-category-option-${visibleCategories[activeCategoryIndex].id}` : undefined}
+                      value={categorySearch}
+                      onChange={event => { setCategorySearch(event.target.value); setActiveCategoryIndex(0); }}
+                      onKeyDown={handleCategorySearchKeyDown}
+                      placeholder="Gõ tên danh mục..."
+                      className="w-full rounded-lg border border-outline-variant bg-surface py-2 pl-9 pr-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div id="theme-category-options" role="listbox" aria-label="Danh mục" className="max-h-56 overflow-y-auto p-1">
+                    {visibleCategories.map((category, index) => (
+                      <button
+                        key={category.id}
+                        id={`theme-category-option-${category.id}`}
+                        role="option"
+                        aria-selected={category.id === categoryId}
+                        type="button"
+                        onMouseEnter={() => setActiveCategoryIndex(index)}
+                        onClick={() => chooseCategory(category.id)}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface ${index === activeCategoryIndex ? 'bg-primary/10' : 'hover:bg-surface-2'}`}
+                      >
+                        <span className="truncate">{category.name}</span>
+                        {category.id === categoryId && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                      </button>
+                    ))}
+                    {visibleCategories.length === 0 && (
+                      <p className="px-3 py-4 text-center text-sm text-on-surface-variant">Không tìm thấy danh mục.</p>
+                    )}
+                  </div>
+                </div>
               )}
-            </label>
+            </div>
 
             <label>
               <span className="mb-1.5 block text-sm font-bold text-on-surface">Order No</span>
