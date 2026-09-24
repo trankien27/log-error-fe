@@ -699,7 +699,7 @@ export type TabType =
   | 'remote_booth'
   | 'print_image'
   | 'recreate_image'
-  | 'theme_image_tools'
+  | 'up_frame'
   | 'shifts'
   | 'list_dictionaries'
   | 'documents'
