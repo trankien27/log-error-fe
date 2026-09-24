@@ -5,7 +5,7 @@ import type { ThemeCategory, ThemeList, ThemeUploadValues } from '../types';
 
 type UploadProfile = Pick<
   ThemeUploadValues,
-  'color' | 'themeCategoryId' | 'themeListIds' | 'layoutListId' | 'isDisplayOnLiveview'
+  'color' | 'themeCategoryId' | 'themeListIds' | 'orderNo' | 'layoutListId' | 'isDisplayOnLiveview'
 >;
 
 type ThemeUploadDialogProps = {
@@ -41,6 +41,7 @@ export default function ThemeUploadDialog({
   const [color, setColor] = useState('#f16d94');
   const [categoryId, setCategoryId] = useState(0);
   const [selectedThemeListIds, setSelectedThemeListIds] = useState<number[]>([]);
+  const [orderNo, setOrderNo] = useState('');
   const [layoutListId, setLayoutListId] = useState('61');
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [isLiveView, setIsLiveView] = useState(true);
@@ -78,6 +79,7 @@ export default function ThemeUploadDialog({
         color,
         themeCategoryId: categoryId,
         themeListIds: selectedThemeListIds,
+        orderNo: orderNo.trim() === '' ? undefined : Number(orderNo),
         layoutListId: Number(layoutListId) || undefined,
         isDisplayOnLiveview: isLiveView,
       },
@@ -95,6 +97,7 @@ export default function ThemeUploadDialog({
     setColor(profile.color);
     setCategoryId(profile.themeCategoryId);
     setSelectedThemeListIds(profile.themeListIds);
+    setOrderNo(profile.orderNo?.toString() || '');
     setLayoutListId(profile.layoutListId?.toString() || '');
     setIsLiveView(profile.isDisplayOnLiveview);
   };
@@ -127,12 +130,18 @@ export default function ThemeUploadDialog({
       toast.error('Vui lòng chọn thumbnail hoặc thêm một ảnh chưa map layout.');
       return;
     }
+    const parsedOrderNo = orderNo.trim() === '' ? undefined : Number(orderNo);
+    if (parsedOrderNo !== undefined && (!Number.isInteger(parsedOrderNo) || parsedOrderNo < 0)) {
+      toast.error('Order No phải là số nguyên không âm.');
+      return;
+    }
 
     await onSubmit({
       name: name.trim(),
       color,
       themeCategoryId: categoryId,
       themeListIds: selectedThemeListIds,
+      orderNo: parsedOrderNo,
       layoutListId: Number(layoutListId) || undefined,
       thumbnail,
       isDisplayOnLiveview: isLiveView,
@@ -195,11 +204,16 @@ export default function ThemeUploadDialog({
             </label>
 
             <label>
+              <span className="mb-1.5 block text-sm font-bold text-on-surface">Order No</span>
+              <input type="number" min={0} step={1} value={orderNo} onChange={event => setOrderNo(event.target.value)} placeholder="Để trống nếu không đặt" className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface" />
+            </label>
+
+            <label>
               <span className="mb-1.5 block text-sm font-bold text-on-surface">Layout List ID</span>
               <input type="number" min={1} value={layoutListId} onChange={event => setLayoutListId(event.target.value)} className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface" />
             </label>
 
-            <label>
+            <label className="sm:col-span-2">
               <span className="mb-1.5 block text-sm font-bold text-on-surface">Thumbnail</span>
               <input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => setThumbnail(event.target.files?.[0] || null)} className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-secondary-container file:px-3 file:py-2 file:font-bold file:text-on-secondary-container" />
               {!thumbnail && fallbackThumbnailName && <span className="mt-1 block text-xs text-primary">Dùng ảnh chưa map: {fallbackThumbnailName}</span>}

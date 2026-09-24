@@ -219,6 +219,7 @@ export default function ThemeImageToolsTab() {
       formData.append('Name', values.name);
       formData.append('Color', values.color);
       formData.append('ThemeListIds', values.themeListIds.join(','));
+      if (values.orderNo !== undefined) formData.append('OrderNo', values.orderNo.toString());
       if (values.layoutListId) formData.append('LayoutListId', values.layoutListId.toString());
       formData.append('IsDisplayOnLiveview', values.isDisplayOnLiveview.toString());
 

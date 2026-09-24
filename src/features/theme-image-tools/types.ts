@@ -36,6 +36,7 @@ export interface ThemeUploadValues {
   color: string;
   themeCategoryId: number;
   themeListIds: number[];
+  orderNo?: number;
   layoutListId?: number;
   thumbnail: File | null;
   isDisplayOnLiveview: boolean;
