@@ -40,6 +40,7 @@ export default function ThemeUploadDialog({
   const [name, setName] = useState('');
   const [color, setColor] = useState('#f16d94');
   const [categoryId, setCategoryId] = useState(0);
+  const [categorySearch, setCategorySearch] = useState('');
   const [selectedThemeListIds, setSelectedThemeListIds] = useState<number[]>([]);
   const [orderNo, setOrderNo] = useState('');
   const [layoutListId, setLayoutListId] = useState('61');
@@ -53,6 +54,14 @@ export default function ThemeUploadDialog({
   useEffect(() => {
     if (open) setProfiles(readProfiles());
   }, [open]);
+
+  const visibleCategories = useMemo(() => {
+    const query = categorySearch.trim().toLocaleLowerCase('vi');
+    if (!query) return categories;
+    return categories.filter(item =>
+      item.id === categoryId || item.name.toLocaleLowerCase('vi').includes(query),
+    );
+  }, [categories, categoryId, categorySearch]);
 
   const visibleThemeLists = useMemo(() => {
     const query = themeListSearch.trim().toLocaleLowerCase('vi');
@@ -197,10 +206,27 @@ export default function ThemeUploadDialog({
 
             <label>
               <span className="mb-1.5 block text-sm font-bold text-on-surface">Danh mục *</span>
-              <select value={categoryId} onChange={event => setCategoryId(Number(event.target.value))} className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface">
+              <input
+                type="search"
+                value={categorySearch}
+                onChange={event => setCategorySearch(event.target.value)}
+                placeholder="Tìm danh mục..."
+                className="mb-2 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface"
+              />
+              <select
+                value={categoryId}
+                onChange={event => {
+                  setCategoryId(Number(event.target.value));
+                  setCategorySearch('');
+                }}
+                className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface"
+              >
                 <option value={0}>Chọn danh mục</option>
-                {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                {visibleCategories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
               </select>
+              {visibleCategories.length === 0 && (
+                <span className="mt-1 block text-xs text-on-surface-variant">Không tìm thấy danh mục.</span>
+              )}
             </label>
 
             <label>
