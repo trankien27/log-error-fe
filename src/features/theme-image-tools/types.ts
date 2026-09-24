@@ -41,3 +41,17 @@ export interface ThemeUploadValues {
   thumbnail: File | null;
   isDisplayOnLiveview: boolean;
 }
+
+export interface ThemeUploadProfile {
+  id: number;
+  name: string;
+  color: string;
+  themeCategoryId: number;
+  themeListIds: number[];
+  orderNo: number | null;
+  layoutListId: number | null;
+  isDisplayOnLiveview: boolean;
+  canManage: boolean;
+}
+
+export type SaveThemeUploadProfile = Omit<ThemeUploadProfile, 'id' | 'canManage'>;

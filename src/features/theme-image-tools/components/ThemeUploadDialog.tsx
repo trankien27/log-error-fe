@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Save, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-import type { ThemeCategory, ThemeList, ThemeUploadValues } from '../types';
+import { themeToolsService } from '../../../services/api/themeToolsService';
+import type { SaveThemeUploadProfile, ThemeCategory, ThemeList, ThemeUploadProfile, ThemeUploadValues } from '../types';
 
 type UploadProfile = Pick<
   ThemeUploadValues,
@@ -47,12 +48,77 @@ export default function ThemeUploadDialog({
   const [thumbnail, setThumbnail] = useState<File | null>(null);
   const [isLiveView, setIsLiveView] = useState(true);
   const [themeListSearch, setThemeListSearch] = useState('');
-  const [profiles, setProfiles] = useState<Record<string, UploadProfile>>({});
-  const [selectedProfile, setSelectedProfile] = useState('');
+  const [profiles, setProfiles] = useState<ThemeUploadProfile[]>([]);
+  const [selectedProfile, setSelectedProfile] = useState(0);
   const [newProfileName, setNewProfileName] = useState('');
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
-    if (open) setProfiles(readProfiles());
+    if (!open) return;
+    let active = true;
+    const loadProfiles = async () => {
+      setLoadingProfiles(true);
+      try {
+        const shared = await themeToolsService.getUploadProfiles();
+        if (!active) return;
+        const local = readProfiles();
+        const localEntries = Object.entries(local);
+        let skipped = 0;
+        for (const [name, profile] of localEntries) {
+          if (!active) break;
+          const existing = shared.find(item => item.name.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi'));
+          if (existing && existing.color === profile.color &&
+              existing.themeCategoryId === profile.themeCategoryId &&
+              existing.themeListIds.join(',') === profile.themeListIds.join(',') &&
+              existing.orderNo === (profile.orderNo ?? null) &&
+              existing.layoutListId === (profile.layoutListId ?? null) &&
+              existing.isDisplayOnLiveview === profile.isDisplayOnLiveview) {
+            delete local[name];
+            continue;
+          }
+          let uploadName = name.trim();
+          let suffix = 2;
+          while (shared.some(item => item.name.toLocaleLowerCase('vi') === uploadName.toLocaleLowerCase('vi'))) {
+            const ending = ` (${suffix++})`;
+            uploadName = `${name.trim().slice(0, 100 - ending.length)}${ending}`;
+          }
+          try {
+            const created = await themeToolsService.createUploadProfile({
+              name: uploadName,
+              color: profile.color,
+              themeCategoryId: profile.themeCategoryId,
+              themeListIds: profile.themeListIds,
+              orderNo: profile.orderNo ?? null,
+              layoutListId: profile.layoutListId ?? null,
+              isDisplayOnLiveview: profile.isDisplayOnLiveview,
+            });
+            shared.push(created);
+            delete local[name];
+          } catch {
+            skipped++;
+          }
+        }
+        if (localEntries.length > 0) {
+          try {
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(local));
+          } catch {
+            // Các profile đã chuyển vẫn được lưu trên server.
+          }
+        }
+        if (active) {
+          setProfiles([...shared].sort((a, b) => a.name.localeCompare(b.name, 'vi')));
+          setSelectedProfile(current => shared.some(item => item.id === current) ? current : 0);
+          if (skipped) toast.warning(`${skipped} profile cũ chưa thể chuyển lên hệ thống; dữ liệu vẫn còn trên trình duyệt này.`);
+        }
+      } catch (error) {
+        if (active) toast.error(error instanceof Error ? error.message : 'Không thể tải profile dùng chung.');
+      } finally {
+        if (active) setLoadingProfiles(false);
+      }
+    };
+    void loadProfiles();
+    return () => { active = false; };
   }, [open]);
 
   const visibleCategories = useMemo(() => {
@@ -70,39 +136,58 @@ export default function ThemeUploadDialog({
 
   if (!open) return null;
 
-  const persistProfiles = (nextProfiles: Record<string, UploadProfile>) => {
-    setProfiles(nextProfiles);
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(nextProfiles));
-  };
-
-  const saveProfile = () => {
+  const saveProfile = async () => {
     const profileName = newProfileName.trim();
     if (!profileName) {
       toast.error('Vui lòng nhập tên profile.');
       return;
     }
-
-    persistProfiles({
-      ...profiles,
-      [profileName]: {
-        color,
-        themeCategoryId: categoryId,
-        themeListIds: selectedThemeListIds,
-        orderNo: orderNo.trim() === '' ? undefined : Number(orderNo),
-        layoutListId: Number(layoutListId) || undefined,
-        isDisplayOnLiveview: isLiveView,
-      },
-    });
-    setSelectedProfile(profileName);
-    setNewProfileName('');
-    toast.success(`Đã lưu profile “${profileName}”.`);
+    if (!categoryId) {
+      toast.error('Vui lòng chọn danh mục theme trước khi lưu profile.');
+      return;
+    }
+    const parsedOrderNo = orderNo.trim() === '' ? null : Number(orderNo);
+    if (parsedOrderNo !== null && (!Number.isInteger(parsedOrderNo) || parsedOrderNo < 0)) {
+      toast.error('Order No phải là số nguyên không âm.');
+      return;
+    }
+    const existing = profiles.find(item => item.name.toLocaleLowerCase('vi') === profileName.toLocaleLowerCase('vi'));
+    if (existing && !existing.canManage) {
+      toast.error('Profile này do người khác tạo. Hãy đặt tên khác để lưu profile riêng.');
+      return;
+    }
+    const payload: SaveThemeUploadProfile = {
+      name: profileName,
+      color,
+      themeCategoryId: categoryId,
+      themeListIds: selectedThemeListIds,
+      orderNo: parsedOrderNo,
+      layoutListId: layoutListId.trim() === '' ? null : Number(layoutListId),
+      isDisplayOnLiveview: isLiveView,
+    };
+    setSavingProfile(true);
+    try {
+      const saved = existing
+        ? await themeToolsService.updateUploadProfile(existing.id, payload)
+        : await themeToolsService.createUploadProfile(payload);
+      setProfiles(current => [...current.filter(item => item.id !== saved.id), saved]
+        .sort((a, b) => a.name.localeCompare(b.name, 'vi')));
+      setSelectedProfile(saved.id);
+      setNewProfileName(saved.name);
+      toast.success(`Đã lưu profile dùng chung “${saved.name}”.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể lưu profile.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const loadProfile = (profileName: string) => {
-    setSelectedProfile(profileName);
-    const profile = profiles[profileName];
+  const loadProfile = (id: number) => {
+    setSelectedProfile(id);
+    const profile = profiles.find(item => item.id === id);
     if (!profile) return;
 
+    setNewProfileName(profile.name);
     setColor(profile.color);
     setCategoryId(profile.themeCategoryId);
     setSelectedThemeListIds(profile.themeListIds);
@@ -111,13 +196,22 @@ export default function ThemeUploadDialog({
     setIsLiveView(profile.isDisplayOnLiveview);
   };
 
-  const deleteProfile = () => {
+  const deleteProfile = async () => {
     if (!selectedProfile) return;
-    const nextProfiles = { ...profiles };
-    delete nextProfiles[selectedProfile];
-    persistProfiles(nextProfiles);
-    setSelectedProfile('');
-    toast.success('Đã xóa profile.');
+    const profile = profiles.find(item => item.id === selectedProfile);
+    if (!profile?.canManage) return;
+    setSavingProfile(true);
+    try {
+      await themeToolsService.deleteUploadProfile(profile.id);
+      setProfiles(current => current.filter(item => item.id !== profile.id));
+      setSelectedProfile(0);
+      setNewProfileName('');
+      toast.success('Đã xóa profile dùng chung.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể xóa profile.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const toggleThemeList = (id: number) => {
@@ -172,20 +266,21 @@ export default function ThemeUploadDialog({
 
         <div className="overflow-y-auto px-6 py-5">
           <div className="mb-5 rounded-xl border border-outline-variant bg-surface-2 p-4">
-            <p className="mb-3 text-xs font-black uppercase tracking-wide text-on-surface-variant">Profile upload</p>
+            <p className="mb-3 text-xs font-black uppercase tracking-wide text-on-surface-variant">Profile upload dùng chung</p>
+            <p className="mb-3 text-xs text-on-surface-variant">Mọi người đều dùng được profile đã lưu. Người tạo hoặc Admin có thể sửa và xóa.</p>
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <select value={selectedProfile} onChange={event => loadProfile(event.target.value)} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface">
-                <option value="">Chọn profile đã lưu</option>
-                {Object.keys(profiles).sort().map(profileName => <option key={profileName} value={profileName}>{profileName}</option>)}
+              <select value={selectedProfile} onChange={event => loadProfile(Number(event.target.value))} disabled={loadingProfiles} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface disabled:opacity-50">
+                <option value={0}>{loadingProfiles ? 'Đang tải profile...' : 'Chọn profile đã lưu'}</option>
+                {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
               </select>
-              <button type="button" disabled={!selectedProfile} onClick={deleteProfile} className="inline-flex items-center justify-center gap-2 rounded-lg border border-error/30 px-3 py-2 text-sm font-bold text-error disabled:opacity-40">
+              <button type="button" disabled={savingProfile || !profiles.find(item => item.id === selectedProfile)?.canManage} onClick={() => void deleteProfile()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-error/30 px-3 py-2 text-sm font-bold text-error disabled:opacity-40">
                 <Trash2 className="h-4 w-4" /> Xóa
               </button>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
               <input value={newProfileName} onChange={event => setNewProfileName(event.target.value)} placeholder="Tên profile mới" className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface" />
-              <button type="button" onClick={saveProfile} className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary-container px-3 py-2 text-sm font-bold text-on-secondary-container">
-                <Save className="h-4 w-4" /> Lưu profile
+              <button type="button" onClick={() => void saveProfile()} disabled={savingProfile || loadingProfiles} className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary-container px-3 py-2 text-sm font-bold text-on-secondary-container disabled:opacity-50">
+                <Save className="h-4 w-4" /> {savingProfile ? 'Đang lưu...' : 'Lưu profile'}
               </button>
             </div>
           </div>
