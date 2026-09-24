@@ -9,14 +9,14 @@ export interface ThemeLayout {
 export interface ThemeCategory {
   id: number;
   name: string;
-  orderNo: number;
+  orderNo: number | null;
   isActive: boolean;
 }
 
 export interface ThemeList {
   id: number;
   name: string;
-  orderNo: number;
+  orderNo: number | null;
   isActive: boolean;
 }
 

@@ -142,13 +142,14 @@ export default function App() {
         <Route path="print-image" element={<PrintImageTab />} />
         <Route path="recreate-image" element={<RecreateImageTab />} />
         <Route
-          path="theme-image-tools"
+          path="up-frame"
           element={(
-            <React.Suspense fallback={<div className="p-6 text-sm font-bold text-on-surface-variant">Đang tải công cụ ảnh...</div>}>
+            <React.Suspense fallback={<div className="p-6 text-sm font-bold text-on-surface-variant">Đang tải Up frame...</div>}>
               <ThemeImageToolsTab />
             </React.Suspense>
           )}
         />
+        <Route path="theme-image-tools" element={<Navigate to="/up-frame" replace />} />
         <Route
           path="shifts"
           element={(

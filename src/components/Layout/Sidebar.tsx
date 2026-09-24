@@ -115,7 +115,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/remote-booth') return 'remote_booth';
     if (path === '/print-image') return 'print_image';
     if (path === '/recreate-image') return 'recreate_image';
-    if (path === '/theme-image-tools') return 'theme_image_tools';
+    if (path === '/up-frame') return 'up_frame';
     if (path === '/shifts') return 'shifts';
     if (path.startsWith('/list-dictionaries')) return 'list_dictionaries';
     if (path === '/documents') return 'documents';
@@ -153,7 +153,7 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'remote_booth': navigate('/remote-booth'); break;
       case 'print_image': navigate('/print-image'); break;
       case 'recreate_image': navigate('/recreate-image'); break;
-      case 'theme_image_tools': navigate('/theme-image-tools'); break;
+      case 'up_frame': navigate('/up-frame'); break;
       case 'shifts': navigate('/shifts'); break;
       case 'list_dictionaries': navigate('/list-dictionaries'); break;
       case 'documents': navigate('/documents'); break;
@@ -317,9 +317,9 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               </button>
             </li>
             <li>
-              <button onClick={() => navigateTo('theme_image_tools')} className={navButtonClass(activeTab === 'theme_image_tools')}>
+              <button onClick={() => navigateTo('up_frame')} className={navButtonClass(activeTab === 'up_frame')}>
                 <Images className="w-4 h-4" />
-                <span>Resize ảnh Theme</span>
+                <span>Up frame</span>
               </button>
             </li>
             {canViewShifts && (

@@ -115,8 +115,8 @@ export default function ThemeImageToolsTab() {
         themeToolsService.getThemeLists(),
       ]);
       setLayouts(layoutItems.filter(item => item.code && item.width > 0 && item.height > 0));
-      setCategories(categoryItems.filter(item => item.isActive).sort((a, b) => a.orderNo - b.orderNo));
-      setThemeLists(themeListItems.filter(item => item.isActive).sort((a, b) => a.orderNo - b.orderNo));
+      setCategories(categoryItems.filter(item => item.isActive).sort((a, b) => (a.orderNo ?? 0) - (b.orderNo ?? 0)));
+      setThemeLists(themeListItems.filter(item => item.isActive).sort((a, b) => (a.orderNo ?? 0) - (b.orderNo ?? 0)));
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể tải cấu hình FunStudio.');
     } finally {
@@ -261,9 +261,9 @@ export default function ThemeImageToolsTab() {
         <div>
           <div className="flex items-center gap-2 text-primary">
             <Images className="h-5 w-5" />
-            <span className="text-xs font-black uppercase tracking-[0.16em]">FunStudio tools</span>
+            <span className="text-xs font-black uppercase tracking-[0.16em]">FunStudio</span>
           </div>
-          <h1 className="mt-2 text-2xl font-black text-on-surface">Resize ảnh & upload theme</h1>
+          <h1 className="mt-2 text-2xl font-black text-on-surface">Up frame</h1>
           <p className="mt-1 text-sm text-on-surface-variant">Tự nhận diện layout theo mã trong tên file, resize và upload trực tiếp.</p>
         </div>
         <button type="button" onClick={() => void loadReferenceData()} disabled={loadingData} className="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant px-4 py-2.5 text-sm font-bold text-on-surface hover:bg-surface-2 disabled:opacity-50">
