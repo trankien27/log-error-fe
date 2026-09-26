@@ -1,18 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   Bell,
   Building2,
   Calendar,
-  ChevronDown,
   Clock3,
   ClipboardList,
   Database,
   History,
   Images,
   LayoutDashboard,
-  LibraryBig,
   NotebookTabs,
   MessageSquare,
   Printer,
@@ -30,20 +28,12 @@ import { useTasksStore } from '../../stores/useTasksStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useUsersStore } from '../../stores/useUsersStore';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { listDictionariesService } from '../../services/api/listDictionariesService';
-import { ListDictionarySidebarDto, TabType } from '../../types';
+import { TabType } from '../../types';
 
 const navButtonClass = (isActive: boolean) =>
   `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
     isActive
       ? 'bg-secondary-container text-on-secondary-container border-l-4 border-primary font-bold'
-      : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
-  }`;
-
-const dictionaryNavButtonClass = (isActive: boolean) =>
-  `w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-bold transition-colors ${
-    isActive
-      ? 'bg-secondary-container text-on-secondary-container ring-1 ring-primary/30'
       : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
   }`;
 
@@ -57,10 +47,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = variant === 'mobile';
-  const [sidebarDictionaries, setSidebarDictionaries] = useState<ListDictionarySidebarDto[]>([]);
-  const [isOtherDictionariesOpen, setIsOtherDictionariesOpen] = useState(
-    location.pathname.startsWith('/list-dictionaries'),
-  );
 
   // Zustand State subscriptions
   const { logs } = useLogsStore();
@@ -72,32 +58,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
   const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
   const canViewR2Usage = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
   const canViewShifts = getCurrentRoleNumber() !== 2;
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadSidebarDictionaries = async () => {
-      try {
-        const data = await listDictionariesService.getSidebar();
-        if (isMounted) setSidebarDictionaries(data);
-      } catch {
-        if (isMounted) setSidebarDictionaries([]);
-      }
-    };
-
-    const handleSidebarUpdated = () => void loadSidebarDictionaries();
-    void loadSidebarDictionaries();
-    window.addEventListener('list-dictionaries:sidebar-updated', handleSidebarUpdated);
-    return () => {
-      isMounted = false;
-      window.removeEventListener('list-dictionaries:sidebar-updated', handleSidebarUpdated);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (location.pathname.startsWith('/list-dictionaries')) {
-      setIsOtherDictionariesOpen(true);
-    }
-  }, [location.pathname]);
 
   const getActiveTab = (): TabType => {
     const path = location.pathname;
@@ -117,7 +77,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (path === '/recreate-image') return 'recreate_image';
     if (path === '/up-frame') return 'up_frame';
     if (path === '/shifts') return 'shifts';
-    if (path.startsWith('/list-dictionaries')) return 'list_dictionaries';
     if (path === '/documents') return 'documents';
     if (path === '/notifications') return 'notifications';
     if (path === '/schedule') return 'schedule';
@@ -155,7 +114,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       case 'recreate_image': navigate('/recreate-image'); break;
       case 'up_frame': navigate('/up-frame'); break;
       case 'shifts': navigate('/shifts'); break;
-      case 'list_dictionaries': navigate('/list-dictionaries'); break;
       case 'documents': navigate('/documents'); break;
       case 'notifications': navigate('/notifications'); break;
       case 'schedule': navigate('/schedule'); break;
@@ -168,11 +126,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     if (isMobile) {
       onClose?.();
     }
-  };
-
-  const navigateToDictionary = (code: string) => {
-    navigate(`/list-dictionaries/${encodeURIComponent(code)}`);
-    if (isMobile) onClose?.();
   };
 
   return (
@@ -330,68 +283,6 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
                 </button>
               </li>
             )}
-            <li>
-              <button
-                type="button"
-                onClick={() => setIsOtherDictionariesOpen(current => !current)}
-                className={navButtonClass(activeTab === 'list_dictionaries')}
-                aria-expanded={isOtherDictionariesOpen}
-                aria-controls="other-dictionaries-menu"
-                title={isOtherDictionariesOpen ? 'Thu gọn danh mục khác' : 'Mở rộng danh mục khác'}
-              >
-                <LibraryBig className="w-4 h-4" />
-                <span>Danh mục khác</span>
-                {sidebarDictionaries.length > 0 && (
-                  <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-black text-primary">
-                    {sidebarDictionaries.length}
-                  </span>
-                )}
-                <ChevronDown className={`${sidebarDictionaries.length === 0 ? 'ml-auto' : ''} h-4 w-4 transition-transform duration-200 ${isOtherDictionariesOpen ? 'rotate-180' : ''}`} />
-              </button>
-              <div
-                id="other-dictionaries-menu"
-                aria-hidden={!isOtherDictionariesOpen}
-                inert={!isOtherDictionariesOpen}
-                className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
-                  isOtherDictionariesOpen
-                    ? 'grid-rows-[1fr] opacity-100'
-                    : 'grid-rows-[0fr] opacity-0'
-                }`}
-              >
-                <div className="overflow-hidden">
-                  <div className="ml-5 mt-1 space-y-1 border-l border-outline-variant pl-2">
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => navigateTo('list_dictionaries')}
-                        className={dictionaryNavButtonClass(location.pathname === '/list-dictionaries')}
-                      >
-                        Quản lý danh mục
-                      </button>
-                    )}
-                    {sidebarDictionaries.map(dictionary => (
-                      <button
-                        key={dictionary.id}
-                        type="button"
-                        onClick={() => navigateToDictionary(dictionary.code)}
-                        className={dictionaryNavButtonClass(
-                          location.pathname === `/list-dictionaries/${encodeURIComponent(dictionary.code)}`,
-                        )}
-                        title={dictionary.name}
-                      >
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                        <span className="truncate">{dictionary.name}</span>
-                      </button>
-                    ))}
-                    {sidebarDictionaries.length === 0 && !isAdmin && (
-                      <p className="px-3 py-2 text-[11px] font-semibold text-on-surface-variant">
-                        Chưa có danh mục hiển thị
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </li>
             <li>
               <button onClick={() => navigateTo('documents')} className={navButtonClass(activeTab === 'documents')}>
                 <NotebookTabs className="w-4 h-4" />

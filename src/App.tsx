@@ -16,7 +16,6 @@ import RemoteBoothTab from './features/remote-booth/components/RemoteBoothTab';
 import PrintImageTab from './features/print-image/components/PrintImageTab';
 import RecreateImageTab from './features/recreate-image/components/RecreateImageTab';
 import ShiftsTab from './features/shifts/components/ShiftsTab';
-import ListDictionariesTab from './features/list-dictionaries/components/ListDictionariesTab';
 import NotificationsTab from './features/notifications/components/NotificationsTab';
 import ScheduleTab from './features/schedule/components/ScheduleTab';
 import OvertimeApprovalTab from './features/overtime/components/OvertimeApprovalTab';
@@ -158,8 +157,6 @@ export default function App() {
             </NotITSupportRoute>
           )}
         />
-        <Route path="list-dictionaries" element={<ListDictionariesTab />} />
-        <Route path="list-dictionaries/:code" element={<ListDictionariesTab />} />
         <Route path="documents" element={<DocumentsTab />} />
         <Route path="notifications" element={<NotificationsTab />} />
         <Route path="schedule" element={<ScheduleTab />} />

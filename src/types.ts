@@ -230,83 +230,6 @@ export interface CreateShiftRequest {
   shiftType?: number;
 }
 
-export type ListDictionaryFieldType = 1 | 2 | 3 | 4 | 5 | 6;
-
-export interface ListDictionaryFieldDto {
-  id: number;
-  code: string;
-  name: string;
-  dataType: ListDictionaryFieldType;
-  isRequired: boolean;
-  sortOrder: number;
-  options: string[];
-  createdBy: string;
-  createdAt: string;
-  updatedBy?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ListDictionaryDto {
-  id: number;
-  code: string;
-  name: string;
-  description?: string | null;
-  isActive: boolean;
-  isVisibleInSidebar: boolean;
-  itemCount: number;
-  fields: ListDictionaryFieldDto[];
-  createdBy: string;
-  createdAt: string;
-  updatedBy?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface ListDictionaryItemDto {
-  id: number;
-  code: string;
-  values: Record<string, string | number | boolean | null>;
-  createdBy: string;
-  createdAt: string;
-  updatedBy?: string | null;
-  updatedAt?: string | null;
-}
-
-export interface CreateListDictionaryRequest {
-  code: string;
-  name: string;
-  description?: string;
-  fields: Array<{
-    code: string;
-    name: string;
-    dataType: ListDictionaryFieldType;
-    isRequired: boolean;
-    options: string[];
-  }>;
-}
-
-export interface SaveListDictionaryItemRequest {
-  values: Record<string, string | number | boolean>;
-}
-
-export interface UpdateListDictionarySidebarRequest {
-  visibleDictionaryCodes: string[];
-}
-
-export interface RenameListDictionaryRequest {
-  name: string;
-}
-
-export interface ImportListDictionaryRequest extends CreateListDictionaryRequest {
-  isVisibleInSidebar: boolean;
-  items: Array<Record<string, string | number | boolean>>;
-}
-
-export interface ListDictionarySidebarDto {
-  id: number;
-  code: string;
-  name: string;
-}
-
 export type KnowledgeDocumentVisibility = 1 | 2;
 export type KnowledgeDocumentEditAccess = 1 | 2 | 3;
 
@@ -701,7 +624,6 @@ export type TabType =
   | 'recreate_image'
   | 'up_frame'
   | 'shifts'
-  | 'list_dictionaries'
   | 'documents'
   | 'notifications'
   | 'schedule'
