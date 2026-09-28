@@ -38,6 +38,7 @@ import {
   WorkScheduleWeekResponse,
 } from '../../../types';
 import WeeklyCoverageSuggestionModal from '../../work-schedules/components/WeeklyCoverageSuggestionModal';
+import CopyWeekScheduleModal from './CopyWeekScheduleModal';
 
 type DraftPanel = {
   mode: 'create' | 'edit';
@@ -318,6 +319,7 @@ export default function ScheduleTab() {
   const [isOvertimeExportModalOpen, setIsOvertimeExportModalOpen] = useState(false);
   const [isExportingOvertime, setIsExportingOvertime] = useState(false);
   const [isWeeklySuggestionOpen, setIsWeeklySuggestionOpen] = useState(false);
+  const [isCopyWeekOpen, setIsCopyWeekOpen] = useState(false);
   const [openShiftSelectKey, setOpenShiftSelectKey] = useState<string | null>(null);
   const [draggedSchedule, setDraggedSchedule] = useState<DraggedSchedule | null>(null);
   const [pendingScheduleOps, setPendingScheduleOps] = useState<Record<number, PendingScheduleOp>>({});
@@ -1356,25 +1358,6 @@ export default function ScheduleTab() {
     });
   };
 
-  const copyCurrentWeek = async () => {
-    if (!canManageSchedule) return;
-
-    try {
-      const targetDate = addDays(weekStart, 7);
-      const result = await scheduleService.copyWeek({
-        sourceDate: weekStart,
-        targetDate,
-        overwriteExisting: false,
-        userIds: [],
-        storeId: null,
-        departmentId: null,
-      });
-      toast.success(`Đã sao chép ${result.createdCount || 0} lịch sang tuần sau.`);
-    } catch (err: any) {
-      toast.error(err.message || 'Không thể sao chép tuần.');
-    }
-  };
-
   const exportExcel = async () => {
     if (!reportYear || reportMonth < 1 || reportMonth > 12) {
       toast.error('Vui lòng chọn năm và tháng hợp lệ.');
@@ -2089,7 +2072,7 @@ export default function ScheduleTab() {
             {scheduleViewMode !== 'month' && <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={copyCurrentWeek}
+                onClick={() => setIsCopyWeekOpen(true)}
                 disabled={!canManageSchedule}
                 className="h-11 px-4 rounded-md border border-outline-variant bg-surface text-sm font-semibold inline-flex items-center gap-2 hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -3241,6 +3224,14 @@ export default function ScheduleTab() {
         open={isWeeklySuggestionOpen}
         users={scheduleUsers}
         onClose={() => setIsWeeklySuggestionOpen(false)}
+        onSuccess={reload}
+      />
+      <CopyWeekScheduleModal
+        open={isCopyWeekOpen}
+        initialSourceDate={weekStart}
+        users={scheduleUsers}
+        shifts={shiftDefinitions}
+        onClose={() => setIsCopyWeekOpen(false)}
         onSuccess={reload}
       />
     </div>
