@@ -360,6 +360,7 @@ export default function ScheduleTab() {
           schedules: weekUser?.schedules || [],
         };
       })
+      .filter(user => user.schedules.length > 0)
       .sort((a, b) => a.userName.localeCompare(b.userName, 'vi'));
   }, [scheduleUsers, weekSchedule]);
 
