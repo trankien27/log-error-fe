@@ -788,7 +788,7 @@ export default function ScheduleTab() {
   }, [weekEnd, weekStart]);
 
   useEffect(() => {
-    usersService.getUsers({ role: 2 })
+    usersService.getUsers({ isActive: true, pageSize: 1000 })
       .then(setScheduleUsers)
       .catch((err: any) => {
         toast.error(err.message || 'Không thể tải danh sách nhân viên lịch làm việc.');

@@ -108,7 +108,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
     setWeekStartDate(getWeekStartDate(dayjs()));
     setCoverageStart(createDefaultStart());
     setCoverageEnd(createDefaultEnd());
-    setSelectedUserIds(users.map(user => user.id));
+    setSelectedUserIds([]);
     setPreviewResponse(null);
     setPreviewItems([]);
     setApiError(null);
@@ -116,11 +116,11 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
 
   useEffect(() => {
     if (open) {
-      setSelectedUserIds(users.map(user => user.id));
+      setSelectedUserIds([]);
     } else {
       reset();
     }
-  }, [open, users]);
+  }, [open]);
 
   const previewMutation = useMutation({
     mutationFn: previewWeeklyCoverageSuggestion,

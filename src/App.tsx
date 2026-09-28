@@ -17,7 +17,7 @@ import PrintImageTab from './features/print-image/components/PrintImageTab';
 import RecreateImageTab from './features/recreate-image/components/RecreateImageTab';
 import ShiftsTab from './features/shifts/components/ShiftsTab';
 import NotificationsTab from './features/notifications/components/NotificationsTab';
-import ScheduleTab from './features/schedule/components/ScheduleTab';
+import SchedulePage from './features/schedule/components/SchedulePage';
 import OvertimeApprovalTab from './features/overtime/components/OvertimeApprovalTab';
 import SettingsTab from './features/settings/components/SettingsTab';
 import AppearanceSettingsTab from './features/settings/components/AppearanceSettingsTab';
@@ -159,7 +159,7 @@ export default function App() {
         />
         <Route path="documents" element={<DocumentsTab />} />
         <Route path="notifications" element={<NotificationsTab />} />
-        <Route path="schedule" element={<ScheduleTab />} />
+        <Route path="schedule" element={<SchedulePage />} />
         <Route
           path="overtime-approval"
           element={(
