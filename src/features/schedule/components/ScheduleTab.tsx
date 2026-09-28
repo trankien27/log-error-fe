@@ -1995,7 +1995,7 @@ export default function ScheduleTab() {
   };
 
   return (
-    <div className="h-auto lg:h-[calc(100vh-112px)] min-h-[calc(100dvh-88px)] lg:min-h-[720px] -m-3 sm:-m-4 lg:-m-6 bg-surface text-on-surface animate-fadeIn">
+    <div className="h-auto min-h-full lg:h-full lg:min-h-[720px] bg-surface text-on-surface animate-fadeIn">
       <div className="h-full flex flex-col">
         <div className="border-b border-outline-variant px-4 lg:px-6 py-4 lg:py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">

@@ -31,7 +31,7 @@ export default function SchedulePage() {
           </button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className={`min-h-0 flex-1 overflow-auto ${activeView === 'team' ? 'pt-3' : ''}`}>
         {activeView === 'team' ? <ScheduleTab /> : <MyScheduleTab />}
       </div>
     </div>
