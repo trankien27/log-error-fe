@@ -2,17 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AlertTriangle,
+  ArrowRight,
+  Building2,
   CalendarClock,
   CheckCircle2,
-  Clock3,
   History,
   ListTodo,
   Loader2,
+  PieChart,
   RefreshCw,
-  Search,
   ShieldAlert,
   TimerReset,
   UserRound,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   DashboardActionItem,
@@ -21,13 +23,15 @@ import {
 } from '../../../services/api/dashboardService';
 import { ErrorLog, OvertimeRequestDto, RecentActivity, WorkScheduleDto } from '../../../types';
 import ServerMonitoringPanel from './ServerMonitoringPanel';
+import { EmptyState, PageHeader, SectionCard, Skeleton } from '../../../components/ui';
+import { useAuthStore } from '../../../stores/useAuthStore';
 
 type RangePreset = 'today' | 'week' | 'month' | 'custom';
 
 const actionMeta: Record<string, { label: string; className: string }> = {
-  task: { label: 'Task', className: 'badge-info' },
+  task: { label: 'Công việc', className: 'badge-info' },
   log: { label: 'Log lỗi', className: 'badge-error' },
-  overtime: { label: 'OT', className: 'badge-warning' },
+  overtime: { label: 'Tăng ca', className: 'badge-warning' },
   schedule: { label: 'Lịch trực', className: 'badge-success' },
 };
 
@@ -36,6 +40,20 @@ const errorGroupLabels: Record<string, string> = {
   Software: 'Phần mềm',
   Other: 'Khác',
 };
+
+const RANGE_OPTIONS: Array<[RangePreset, string]> = [
+  ['today', 'Hôm nay'],
+  ['week', 'Tuần này'],
+  ['month', 'Tháng này'],
+  ['custom', 'Tùy chọn'],
+];
+
+const GROUP_COLORS = ['var(--color-primary)', 'var(--color-warning)', 'var(--color-success)', 'var(--color-error)', 'var(--color-secondary)'];
+
+const dateInputClass =
+  'h-9 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10';
+
+const listRowClass = 'block px-4 py-3 sm:px-5 transition-colors hover:bg-surface-2/60';
 
 function toDateInput(date: Date) {
   const year = date.getFullYear();
@@ -94,7 +112,7 @@ function getScheduleUserName(schedule: WorkScheduleDto) {
 
 function getStatusLabel(status: ErrorLog['status']) {
   if (status === 1) return 'Đang xử lý';
-  if (status === 2) return 'Gửi Dev';
+  if (status === 2) return 'Đã chuyển Dev';
   return 'Theo dõi';
 }
 
@@ -111,62 +129,188 @@ function getOtStatusLabel(status: OvertimeRequestDto['status']) {
   return 'Đã hủy';
 }
 
-function Panel({
-  title,
-  subtitle,
-  children,
-  action,
+function getGreeting(date = new Date()) {
+  const hour = date.getHours();
+  if (hour < 11) return 'Chào buổi sáng';
+  if (hour < 14) return 'Chào buổi trưa';
+  if (hour < 18) return 'Chào buổi chiều';
+  return 'Chào buổi tối';
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone,
+  to,
 }: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
+  label: string;
+  value: number | string;
+  hint?: string;
+  icon: LucideIcon;
+  tone: 'primary' | 'error' | 'warning' | 'success';
+  to: string;
 }) {
+  const toneClass = {
+    primary: 'bg-primary-subtle text-primary',
+    error: 'bg-error-container text-on-error-container',
+    warning: 'bg-warning-container text-on-warning-container',
+    success: 'bg-success-container text-on-success-container',
+  }[tone];
+
   return (
-    <section className="card-surface">
-      <div className="flex items-start justify-between gap-3 border-b border-outline-variant px-4 py-3">
-        <div>
-          <h2 className="text-sm font-bold text-on-surface">{title}</h2>
-          {subtitle && <p className="mt-1 text-xs text-on-surface-variant">{subtitle}</p>}
-        </div>
-        {action}
+    <Link
+      to={to}
+      className="card-surface group p-4 sm:p-5 flex flex-col gap-3 transition-all hover:-translate-y-0.5 hover:shadow-elevated"
+    >
+      <div className="flex items-center justify-between">
+        <span className={`h-10 w-10 rounded-xl inline-flex items-center justify-center ${toneClass}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        <ArrowRight className="h-4 w-4 text-on-surface-variant opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
       </div>
-      {children}
-    </section>
+      <div>
+        <p className="text-3xl font-semibold text-on-surface tabular-nums leading-none">{value}</p>
+        <p className="mt-2 text-sm font-medium text-on-surface">{label}</p>
+        {hint && <p className="mt-0.5 text-xs text-on-surface-variant">{hint}</p>}
+      </div>
+    </Link>
   );
 }
 
-function EmptyState({ text }: { text: string }) {
+function DonutChart({ items }: { items: Array<{ label: string; count: number }> }) {
+  const total = items.reduce((sum, item) => sum + item.count, 0);
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
   return (
-    <div className="flex min-h-[140px] items-center justify-center px-4 py-8 text-center text-xs font-semibold text-on-surface-variant/70">
-      {text}
+    <div className="flex flex-col sm:flex-row items-center gap-6">
+      <div className="relative h-36 w-36 shrink-0">
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" role="img" aria-label="Biểu đồ nhóm lỗi">
+          <circle cx="50" cy="50" r={radius} fill="none" stroke="var(--color-surface-2)" strokeWidth="12" />
+          {items.map((item, index) => {
+            const length = total ? (item.count / total) * circumference : 0;
+            const segment = (
+              <circle
+                key={item.label}
+                cx="50"
+                cy="50"
+                r={radius}
+                fill="none"
+                stroke={GROUP_COLORS[index % GROUP_COLORS.length]}
+                strokeWidth="12"
+                strokeDasharray={`${Math.max(length - 1.5, 0)} ${circumference}`}
+                strokeDashoffset={-offset}
+              />
+            );
+            offset += length;
+            return segment;
+          })}
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-semibold text-on-surface tabular-nums">{total}</span>
+          <span className="text-xs text-on-surface-variant">log lỗi</span>
+        </div>
+      </div>
+      <ul className="w-full space-y-2.5">
+        {items.map((item, index) => (
+          <li key={item.label} className="flex items-center gap-2.5 text-sm">
+            <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: GROUP_COLORS[index % GROUP_COLORS.length] }} />
+            <span className="flex-1 text-on-surface-variant truncate">{item.label}</span>
+            <span className="font-medium text-on-surface tabular-nums">{item.count}</span>
+            <span className="w-10 text-right text-xs text-on-surface-variant tabular-nums">
+              {total ? Math.round((item.count / total) * 100) : 0}%
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
+function RankingBars({
+  items,
+  color,
+}: {
+  items: Array<{ key: string; label: string; count: number }>;
+  color: string;
+}) {
+  const max = Math.max(...items.map(item => item.count), 1);
+  return (
+    <ol className="space-y-3.5">
+      {items.map((item, index) => (
+        <li key={item.key}>
+          <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold ${index < 3 ? 'bg-primary-subtle text-primary' : 'bg-surface-2 text-on-surface-variant'}`}>
+                {index + 1}
+              </span>
+              <span className="truncate text-on-surface">{item.label}</span>
+            </span>
+            <span className="font-medium text-on-surface tabular-nums">{item.count}</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+            <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.max((item.count / max) * 100, 6)}%`, background: color }} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function ActionItemRow({ item }: { item: DashboardActionItem }) {
-  const meta = actionMeta[item.type] || { label: item.type, className: 'bg-surface-2 text-on-surface-variant border border-outline-variant rounded px-2 py-0.5 text-[10px] font-bold' };
+  const meta = actionMeta[item.type] || { label: item.type, className: 'badge-info' };
+  const isHigh = item.priority === 'high';
   const content = (
-    <article className="group flex gap-3 px-4 py-3 transition-colors hover:bg-surface-2">
-      <div className={`mt-0.5 h-8 w-8 shrink-0 rounded-lg border ${item.priority === 'high' ? 'border-error-container bg-error-container text-on-error-container' : 'border-secondary-container bg-secondary-container text-on-secondary-container'} flex items-center justify-center`}>
-        {item.priority === 'high' ? <ShieldAlert className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-      </div>
+    <article className="group flex gap-3 px-4 py-3.5 sm:px-5 transition-colors hover:bg-surface-2/60">
+      <span className={`mt-0.5 h-9 w-9 shrink-0 rounded-xl inline-flex items-center justify-center ${isHigh ? 'bg-error-container text-on-error-container' : 'bg-secondary-container text-on-secondary-container'}`}>
+        {isHigh ? <ShieldAlert className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+      </span>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <span className={meta.className}>{meta.label}</span>
-          {item.priority === 'high' && <span className="badge-error">Ưu tiên cao</span>}
+          {isHigh && <span className="badge-error">Ưu tiên cao</span>}
         </div>
-        <h3 className="mt-1.5 text-sm font-bold text-on-surface">{item.title}</h3>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">{item.description}</p>
+        <h3 className="mt-1.5 text-sm font-medium text-on-surface">{item.title}</h3>
+        <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-on-surface-variant">{item.description}</p>
       </div>
-      <time className="hidden shrink-0 text-[11px] font-semibold text-on-surface-variant/70 sm:block">{formatDate(item.occurredAt)}</time>
+      <time className="hidden shrink-0 text-xs text-on-surface-variant sm:block">{formatDate(item.occurredAt)}</time>
     </article>
   );
 
   return item.targetUrl ? <Link to={item.targetUrl}>{content}</Link> : content;
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-5" aria-busy="true" aria-label="Đang tải tổng quan">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <div key={index} className="card-surface p-5 space-y-4">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+        <div className="card-surface p-5 space-y-4 xl:col-span-7">
+          {Array.from({ length: 5 }, (_, index) => <Skeleton key={index} className="h-12 w-full" />)}
+        </div>
+        <div className="card-surface p-5 space-y-4 xl:col-span-5">
+          <Skeleton className="mx-auto h-36 w-36 rounded-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OverviewTab() {
+  const userName = useAuthStore(state => state.currentUser?.name);
   const initialRange = useMemo(() => getRange('month'), []);
   const [rangePreset, setRangePreset] = useState<RangePreset>('month');
   const [fromDate, setFromDate] = useState(initialRange.fromDate);
@@ -174,10 +318,6 @@ export default function OverviewTab() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const maxGroupCount = Math.max(...(summary?.errorGroups.map(item => item.count) || [0]), 1);
-  const maxStoreCount = Math.max(...(summary?.storeRanking.map(item => item.errorCount) || [0]), 1);
-  const maxUserErrorCount = Math.max(...(summary?.userErrorRanking.map(item => item.errorCount) || [0]), 1);
 
   const fetchSummary = async () => {
     setIsLoading(true);
@@ -187,7 +327,7 @@ export default function OverviewTab() {
       const data = await dashboardService.getSummary({ fromDate, toDate });
       setSummary(data);
     } catch (err: any) {
-      setError(err.message || 'Không thể tải dashboard.');
+      setError(err.message || 'Không thể tải dữ liệu tổng quan.');
     } finally {
       setIsLoading(false);
     }
@@ -207,291 +347,293 @@ export default function OverviewTab() {
     }
   };
 
+  const highPriorityCount = summary?.actionItems.filter(item => item.priority === 'high').length ?? 0;
+  const firstName = userName?.trim().split(/\s+/).pop();
+  const rangeLabel = `${formatDate(fromDate)} – ${formatDate(toDate)}`;
+
   return (
-    <div className="space-y-5 text-left animate-fadeIn">
-      <div className="card-surface p-4">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <h1 className="text-xl font-black text-on-surface">Tổng quan vận hành</h1>
-            <p className="mt-1 text-xs font-medium text-on-surface-variant">
-              Gom các việc cần xử lý, lịch trực, OT, task và log lỗi vào một màn hình.
-            </p>
+    <div className="space-y-5 text-left">
+      <PageHeader
+        title={`${getGreeting()}${firstName ? `, ${firstName}` : ''} 👋`}
+        description="Đây là tình hình vận hành trong khoảng thời gian bạn chọn."
+        actions={
+          <button type="button" onClick={() => void fetchSummary()} disabled={isLoading} className="btn-secondary">
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Làm mới
+          </button>
+        }
+      >
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="inline-flex w-full md:w-auto rounded-lg bg-surface-2 p-1">
+            {RANGE_OPTIONS.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => changePreset(value)}
+                className={`flex-1 md:flex-none h-8 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                  rangePreset === value ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-            <div className="flex rounded-lg border border-outline-variant bg-surface-2 p-1">
-              {[
-                ['today', 'Hôm nay'],
-                ['week', 'Tuần này'],
-                ['month', 'Tháng này'],
-                ['custom', 'Tùy chọn'],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => changePreset(value as RangePreset)}
-                  className={`h-9 rounded-md px-3 text-xs font-bold transition-colors cursor-pointer ${
-                    rangePreset === value ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <label className="block text-xs font-bold text-on-surface-variant">
-              Từ ngày
-              <input
-                type="date"
-                value={fromDate}
-                onChange={event => {
-                  setRangePreset('custom');
-                  setFromDate(event.target.value);
-                }}
-                className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs font-semibold focus:outline-primary lg:w-40"
-              />
-            </label>
-
-            <label className="block text-xs font-bold text-on-surface-variant">
-              Đến ngày
-              <input
-                type="date"
-                value={toDate}
-                onChange={event => {
-                  setRangePreset('custom');
-                  setToDate(event.target.value);
-                }}
-                className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs font-semibold focus:outline-primary lg:w-40"
-              />
-            </label>
-
-            <button
-              type="button"
-              onClick={() => void fetchSummary()}
-              disabled={isLoading}
-              className="btn-primary h-10 px-4"
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              Làm mới
-            </button>
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              aria-label="Từ ngày"
+              value={fromDate}
+              onChange={event => {
+                setRangePreset('custom');
+                setFromDate(event.target.value);
+              }}
+              className={`${dateInputClass} min-w-0 flex-1 md:w-40 md:flex-none`}
+            />
+            <span className="text-on-surface-variant">–</span>
+            <input
+              type="date"
+              aria-label="Đến ngày"
+              value={toDate}
+              onChange={event => {
+                setRangePreset('custom');
+                setToDate(event.target.value);
+              }}
+              className={`${dateInputClass} min-w-0 flex-1 md:w-40 md:flex-none`}
+            />
           </div>
         </div>
-      </div>
+      </PageHeader>
 
       {error && (
-        <div className="rounded-lg border border-error-container bg-error-container px-4 py-3 text-sm font-semibold text-on-error-container">
-          {error}
+        <div role="alert" className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-error/20 bg-error-container px-4 py-3 text-sm text-on-error-container">
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </span>
+          <button type="button" onClick={() => void fetchSummary()} className="self-start sm:self-auto font-medium underline underline-offset-2 cursor-pointer">
+            Thử lại
+          </button>
         </div>
       )}
 
-      <ServerMonitoringPanel />
-
       {isLoading && !summary ? (
-        <div className="flex h-[420px] items-center justify-center rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface-variant">
-          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Đang tải dashboard...
-        </div>
+        <DashboardSkeleton />
       ) : (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-          <div className="space-y-5 xl:col-span-7">
-            <Panel
-              title="Việc cần xử lý ngay"
-              subtitle="Ưu tiên task quá hạn, log mức cao, OT chờ duyệt và thiếu lịch trực."
-              action={<AlertTriangle className="h-5 w-5 text-warning" />}
-            >
-              <div className="divide-y divide-outline-variant/40">
-                {summary?.actionItems.length ? (
-                  summary.actionItems.map((item, index) => <ActionItemRow key={`${item.type}-${index}`} item={item} />)
-                ) : (
-                  <EmptyState text="Chưa có việc khẩn cần xử lý." />
-                )}
-              </div>
-            </Panel>
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <StatCard
+              label="Việc cần xử lý"
+              value={summary?.actionItems.length ?? 0}
+              hint={highPriorityCount ? `${highPriorityCount} việc ưu tiên cao` : 'Không có việc khẩn'}
+              icon={ShieldAlert}
+              tone={highPriorityCount ? 'error' : 'primary'}
+              to="/tasks"
+            />
+            <StatCard
+              label="Log lỗi cần chú ý"
+              value={summary?.attentionLogs.length ?? 0}
+              hint={rangeLabel}
+              icon={AlertTriangle}
+              tone="warning"
+              to="/error-logs"
+            />
+            <StatCard
+              label="Công việc đến hạn"
+              value={summary?.dueTasks.length ?? 0}
+              hint="Hạn chót đến hôm nay"
+              icon={ListTodo}
+              tone="primary"
+              to="/tasks"
+            />
+            <StatCard
+              label="Tăng ca chờ duyệt"
+              value={summary?.pendingOvertimeRequests.length ?? 0}
+              hint={`${summary?.todaySchedules.length ?? 0} người trực hôm nay`}
+              icon={TimerReset}
+              tone="success"
+              to="/overtime-approval"
+            />
+          </div>
 
-            <Panel title="Task đến hạn" subtitle="Task chưa hoàn tất có deadline đến hôm nay." action={<ListTodo className="h-5 w-5 text-primary" />}>
-              <div className="divide-y divide-outline-variant/40">
-                {summary?.dueTasks.length ? (
-                  summary.dueTasks.map(task => (
-                    <Link key={task.id} to="/tasks" className="block px-4 py-3 transition-colors hover:bg-surface-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-mono text-[10px] font-bold text-on-surface-variant/70">{task.code}</p>
-                          <h3 className="mt-1 line-clamp-1 text-sm font-bold text-on-surface">{task.title}</h3>
-                          <p className="mt-1 text-xs text-on-surface-variant">{task.assigneeName || 'Chưa có người phụ trách'}</p>
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+            <div className="space-y-5 xl:col-span-7">
+              <SectionCard
+                title="Việc cần xử lý ngay"
+                description="Công việc quá hạn, log mức cao, tăng ca chờ duyệt và ca còn thiếu người."
+                icon={ShieldAlert}
+                bodyClassName="p-0"
+              >
+                <div className="divide-y divide-outline-variant/60">
+                  {summary?.actionItems.length ? (
+                    summary.actionItems.map((item, index) => <ActionItemRow key={`${item.type}-${index}`} item={item} />)
+                  ) : (
+                    <EmptyState compact icon={CheckCircle2} title="Mọi thứ đều ổn" description="Chưa có việc khẩn cần xử lý." />
+                  )}
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Công việc đến hạn" description="Chưa hoàn tất và có hạn chót đến hôm nay." icon={ListTodo} bodyClassName="p-0">
+                <div className="divide-y divide-outline-variant/60">
+                  {summary?.dueTasks.length ? (
+                    summary.dueTasks.map(task => (
+                      <Link key={task.id} to="/tasks" className={listRowClass}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-mono text-xs text-on-surface-variant">{task.code}</p>
+                            <h3 className="mt-0.5 line-clamp-1 text-sm font-medium text-on-surface">{task.title}</h3>
+                            <p className="mt-0.5 text-xs text-on-surface-variant">{task.assigneeName || 'Chưa có người phụ trách'}</p>
+                          </div>
+                          <span className="badge-info shrink-0">{formatDate(task.deadline)}</span>
                         </div>
-                        <span className="shrink-0 rounded border border-secondary-container bg-secondary-container px-2 py-1 text-[11px] font-bold text-on-secondary-container">
-                          {formatDate(task.deadline)}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <EmptyState text="Không có task đến hạn trong hôm nay." />
-                )}
-              </div>
-            </Panel>
+                      </Link>
+                    ))
+                  ) : (
+                    <EmptyState compact icon={ListTodo} title="Không có việc đến hạn" description="Hôm nay không có công việc nào tới hạn." />
+                  )}
+                </div>
+              </SectionCard>
 
-            <Panel title="Log lỗi cần chú ý" subtitle="Log chưa ổn định hoặc có mức độ cao trong khoảng lọc." action={<ShieldAlert className="h-5 w-5 text-error" />}>
-              <div className="divide-y divide-outline-variant/40">
-                {summary?.attentionLogs.length ? (
-                  summary.attentionLogs.map(log => (
-                    <Link key={log.id} to="/error-logs" className="block px-4 py-3 transition-colors hover:bg-surface-2">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-[10px] font-bold text-on-surface-variant/70">{log.errorCode}</span>
-                            <span className="badge-error">
-                              {getSeverityLabel(log.severity)}
+              <SectionCard title="Log lỗi cần chú ý" description="Lỗi chưa ổn định hoặc mức độ cao trong khoảng đã chọn." icon={AlertTriangle} bodyClassName="p-0">
+                <div className="divide-y divide-outline-variant/60">
+                  {summary?.attentionLogs.length ? (
+                    summary.attentionLogs.map(log => (
+                      <Link key={log.id} to="/error-logs" className={listRowClass}>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-xs text-on-surface-variant">{log.errorCode}</span>
+                              <span className="badge-error">{getSeverityLabel(log.severity)}</span>
+                            </div>
+                            <h3 className="mt-1 line-clamp-1 text-sm font-medium text-on-surface">{log.store}</h3>
+                            <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-on-surface-variant">{log.description}</p>
+                          </div>
+                          <span className="badge-warning shrink-0 self-start">{getStatusLabel(log.status)}</span>
+                        </div>
+                      </Link>
+                    ))
+                  ) : (
+                    <EmptyState compact icon={CheckCircle2} title="Không có lỗi cần chú ý" description="Hệ thống đang ổn định trong khoảng đã chọn." />
+                  )}
+                </div>
+              </SectionCard>
+
+              <ServerMonitoringPanel />
+            </div>
+
+            <div className="space-y-5 xl:col-span-5">
+              <SectionCard
+                title="Lịch trực hôm nay"
+                description={summary?.today ? formatDate(summary.today) : undefined}
+                icon={CalendarClock}
+                bodyClassName="p-0"
+              >
+                <div className="divide-y divide-outline-variant/60">
+                  {summary?.todaySchedules.length ? (
+                    summary.todaySchedules.map(schedule => {
+                      const name = getScheduleUserName(schedule);
+                      return (
+                        <Link key={schedule.id} to="/schedule" className={listRowClass}>
+                          <div className="flex items-center gap-3">
+                            <span className="h-9 w-9 shrink-0 rounded-full bg-primary-subtle text-primary inline-flex items-center justify-center text-sm font-semibold">
+                              {name.trim().charAt(0).toUpperCase()}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="line-clamp-1 text-sm font-medium text-on-surface">{name}</h3>
+                              <p className="text-xs text-on-surface-variant">{schedule.shiftCode} · {schedule.shiftName}</p>
+                            </div>
+                            <span className="badge-success shrink-0 tabular-nums">
+                              {formatTime(schedule.startTime)} – {formatTime(schedule.endTime)}
                             </span>
                           </div>
-                          <h3 className="mt-1 line-clamp-1 text-sm font-bold text-on-surface">{log.store}</h3>
-                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">{log.description}</p>
-                        </div>
-                        <span className="shrink-0 rounded border border-outline-variant bg-surface-2 px-2 py-1 text-[11px] font-bold text-on-surface-variant">
-                          {getStatusLabel(log.status)}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <EmptyState text="Không có log lỗi cần chú ý trong khoảng lọc." />
-                )}
-              </div>
-            </Panel>
-          </div>
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    <EmptyState compact icon={CalendarClock} title="Chưa có lịch trực" description="Hôm nay chưa có ai được xếp ca." />
+                  )}
+                </div>
+              </SectionCard>
 
-          <div className="space-y-5 xl:col-span-5">
-            <Panel title="Lịch trực hôm nay" subtitle={summary?.today ? formatDate(summary.today) : undefined} action={<CalendarClock className="h-5 w-5 text-success" />}>
-              <div className="divide-y divide-outline-variant/40">
-                {summary?.todaySchedules.length ? (
-                  summary.todaySchedules.map(schedule => (
-                    <Link key={schedule.id} to="/schedule" className="block px-4 py-3 transition-colors hover:bg-surface-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="line-clamp-1 text-sm font-bold text-on-surface">{getScheduleUserName(schedule)}</h3>
-                          <p className="mt-1 text-xs font-semibold text-on-surface-variant">{schedule.shiftCode} - {schedule.shiftName}</p>
+              <SectionCard title="Tăng ca chờ duyệt" icon={TimerReset} bodyClassName="p-0">
+                <div className="divide-y divide-outline-variant/60">
+                  {summary?.pendingOvertimeRequests.length ? (
+                    summary.pendingOvertimeRequests.map(item => (
+                      <Link key={item.id} to="/overtime-approval" className={listRowClass}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="line-clamp-1 text-sm font-medium text-on-surface">{item.userFullName}</h3>
+                            <p className="mt-0.5 text-xs text-on-surface-variant">
+                              {formatDate(item.workDate)} · {formatTime(item.startTime)} – {formatTime(item.endTime)}
+                            </p>
+                          </div>
+                          <span className="badge-warning shrink-0">
+                            {item.totalHours}h · {getOtStatusLabel(item.status)}
+                          </span>
                         </div>
-                        <span className="badge-success">
-                          {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <EmptyState text="Hôm nay chưa có lịch trực." />
-                )}
-              </div>
-            </Panel>
+                      </Link>
+                    ))
+                  ) : (
+                    <EmptyState compact icon={TimerReset} title="Không có yêu cầu nào" description="Chưa có yêu cầu tăng ca đang chờ duyệt." />
+                  )}
+                </div>
+              </SectionCard>
 
-            <Panel title="OT chờ duyệt" subtitle="Các yêu cầu OT đang ở trạng thái chờ." action={<TimerReset className="h-5 w-5 text-warning" />}>
-              <div className="divide-y divide-outline-variant/40">
-                {summary?.pendingOvertimeRequests.length ? (
-                  summary.pendingOvertimeRequests.map(item => (
-                    <Link key={item.id} to="/overtime-approval" className="block px-4 py-3 transition-colors hover:bg-surface-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="line-clamp-1 text-sm font-bold text-on-surface">{item.userFullName}</h3>
-                          <p className="mt-1 text-xs text-on-surface-variant">
-                            {formatDate(item.workDate)} · {formatTime(item.startTime)} - {formatTime(item.endTime)}
-                          </p>
-                        </div>
-                        <span className="badge-warning">
-                          {item.totalHours}h · {getOtStatusLabel(item.status)}
-                        </span>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <EmptyState text="Không có OT đang chờ duyệt." />
-                )}
-              </div>
-            </Panel>
-
-            <Panel title="Nhóm lỗi nhiều nhất" subtitle={`Từ ${formatDate(fromDate)} đến ${formatDate(toDate)}`} action={<Search className="h-5 w-5 text-on-surface-variant" />}>
-              <div className="space-y-3 p-4">
+              <SectionCard title="Nhóm lỗi" description={rangeLabel} icon={PieChart}>
                 {summary?.errorGroups.length ? (
-                  summary.errorGroups.map(item => (
-                    <div key={item.name}>
-                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                        <span className="font-bold text-on-surface-variant">{errorGroupLabels[item.name] || item.name}</span>
-                        <span className="font-black text-on-surface tabular-nums">{item.count}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-                        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.max((item.count / maxGroupCount) * 100, 8)}%` }} />
-                      </div>
-                    </div>
-                  ))
+                  <DonutChart items={summary.errorGroups.map(item => ({ label: errorGroupLabels[item.name] || item.name, count: item.count }))} />
                 ) : (
-                  <EmptyState text="Chưa có dữ liệu nhóm lỗi." />
+                  <EmptyState compact icon={PieChart} title="Chưa có dữ liệu" />
                 )}
-              </div>
-            </Panel>
+              </SectionCard>
 
-            <Panel title="Ranking cửa hàng lỗi nhiều" subtitle="Sắp xếp theo khoảng thời gian đang lọc." action={<Clock3 className="h-5 w-5 text-on-surface-variant" />}>
-              <div className="space-y-3 p-4">
+              <SectionCard title="Cửa hàng nhiều lỗi nhất" description={rangeLabel} icon={Building2}>
                 {summary?.storeRanking.length ? (
-                  summary.storeRanking.map((item, index) => (
-                    <div key={`${item.store}-${index}`}>
-                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                        <span className="min-w-0 truncate font-bold text-on-surface-variant">
-                          #{index + 1} {item.store}
-                        </span>
-                        <span className="font-black text-on-surface tabular-nums">{item.errorCount}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-                        <div className="h-full rounded-full bg-warning" style={{ width: `${Math.max((item.errorCount / maxStoreCount) * 100, 8)}%` }} />
-                      </div>
-                    </div>
-                  ))
+                  <RankingBars
+                    color="var(--color-warning)"
+                    items={summary.storeRanking.map((item, index) => ({ key: `${item.store}-${index}`, label: item.store, count: item.errorCount }))}
+                  />
                 ) : (
-                  <EmptyState text="Chưa có dữ liệu ranking cửa hàng." />
+                  <EmptyState compact icon={Building2} title="Chưa có dữ liệu" />
                 )}
-              </div>
-            </Panel>
+              </SectionCard>
 
-            <Panel title="Log lỗi theo người" subtitle="Đếm theo người phụ trách trong khoảng lọc." action={<UserRound className="h-5 w-5 text-on-surface-variant" />}>
-              <div className="space-y-3 p-4">
+              <SectionCard title="Log lỗi theo người phụ trách" description={rangeLabel} icon={UserRound}>
                 {summary?.userErrorRanking.length ? (
-                  summary.userErrorRanking.map((item, index) => (
-                    <div key={`${item.userId || item.userName}-${index}`}>
-                      <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-                        <span className="min-w-0 truncate font-bold text-on-surface-variant">
-                          #{index + 1} {item.userName}
-                        </span>
-                        <span className="font-black text-on-surface tabular-nums">{item.errorCount}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-surface-2">
-                        <div className="h-full rounded-full bg-secondary" style={{ width: `${Math.max((item.errorCount / maxUserErrorCount) * 100, 8)}%` }} />
-                      </div>
-                    </div>
-                  ))
+                  <RankingBars
+                    color="var(--color-primary)"
+                    items={summary.userErrorRanking.map((item, index) => ({ key: `${item.userId || item.userName}-${index}`, label: item.userName, count: item.errorCount }))}
+                  />
                 ) : (
-                  <EmptyState text="Chưa có dữ liệu log lỗi theo người." />
+                  <EmptyState compact icon={UserRound} title="Chưa có dữ liệu" />
                 )}
-              </div>
-            </Panel>
+              </SectionCard>
 
-            <Panel title="Hoạt động gần đây" subtitle="Các thay đổi mới nhất trong hệ thống." action={<History className="h-5 w-5 text-on-surface-variant" />}>
-              <div className="divide-y divide-outline-variant/40">
+              <SectionCard title="Hoạt động gần đây" icon={History} bodyClassName="p-0">
                 {summary?.recentActivities.length ? (
-                  summary.recentActivities.map((activity: RecentActivity) => (
-                    <article key={activity.id} className="px-4 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="rounded border border-outline-variant bg-surface-2 px-2 py-0.5 text-[10px] font-bold text-on-surface-variant">
-                          {activity.activityTypeLabel}
-                        </span>
-                        <time className="text-[10px] font-semibold text-on-surface-variant/70">{formatDateTime(activity.occurredAt)}</time>
-                      </div>
-                      <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-5 text-on-surface-variant">{activity.description}</p>
-                    </article>
-                  ))
+                  <ol className="px-4 py-3 sm:px-5">
+                    {summary.recentActivities.map((activity: RecentActivity, index) => (
+                      <li key={activity.id} className="relative flex gap-3 pb-4 last:pb-1">
+                        {index < summary.recentActivities.length - 1 && (
+                          <span className="absolute left-[5px] top-4 bottom-0 w-px bg-outline-variant" aria-hidden="true" />
+                        )}
+                        <span className="mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full border-2 border-primary bg-surface" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs font-medium text-on-surface">{activity.activityTypeLabel}</span>
+                            <time className="text-xs text-on-surface-variant shrink-0">{formatDateTime(activity.occurredAt)}</time>
+                          </div>
+                          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-on-surface-variant">{activity.description}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
                 ) : (
-                  <EmptyState text="Chưa có hoạt động gần đây." />
+                  <EmptyState compact icon={History} title="Chưa có hoạt động" />
                 )}
-              </div>
-            </Panel>
+              </SectionCard>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

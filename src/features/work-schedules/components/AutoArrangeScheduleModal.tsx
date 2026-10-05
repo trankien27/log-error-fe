@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ThunderboltOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Drawer, Modal, Steps, notification } from 'antd';
+import { Alert, Button, Drawer, Steps } from 'antd';
+import { Zap } from 'lucide-react';
+import { toast } from 'sonner';
+import { confirmAction } from '../../../components/ui';
 import { ApiError } from '../../../services/api/apiClient';
 import { ShiftDto, User } from '../../../types';
 import {
@@ -94,9 +96,8 @@ export default function AutoArrangeScheduleModal({ open, users, shifts = [], onC
       setPreviewResponse({ ...response, items });
       setPreviewItems(items);
       setCurrentStep(3);
-      notification.success({
-        message: 'Đã tạo preview chia ca',
-        description: `CoverageRate ${response.summary.coverageRate}%.`,
+      toast.success('Đã tạo bản xem trước.', {
+        description: `Tỷ lệ phủ ca ${response.summary.coverageRate}%.`,
       });
     },
     onError: error => setApiError(mapAutoArrangeError(error)),
@@ -107,10 +108,7 @@ export default function AutoArrangeScheduleModal({ open, users, shifts = [], onC
     onSuccess: async response => {
       await queryClient.invalidateQueries({ queryKey: ['work-schedules', 'week'] });
       await onSuccess();
-      notification.success({
-        message: 'Đã lưu lịch tự động',
-        description: `Đã lưu ${response.items.length} lịch làm việc.`,
-      });
+      toast.success(`Đã lưu ${response.items.length} lịch làm việc.`);
       closeAndReset();
     },
     onError: error => setApiError(mapAutoArrangeError(error)),
@@ -166,19 +164,19 @@ export default function AutoArrangeScheduleModal({ open, users, shifts = [], onC
     onClose();
   };
 
-  const requestClose = () => {
+  const requestClose = async () => {
     if (!hasDirtyData) {
       closeAndReset();
       return;
     }
 
-    Modal.confirm({
-      title: 'Bạn có thay đổi chưa lưu',
-      content: 'Đóng màn hình sẽ xóa cấu hình tự động chia ca hiện tại. Bạn có chắc muốn đóng?',
+    const confirmed = await confirmAction({
+      title: 'Đóng khi chưa lưu?',
+      content: 'Cấu hình chia ca hiện tại sẽ bị bỏ.',
       okText: 'Đóng',
       cancelText: 'Ở lại',
-      onOk: closeAndReset,
     });
+    if (confirmed) closeAndReset();
   };
 
   const runPreview = () => {
@@ -207,12 +205,12 @@ export default function AutoArrangeScheduleModal({ open, users, shifts = [], onC
 
   return (
     <Drawer
-      title="Tự động chia ca cho toàn bộ nhân viên trong tuần"
+      title="Tự động chia ca trong tuần"
       open={open}
       onClose={requestClose}
       width="min(1280px, 96vw)"
       destroyOnClose
-      extra={<Button icon={<ThunderboltOutlined />} type="primary" onClick={runPreview} loading={previewMutation.isPending}>Preview</Button>}
+      extra={<Button icon={<Zap className="h-4 w-4" />} type="primary" onClick={runPreview} loading={previewMutation.isPending}>Xem trước</Button>}
       footer={
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Button onClick={requestClose}>Hủy</Button>
@@ -238,13 +236,13 @@ export default function AutoArrangeScheduleModal({ open, users, shifts = [], onC
               { title: 'Phạm vi' },
               { title: 'Giới hạn nhân viên' },
               { title: 'Nhu cầu ca' },
-              { title: 'Preview & lưu' },
+              { title: 'Xem trước & lưu' },
             ]}
           />
         </div>
 
-        {apiError && <Alert type="error" showIcon message="Không thể xử lý tự động chia ca" description={<pre className="whitespace-pre-wrap font-sans">{apiError}</pre>} />}
-        {optionsQuery.isFetching && <Alert type="info" showIcon message="Đang tải dữ liệu ca và tùy chọn..." />}
+        {apiError && <Alert type="error" showIcon message="Không thể tự động chia ca" description={<pre className="whitespace-pre-wrap font-sans">{apiError}</pre>} />}
+        {optionsQuery.isFetching && <Alert type="info" showIcon message="Đang tải danh sách ca..." />}
 
         {currentStep === 0 && (
           <AutoArrangeScopeStep

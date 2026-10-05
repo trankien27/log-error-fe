@@ -17,6 +17,7 @@ import {
   ensureFontLoaded,
 } from '../../theme/theme.fonts';
 import { useThemeStore } from '../../../stores/useThemeStore';
+import { SectionCard } from '../../../components/ui';
 
 type ThemeSettingKey = keyof ThemeSettings;
 
@@ -69,7 +70,8 @@ function FontSelect({
       <select
         value={showCustom ? '__custom__' : value}
         onChange={event => handleSelect(event.target.value)}
-        className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 text-sm font-bold text-on-surface focus:outline-primary"
+        aria-label="Chọn font"
+        className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
       >
         {grouped.sans.length > 0 && (
           <optgroup label="Sans-serif">
@@ -96,11 +98,12 @@ function FontSelect({
           onChange={event => onChange(event.target.value)}
           maxLength={300}
           placeholder='"Tên font", sans-serif'
-          className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 font-mono text-xs font-bold text-on-surface focus:outline-primary"
+          aria-label="CSS font-family"
+          className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 font-mono text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
         />
       )}
 
-      <p className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface" style={{ fontFamily: value }}>
+      <p className="rounded-lg border border-outline-variant bg-surface-2/60 px-3 py-2 text-sm text-on-surface" style={{ fontFamily: value }}>
         Xem trước: Nhật ký lỗi #1234 — AaBbCc 0123
       </p>
     </div>
@@ -215,7 +218,7 @@ export default function ThemeSettingsSection() {
     try {
       setApplyingPreset(preset.id);
       await updateTheme(preset.settings);
-      toast.success(`Đã lưu ${preset.name} làm giao diện global. Mọi người dùng sẽ thấy sau khi tải lại trang.`);
+      toast.success(`Đã áp dụng ${preset.name}. Mọi người sẽ thấy sau khi tải lại trang.`);
     } catch (error: any) {
       toast.error(error?.message || 'Không thể áp dụng bộ giao diện.');
     } finally {
@@ -257,7 +260,7 @@ export default function ThemeSettingsSection() {
     try {
       setIsSaving(true);
       await updateTheme(normalized);
-      toast.success('Đã lưu và áp dụng toàn bộ cấu hình giao diện.');
+      toast.success('Đã lưu cấu hình giao diện.');
     } catch (error: any) {
       toast.error(error?.message || 'Không thể cập nhật cấu hình giao diện.');
     } finally {
@@ -266,29 +269,22 @@ export default function ThemeSettingsSection() {
   };
 
   return (
-    <section className="card-surface p-5 shadow-sm">
-      <div className="mb-5 flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Palette className="h-5 w-5" />
-        </div>
-        <div>
-          <h3 className="text-base font-black text-on-surface">Theme toàn hệ thống</h3>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            Chọn nhanh một bộ giao diện dựng sẵn, hoặc tinh chỉnh từng token bên dưới. Bấm dấu chấm than cạnh từng token để xem thành phần chịu ảnh hưởng.
-          </p>
-        </div>
-      </div>
+    <SectionCard
+      title="Theme toàn hệ thống"
+      description="Chọn nhanh một bộ dựng sẵn hoặc tinh chỉnh từng màu bên dưới. Bấm biểu tượng ! để xem màu đó dùng ở đâu."
+      icon={Palette}
+    >
 
-      <div className="mb-6 rounded-2xl border border-outline-variant bg-surface-2/30 p-4">
+      <div className="mb-5 rounded-xl border border-outline-variant bg-surface-2/40 p-4">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div>
-            <h4 className="text-sm font-black text-on-surface">Bộ giao diện</h4>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Bấm để chuyển bộ và lưu cấu hình global cho toàn hệ thống — mọi người dùng sẽ thấy sau khi tải lại trang. Có thể tinh chỉnh thêm ở phần token bên dưới.
+            <h4 className="text-sm font-semibold text-on-surface">Bộ giao diện</h4>
+            <p className="mt-0.5 text-xs text-on-surface-variant">
+              Bấm để áp dụng và lưu cho cả hệ thống — mọi người sẽ thấy sau khi tải lại trang.
             </p>
           </div>
           {activePreset === null && (
-            <span className="shrink-0 rounded-full border border-warning/30 bg-warning-container/60 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-on-warning-container">
+            <span className="badge-warning shrink-0">
               Bản tùy chỉnh
             </span>
           )}
@@ -307,13 +303,13 @@ export default function ThemeSettingsSection() {
                 aria-pressed={isActive}
                 className={`group relative flex flex-col gap-3 rounded-xl border p-4 text-left transition-all disabled:cursor-not-allowed ${
                   isActive
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary/30'
-                    : 'border-outline-variant bg-surface hover:border-primary/50 hover:bg-surface-2/50'
+                    ? 'border-primary bg-primary-subtle ring-2 ring-primary/30'
+                    : 'border-outline-variant bg-surface hover:border-primary/50 hover:bg-surface-2/50 cursor-pointer'
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-on-surface">{preset.name}</p>
+                    <p className="text-sm font-semibold text-on-surface">{preset.name}</p>
                     <p className="mt-1 text-xs leading-5 text-on-surface-variant">{preset.description}</p>
                   </div>
                   <span
@@ -331,8 +327,8 @@ export default function ThemeSettingsSection() {
                       <span key={index} className="h-7 w-8" style={{ backgroundColor: color }} />
                     ))}
                   </div>
-                  <span className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
-                    {isActive ? 'Đang áp dụng' : isApplying ? 'Đang áp dụng...' : 'Chọn bộ này'}
+                  <span className="text-xs font-medium text-on-surface-variant">
+                    {isActive ? 'Đang áp dụng' : isApplying ? 'Đang áp dụng…' : 'Chọn bộ này'}
                   </span>
                 </div>
               </button>
@@ -341,12 +337,12 @@ export default function ThemeSettingsSection() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {THEME_GROUPS.map(group => (
-          <section key={group.title} className="rounded-2xl border border-outline-variant bg-surface-2/30 p-4">
+          <section key={group.title} className="rounded-xl border border-outline-variant bg-surface-2/40 p-4">
             <div className="mb-4">
-              <h4 className="text-sm font-black text-on-surface">{group.title}</h4>
-              <p className="mt-1 text-xs text-on-surface-variant">{group.description}</p>
+              <h4 className="text-sm font-semibold text-on-surface">{group.title}</h4>
+              <p className="mt-0.5 text-xs text-on-surface-variant">{group.description}</p>
             </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -354,13 +350,13 @@ export default function ThemeSettingsSection() {
                 <div key={field.key} className="rounded-xl border border-outline-variant bg-surface p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-black text-on-surface">{field.label}</p>
-                      <code className="mt-1 block truncate text-[10px] font-bold text-primary">{field.variable}</code>
+                      <p className="truncate text-sm font-medium text-on-surface">{field.label}</p>
+                      <code className="mt-0.5 block truncate font-mono text-[11px] text-primary">{field.variable}</code>
                     </div>
                     <button
                       type="button"
                       onClick={() => setInfoField(current => current === field.key ? null : field.key)}
-                      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                      className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-colors cursor-pointer ${
                         infoField === field.key
                           ? 'border-warning bg-warning-container text-on-warning-container'
                           : 'border-outline-variant text-on-surface-variant hover:border-warning hover:text-warning'
@@ -388,7 +384,8 @@ export default function ThemeSettingsSection() {
                         onChange={event => updateDraft(field.key, event.target.value)}
                         maxLength={7}
                         placeholder="#RRGGBB"
-                        className="h-10 min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface-2 px-3 font-mono text-sm font-bold uppercase text-on-surface focus:outline-primary"
+                        aria-label={`Mã màu ${field.label.toLowerCase()}`}
+                        className="h-10 min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface px-3 font-mono text-sm uppercase text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                       />
                     </div>
                   ) : (
@@ -401,7 +398,7 @@ export default function ThemeSettingsSection() {
 
                   {infoField === field.key && (
                     <div className="mt-3 rounded-lg border border-warning/20 bg-warning-container/50 px-3 py-2 text-xs leading-5 text-on-warning-container">
-                      <span className="font-black">Dùng cho: </span>{field.usage}
+                      <span className="font-medium">Dùng cho: </span>{field.usage}
                     </div>
                   )}
                 </div>
@@ -418,7 +415,7 @@ export default function ThemeSettingsSection() {
             fontFamily: draft.fontSans,
           }}
         >
-          <p className="mb-3 text-xs font-black uppercase tracking-wide" style={{ color: safeColor(draft.secondaryTextColor, '#5B6178') }}>
+          <p className="mb-3 text-xs font-medium" style={{ color: safeColor(draft.secondaryTextColor, '#5B6178') }}>
             Xem trước tổng hợp
           </p>
           <div
@@ -428,14 +425,14 @@ export default function ThemeSettingsSection() {
               borderColor: safeColor(draft.outlineVariantColor, '#D7DAE4'),
             }}
           >
-            <p className="text-base font-black" style={{ color: safeColor(draft.primaryTextColor, '#181B29') }}>Tiêu đề và nội dung chính</p>
-            <p className="mt-1 text-xs font-bold" style={{ color: safeColor(draft.secondaryTextColor, '#5B6178') }}>Mô tả sử dụng màu chữ phụ trên surface.</p>
+            <p className="text-base font-semibold" style={{ color: safeColor(draft.primaryTextColor, '#181B29') }}>Tiêu đề và nội dung chính</p>
+            <p className="mt-1 text-xs" style={{ color: safeColor(draft.secondaryTextColor, '#5B6178') }}>Mô tả sử dụng màu chữ phụ trên surface.</p>
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <button type="button" className="inline-flex h-9 items-center rounded-lg px-4 text-xs font-black" style={{ backgroundColor: safeColor(draft.primaryButtonColor, '#1B55BF'), color: safeColor(draft.onPrimaryColor, '#FFFFFF') }}>Button chính</button>
-              <button type="button" className="inline-flex h-9 items-center rounded-lg border px-4 text-xs font-black" style={{ backgroundColor: safeColor(draft.secondaryButtonColor, '#FFFFFF'), color: getContrastColor(draft.secondaryButtonColor), borderColor: safeColor(draft.outlineVariantColor, '#D7DAE4') }}>Button phụ</button>
-              <span className="rounded-full px-2.5 py-1 text-[10px] font-black" style={{ backgroundColor: safeColor(draft.successContainerColor, '#D9F5E6'), color: safeColor(draft.onSuccessContainerColor, '#0F6B47') }}>Thành công</span>
-              <span className="rounded-full px-2.5 py-1 text-[10px] font-black" style={{ backgroundColor: safeColor(draft.warningContainerColor, '#FBECD0'), color: safeColor(draft.onWarningContainerColor, '#7A4A05') }}>Cảnh báo</span>
-              <span className="rounded-full px-2.5 py-1 text-[10px] font-black" style={{ backgroundColor: safeColor(draft.errorContainerColor, '#FBDEDB'), color: safeColor(draft.onErrorContainerColor, '#8C2018') }}>Lỗi</span>
+              <button type="button" className="inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium" style={{ backgroundColor: safeColor(draft.primaryButtonColor, '#1B55BF'), color: safeColor(draft.onPrimaryColor, '#FFFFFF') }}>Button chính</button>
+              <button type="button" className="inline-flex h-9 items-center rounded-lg border px-4 text-sm font-medium" style={{ backgroundColor: safeColor(draft.secondaryButtonColor, '#FFFFFF'), color: getContrastColor(draft.secondaryButtonColor), borderColor: safeColor(draft.outlineVariantColor, '#D7DAE4') }}>Button phụ</button>
+              <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: safeColor(draft.successContainerColor, '#D9F5E6'), color: safeColor(draft.onSuccessContainerColor, '#0F6B47') }}>Thành công</span>
+              <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: safeColor(draft.warningContainerColor, '#FBECD0'), color: safeColor(draft.onWarningContainerColor, '#7A4A05') }}>Cảnh báo</span>
+              <span className="rounded-full px-2.5 py-1 text-xs font-medium" style={{ backgroundColor: safeColor(draft.errorContainerColor, '#FBDEDB'), color: safeColor(draft.onErrorContainerColor, '#8C2018') }}>Lỗi</span>
               <code className="rounded px-2 py-1 text-xs" style={{ backgroundColor: safeColor(draft.surface2Color, '#EEF0F7'), color: safeColor(draft.secondaryColor, '#3C4A68'), fontFamily: draft.fontMono }}>CODE-001</code>
             </div>
           </div>
@@ -448,10 +445,10 @@ export default function ThemeSettingsSection() {
             className="btn-primary h-10 w-full px-5 sm:w-auto"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            <span>{isSaving ? 'Đang lưu...' : 'Lưu toàn bộ theme'}</span>
+            <span>{isSaving ? 'Đang lưu…' : 'Lưu theme'}</span>
           </button>
         </div>
       </form>
-    </section>
+    </SectionCard>
   );
 }

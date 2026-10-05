@@ -1,8 +1,9 @@
 import React, { ChangeEvent, useRef, useState } from 'react';
-import { Camera, Eye, EyeOff, Loader2, Lock, Save, Upload } from 'lucide-react';
+import { Camera, Eye, EyeOff, Loader2, Lock, Save, Upload, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
 import { accountService } from '../../../services/api/accountService';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { PageHeader, SectionCard } from '../../../components/ui';
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
 
@@ -46,7 +47,7 @@ export default function SettingsTab() {
     }
 
     if (file.size > MAX_AVATAR_BYTES) {
-      toast.error('Ảnh avatar phải nhỏ hơn 1MB.');
+      toast.error('Ảnh đại diện phải nhỏ hơn 1MB.');
       return;
     }
 
@@ -55,9 +56,9 @@ export default function SettingsTab() {
       const avatarDataUrl = await fileToDataUrl(file);
       const user = await accountService.updateAvatar(avatarDataUrl);
       updateCurrentUser({ avatar: user.avatar });
-      toast.success('Đã cập nhật avatar.');
+      toast.success('Đã cập nhật ảnh đại diện.');
     } catch (error: any) {
-      toast.error(error?.message || 'Không thể cập nhật avatar.');
+      toast.error(error?.message || 'Không thể cập nhật ảnh đại diện.');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -90,16 +91,15 @@ export default function SettingsTab() {
   };
 
   return (
-    <div className="space-y-6 text-left text-on-surface animate-fadeIn">
-      <div>
-        <h2 className="text-xl font-bold text-on-surface font-sans">Thiết lập tài khoản</h2>
-        <p className="mt-1 text-xs text-on-surface-variant">
-          Đổi mật khẩu đăng nhập và cập nhật ảnh đại diện.
-        </p>
-      </div>
+    <div className="text-left text-on-surface animate-fadeIn">
+      <PageHeader
+        title="Tài khoản"
+        description="Cập nhật ảnh đại diện và đổi mật khẩu đăng nhập."
+        icon={UserCog}
+      />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        <section className="card-surface p-5 shadow-sm lg:col-span-4">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <section className="card-surface p-5 lg:col-span-4">
           <div className="flex flex-col items-center text-center">
             <div className="relative">
               {currentUser?.avatar ? (
@@ -109,8 +109,8 @@ export default function SettingsTab() {
                   className="h-28 w-28 rounded-full border border-outline-variant object-cover"
                 />
               ) : (
-                <div className="flex h-28 w-28 items-center justify-center rounded-full border border-outline-variant bg-primary/10">
-                  <span className="text-3xl font-black text-primary">
+                <div className="flex h-28 w-28 items-center justify-center rounded-full border border-outline-variant bg-primary-subtle">
+                  <span className="text-3xl font-semibold text-primary">
                     {(currentUser?.name || '?')[0].toUpperCase()}
                   </span>
                 </div>
@@ -119,15 +119,16 @@ export default function SettingsTab() {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploadingAvatar}
-                className="absolute bottom-0 right-0 inline-flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant bg-surface text-primary shadow-sm hover:bg-primary/10 disabled:opacity-60"
-                aria-label="Tải avatar"
+                className="absolute bottom-0 right-0 inline-flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant bg-surface text-primary shadow-sm hover:bg-primary-subtle cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label="Đổi ảnh đại diện"
+                title="Đổi ảnh đại diện"
               >
                 {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               </button>
             </div>
 
-            <h3 className="mt-4 text-base font-black text-on-surface">{currentUser?.name || 'Tài khoản'}</h3>
-            <p className="mt-1 max-w-full truncate text-xs font-medium text-on-surface-variant">{currentUser?.email}</p>
+            <h3 className="mt-4 text-base font-semibold text-on-surface">{currentUser?.name || 'Tài khoản'}</h3>
+            <p className="mt-0.5 max-w-full truncate text-sm text-on-surface-variant">{currentUser?.email}</p>
 
             <input
               ref={fileInputRef}
@@ -141,78 +142,80 @@ export default function SettingsTab() {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingAvatar}
-              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-outline-variant text-sm font-bold text-primary hover:bg-primary/10 disabled:opacity-60"
+              className="btn-secondary mt-5 w-full"
             >
               {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              <span>Upload avatar</span>
+              <span>Đổi ảnh đại diện</span>
             </button>
-            <p className="mt-2 text-xs font-medium text-on-surface-variant">Chỉ nhận ảnh dưới 1MB.</p>
+            <p className="mt-2 text-xs text-on-surface-variant">PNG, JPG, WEBP hoặc GIF, dưới 1MB.</p>
           </div>
         </section>
 
-        <section className="card-surface p-5 shadow-sm lg:col-span-8">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning-container text-warning">
-              <Lock className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-black text-on-surface">Đổi mật khẩu</h3>
-              <p className="mt-1 text-xs text-on-surface-variant">Nhập mật khẩu hiện tại trước khi đặt mật khẩu mới.</p>
-            </div>
-          </div>
+        <SectionCard
+          className="lg:col-span-8"
+          title="Đổi mật khẩu"
+          description="Nhập mật khẩu hiện tại trước khi đặt mật khẩu mới."
+          icon={Lock}
+        >
 
           <div className="space-y-4">
-            <label className="block text-xs font-bold text-on-surface-variant">
+            <label className="block text-sm font-medium text-on-surface">
               Mật khẩu hiện tại
               <div className="relative mt-1.5">
                 <input
                   type={showCurrentPassword ? 'text' : 'password'}
                   value={settingsPasswordCurrent}
                   onChange={event => setSettingsPasswordCurrent(event.target.value)}
-                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 pr-10 text-sm font-medium focus:bg-surface focus:outline-primary"
+                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 pr-10 text-sm font-normal text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(current => !current)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                  aria-label={showCurrentPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  title={showCurrentPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
                 >
                   {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </label>
 
-            <label className="block text-xs font-bold text-on-surface-variant">
+            <label className="block text-sm font-medium text-on-surface">
               Mật khẩu mới
               <div className="relative mt-1.5">
                 <input
                   type={showNewPassword ? 'text' : 'password'}
                   value={settingsPasswordNew}
                   onChange={event => setSettingsPasswordNew(event.target.value)}
-                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 pr-10 text-sm font-medium focus:bg-surface focus:outline-primary"
+                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 pr-10 text-sm font-normal text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(current => !current)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                  aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  title={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
                 >
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </label>
 
-            <label className="block text-xs font-bold text-on-surface-variant">
+            <label className="block text-sm font-medium text-on-surface">
               Xác nhận mật khẩu mới
               <div className="relative mt-1.5">
                 <input
                   type={showConfirmNewPassword ? 'text' : 'password'}
                   value={settingsPasswordConfirm}
                   onChange={event => setSettingsPasswordConfirm(event.target.value)}
-                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 px-3 pr-10 text-sm font-medium focus:bg-surface focus:outline-primary"
+                  className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 pr-10 text-sm font-normal text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmNewPassword(current => !current)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
+                  aria-label={showConfirmNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  title={showConfirmNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
                 >
                   {showConfirmNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -220,7 +223,7 @@ export default function SettingsTab() {
             </label>
           </div>
 
-          <div className="mt-6 flex justify-end border-t border-outline-variant pt-4">
+          <div className="mt-6 flex justify-end border-t border-outline-variant pt-4 -mx-4 px-4 sm:-mx-5 sm:px-5">
             <button
               type="button"
               onClick={handlePasswordSubmit}
@@ -231,7 +234,7 @@ export default function SettingsTab() {
               <span>Lưu mật khẩu</span>
             </button>
           </div>
-        </section>
+        </SectionCard>
       </div>
     </div>
   );

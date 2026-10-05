@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Modal, Skeleton, Space, Typography, notification } from 'antd';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
+import { Alert, Button, Modal, Skeleton, Space, Typography } from 'antd';
+import { toast } from 'sonner';
+import { confirmAction } from '../../../components/ui';
 import { ApiError } from '../../../services/api/apiClient';
 import { User } from '../../../types';
 import { getQuickArrangeOptions, quickArrangeWorkSchedule } from '../api/workScheduleApi';
@@ -39,7 +40,7 @@ export function mapQuickArrangeApiError(error: unknown) {
   }
 
   if (error instanceof Error) return error.message;
-  return 'Có lỗi xảy ra khi sắp xếp lịch nhanh.';
+  return 'Không thể xếp lịch nhanh. Vui lòng thử lại.';
 }
 
 export default function QuickArrangeScheduleModal({ open, users, onClose, onSuccess }: Props) {
@@ -86,16 +87,14 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
 
       if (response.warnings.length > 0) {
         setResult(response);
-        notification.warning({
-          message: 'Đã xếp lịch với cảnh báo',
+        toast.warning('Đã xếp lịch, có vài cảnh báo.', {
           description: `Đã tạo ${response.createdShiftCount}/${response.requestedShiftCount} khung giờ.`,
         });
         return;
       }
 
-      notification.success({
-        message: 'Sắp xếp lịch nhanh thành công',
-        description: `Đã xếp thành công ${response.createdShiftCount} khung giờ cho ${response.userName}.`,
+      toast.success('Đã xếp lịch nhanh.', {
+        description: `Đã xếp ${response.createdShiftCount} khung giờ cho ${response.userName}.`,
       });
       handleResetAndClose();
     },
@@ -129,22 +128,22 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
     onClose();
   };
 
-  const requestClose = () => {
+  const requestClose = async () => {
     if (!hasDirtyData) {
       handleResetAndClose();
       return;
     }
 
-    Modal.confirm({
-      title: 'Bạn có thay đổi chưa được lưu',
-      content: 'Bạn có chắc muốn đóng?',
+    const confirmed = await confirmAction({
+      title: 'Đóng khi chưa lưu?',
+      content: 'Các thay đổi bạn vừa nhập sẽ bị bỏ.',
       okText: 'Đóng',
       cancelText: 'Ở lại',
-      onOk: handleResetAndClose,
     });
+    if (confirmed) handleResetAndClose();
   };
 
-  const submit = () => {
+  const submit = async () => {
     setApiError(null);
 
     const run = () => {
@@ -156,14 +155,12 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
     };
 
     if (formState.overwriteExisting) {
-      Modal.confirm({
-        title: 'Xác nhận ghi đè lịch hiện có',
-        icon: <ExclamationCircleOutlined />,
-        content: 'Lịch chưa hoàn thành của nhân viên trong tuần có thể bị thay thế. Bạn có chắc muốn tiếp tục?',
+      const confirmed = await confirmAction({
+        title: 'Ghi đè lịch hiện có?',
+        content: 'Các lịch chưa hoàn thành của nhân viên trong tuần có thể bị thay thế.',
         okText: 'Tiếp tục',
-        cancelText: 'Hủy',
-        onOk: run,
       });
+      if (confirmed) run();
       return;
     }
 
@@ -172,7 +169,7 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
 
   return (
     <Modal
-      title="Đề xuất lịch nhanh theo khung giờ"
+      title="Xếp lịch nhanh"
       open={open}
       onCancel={requestClose}
       width="min(860px, calc(100vw - 24px))"
@@ -225,8 +222,8 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
             <Alert
               type="info"
               showIcon
-              message={`Lịch hiện có trong tuần đang xem: ${options.existingWorkingHours} giờ, ${options.existingSchedules.length} lịch.`}
-              description="Hệ thống chỉ xếp theo các ca đã chọn; giờ làm và thời gian làm việc được lấy từ cấu hình shift."
+              message={`Tuần này đã có ${options.existingSchedules.length} lịch, tổng ${options.existingWorkingHours} giờ.`}
+              description="Hệ thống chỉ xếp theo các ca bạn chọn, giờ làm lấy theo cấu hình ca."
             />
             <QuickArrangeShiftSelection
               formState={formState}
@@ -245,7 +242,7 @@ export default function QuickArrangeScheduleModal({ open, users, onClose, onSucc
 
         {!formState.userId && (
           <Typography.Text type="secondary">
-            Chọn nhân viên để tải dữ liệu lịch hiện có trong tuần.
+            Chọn nhân viên để xem lịch hiện có trong tuần.
           </Typography.Text>
         )}
       </div>

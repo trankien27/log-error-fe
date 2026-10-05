@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Send, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Bell, BellOff, Info, Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNotificationTime, useNotificationStore } from '../../../stores/useNotificationStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { EmptyState, ListSkeleton, PageHeader } from '../../../components/ui';
 
 export default function NotificationsTab() {
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -27,117 +28,130 @@ export default function NotificationsTab() {
     }
   };
 
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const tabClass = (active: boolean) =>
+    `h-8 px-3.5 text-sm rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+      active ? 'bg-surface text-on-surface font-medium shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+    }`;
+
   return (
-    <div className="space-y-6 text-left animate-fadeIn">
-      {/* Header screen */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">Màn hình cảnh báo phát thanh & Thông báo hệ thống</h2>
-          <p className="text-xs text-on-surface-variant mt-1">Điều khiển các luồng tin thông báo cảnh báo hoặc nâng cấp tài nguyên máy chủ tới toàn thể kỹ thuật viên.</p>
-        </div>
-        {canBroadcast && (
+    <div className="text-left animate-fadeIn">
+      <PageHeader
+        title="Thông báo"
+        description="Tin nhắn và cảnh báo gửi đến đội kỹ thuật."
+        icon={Bell}
+        actions={canBroadcast ? (
           <button
+            type="button"
             onClick={() => setIsNotificationModalOpen(true)}
             disabled={isLoading}
             className="btn-primary"
           >
             <Send className="w-4 h-4" /> Gửi thông báo
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
-      {/* Simple helper tabs filter */}
-      <div className="flex gap-2 p-1 bg-surface border border-outline-variant rounded-xl shadow-sm w-full sm:w-fit overflow-x-auto font-sans">
-        <button
-          className={`px-4 py-1.5 text-xs rounded-lg whitespace-nowrap ${filter === 'all' ? 'bg-secondary-container text-on-secondary-container font-bold' : 'text-on-surface-variant hover:bg-surface-2 font-medium cursor-pointer'}`}
-          onClick={() => setFilter('all')}
-        >
-          Tất cả thông báo
+      <div className="mb-4 inline-flex gap-1 p-1 bg-surface-2 border border-outline-variant rounded-xl w-full sm:w-fit overflow-x-auto" role="tablist">
+        <button type="button" role="tab" aria-selected={filter === 'all'} className={tabClass(filter === 'all')} onClick={() => setFilter('all')}>
+          Tất cả
         </button>
-        <button
-          className={`px-4 py-1.5 text-xs rounded-lg whitespace-nowrap ${filter === 'unread' ? 'bg-secondary-container text-on-secondary-container font-bold' : 'text-on-surface-variant hover:bg-surface-2 font-medium cursor-pointer'}`}
-          onClick={() => setFilter('unread')}
-        >
-          Chưa đọc ({notifications.filter(n => !n.isRead).length})
+        <button type="button" role="tab" aria-selected={filter === 'unread'} className={tabClass(filter === 'unread')} onClick={() => setFilter('unread')}>
+          Chưa đọc ({unreadCount})
         </button>
       </div>
 
-      {/* Notification list block */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {isLoading ? (
-          <p className="text-center font-sans font-bold text-on-surface-variant py-12 bg-surface rounded-xl border border-outline-variant">
-            Đang tải thông báo...
-          </p>
+          <div className="card-surface p-5">
+            <ListSkeleton rows={5} />
+          </div>
         ) : visibleNotifications.length === 0 ? (
-          <div className="empty-state">
-            <AlertTriangle className="w-8 h-8 text-on-surface-variant/50 mb-2" />
-            <p className="font-sans font-bold text-on-surface-variant">
-              {filter === 'unread' ? 'Bạn không có thông báo chưa đọc.' : 'Không có thông báo nào trong hệ thống.'}
-            </p>
+          <div className="card-surface">
+            <EmptyState
+              icon={BellOff}
+              title={filter === 'unread' ? 'Bạn đã đọc hết thông báo' : 'Chưa có thông báo nào'}
+              description={filter === 'unread' ? 'Tuyệt vời, không còn gì cần xem.' : 'Thông báo mới sẽ xuất hiện ở đây.'}
+            />
           </div>
         ) : (
-          visibleNotifications.map(notif => (
-            <div
-              key={notif.id}
-              onClick={() => {
-                if (!notif.isRead) {
-                  handleToggleReadState(notif.id);
-                }
-                setSelectedNotification(notif.isRead ? notif : { ...notif, isRead: true });
-              }}
-              className={`bg-surface border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row gap-4 items-start shadow-sm hover:shadow-md hover:border-primary/40 transition-all relative overflow-hidden cursor-pointer ${
-                notif.isRead ? 'border-outline-variant opacity-80' : 'border-primary/20 bg-primary/5'
-              }`}
-            >
-              {/* Active highlight color ribbon */}
-              {!notif.isRead && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl"></div>
-              )}
-
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                notif.type === 'warning'
-                  ? 'bg-error-container text-error'
-                  : notif.type === 'update'
-                  ? 'bg-secondary-container text-primary'
-                  : 'bg-success-container text-success'
-              }`}>
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-
-              <div className="flex-1 min-w-0 text-left">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 mb-1">
-                  <h3 className={`text-sm tracking-tight ${notif.isRead ? 'text-on-surface-variant line-through' : 'text-on-surface font-bold'}`}>
-                    {notif.title}
-                  </h3>
-                  <span className="text-[10px] text-on-surface-variant font-mono whitespace-nowrap">{formatNotificationTime(notif.time)}</span>
-                </div>
-                <p className="text-xs text-on-surface-variant leading-relaxed truncate-2-lines">{notif.content}</p>
-
-                <div className="flex flex-wrap items-center gap-3 mt-3">
-                  <span className="inline-flex items-center gap-1 bg-surface-2 px-2 py-0.5 rounded text-[10px] text-on-surface-variant font-medium font-sans">
-                    Gửi đến: {notif.tagName}
-                  </span>
-
-                  {notif.category && (
-                    <span className="inline-flex items-center bg-primary/5 px-2 py-0.5 rounded text-[10px] text-primary font-medium">
-                      {notif.category.replaceAll('_', ' ')}
-                    </span>
-                  )}
-
-                  {notif.tagType === 'Urgent' && (
-                    <span className="badge-error font-sans">Khẩn cấp</span>
-                  )}
-
-                  <span className="text-[10px] text-on-surface-variant hover:underline cursor-pointer sm:ml-auto font-sans" onClick={(e) => {
-                    e.stopPropagation();
+          visibleNotifications.map(notif => {
+            const TypeIcon = notif.type === 'warning' ? AlertTriangle : notif.type === 'update' ? Sparkles : Info;
+            return (
+              <div
+                key={notif.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  if (!notif.isRead) {
                     handleToggleReadState(notif.id);
-                  }}>
-                    {notif.isRead ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'}
-                  </span>
+                  }
+                  setSelectedNotification(notif.isRead ? notif : { ...notif, isRead: true });
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    event.currentTarget.click();
+                  }
+                }}
+                className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 flex gap-4 items-start shadow-sm transition-all cursor-pointer hover:shadow-md hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
+                  notif.isRead ? 'bg-surface border-outline-variant' : 'bg-primary-subtle/40 border-primary/25'
+                }`}
+              >
+                {!notif.isRead && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" aria-hidden="true"></div>
+                )}
+
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                  notif.type === 'warning'
+                    ? 'bg-error-container text-on-error-container'
+                    : notif.type === 'update'
+                    ? 'bg-primary-subtle text-primary'
+                    : 'bg-success-container text-on-success-container'
+                }`}>
+                  <TypeIcon className="w-5 h-5" />
+                </div>
+
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 mb-1">
+                    <h3 className={`text-sm ${notif.isRead ? 'text-on-surface-variant font-medium' : 'text-on-surface font-semibold'}`}>
+                      {!notif.isRead && <span className="mr-2 inline-block h-2 w-2 rounded-full bg-primary align-middle" aria-label="Chưa đọc" />}
+                      {notif.title}
+                    </h3>
+                    <span className="text-xs text-on-surface-variant whitespace-nowrap">{formatNotificationTime(notif.time)}</span>
+                  </div>
+                  <p className="text-sm text-on-surface-variant leading-relaxed truncate-2-lines">{notif.content}</p>
+
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <span className="inline-flex items-center gap-1 bg-surface-2 px-2 py-0.5 rounded-md text-xs text-on-surface-variant font-medium">
+                      Gửi đến: {notif.tagName}
+                    </span>
+
+                    {notif.category && (
+                      <span className="inline-flex items-center bg-primary-subtle px-2 py-0.5 rounded-md text-xs text-primary font-medium">
+                        {notif.category.replaceAll('_', ' ')}
+                      </span>
+                    )}
+
+                    {notif.tagType === 'Urgent' && (
+                      <span className="badge-error">Khẩn cấp</span>
+                    )}
+
+                    <button
+                      type="button"
+                      className="h-7 px-2 rounded-md text-xs font-medium text-on-surface-variant hover:bg-surface-2 hover:text-primary cursor-pointer sm:ml-auto"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleReadState(notif.id);
+                      }}
+                    >
+                      {notif.isRead ? 'Đánh dấu chưa đọc' : 'Đánh dấu đã đọc'}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

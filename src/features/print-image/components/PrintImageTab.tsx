@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, Printer, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageHeader, SectionCard } from '../../../components/ui';
 import {
   BOOTH_LOCAL_BASE_URL,
   LocalTransactionItem,
@@ -112,26 +113,26 @@ export default function PrintImageTab() {
   };
 
   return (
-    <div className="space-y-5 sm:space-y-6 text-left animate-fadeIn">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">In ảnh</h2>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Ảnh lấy từ giao dịch của chính máy này, chọn ảnh rồi gửi lệnh in trực tiếp tới booth.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleReload}
-          disabled={boothLocalStatus === 'checking' || booth.isLoadingTransactions}
-          className="h-11 sm:h-10 px-4 border border-outline-variant rounded-lg hover:bg-surface-2 text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {booth.isLoadingTransactions
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <RefreshCw className="w-4 h-4" />}
-          Tải lại
-        </button>
-      </div>
+    <div className="space-y-5 text-left animate-fadeIn">
+      <PageHeader
+        title="In ảnh"
+        description="Chọn ảnh từ giao dịch của máy này rồi gửi lệnh in tới booth."
+        icon={Printer}
+        className="!mb-0"
+        actions={
+          <button
+            type="button"
+            onClick={handleReload}
+            disabled={boothLocalStatus === 'checking' || booth.isLoadingTransactions}
+            className="btn-secondary h-11 sm:h-10"
+          >
+            {booth.isLoadingTransactions
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : <RefreshCw className="w-4 h-4" />}
+            Tải lại
+          </button>
+        }
+      />
 
       <BoothStatusBanner
         status={boothLocalStatus}
@@ -141,39 +142,39 @@ export default function PrintImageTab() {
       />
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="rounded-xl border border-outline-variant bg-surface p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <SectionCard title="Thông tin in" description="Các giá trị được lấy sẵn từ giao dịch đã chọn.">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">TransactionId (tự lấy từ DB)</label>
+              <label className="block text-sm font-medium text-on-surface mb-1.5">Mã giao dịch</label>
               <input
                 readOnly
                 value={booth.selectedTransactionId}
                 placeholder="Chọn một ảnh bên dưới"
-                className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg bg-surface-2 font-mono text-[11px] text-on-surface-variant"
+                className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg bg-surface-2 font-mono text-xs text-on-surface-variant"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">LayoutId (tự lấy từ DB)</label>
+              <label className="block text-sm font-medium text-on-surface mb-1.5">Layout</label>
               <input
                 type="number"
                 min={0}
                 value={layoutId}
                 onChange={event => setLayoutId(Number(event.target.value))}
-                className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-on-surface-variant mb-1.5">Số ảnh in (numberOfImage) *</label>
+              <label className="block text-sm font-medium text-on-surface mb-1.5">Số ảnh in <span className="text-error">*</span></label>
               <input
                 type="number"
                 min={1}
                 value={numberOfImage}
                 onChange={event => setNumberOfImage(Number(event.target.value))}
-                className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               />
             </div>
           </div>
-        </div>
+        </SectionCard>
 
         <TransactionPickerGrid
           title="Chọn ảnh để in"
@@ -191,7 +192,7 @@ export default function PrintImageTab() {
 
         <div className="sticky bottom-0 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 bg-surface/95 backdrop-blur border-t border-outline-variant sm:border-t-0 sm:bg-transparent sm:backdrop-blur-none z-10">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[11px] font-medium text-on-surface-variant">
+            <p className="text-sm text-on-surface-variant">
               {selectedTransaction
                 ? `Sẽ in ${numberOfImage} ảnh · layout ${layoutId} · ${selectedTransaction.code || selectedTransaction.transactionId}`
                 : 'Chưa chọn ảnh nào.'}
@@ -199,12 +200,12 @@ export default function PrintImageTab() {
             <button
               type="submit"
               disabled={printMutation.isPending || boothLocalStatus === 'checking'}
-              className="h-12 sm:h-11 px-6 bg-primary text-white rounded-lg hover:bg-primary-hover active:bg-primary-active shadow-brand font-bold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="btn-primary h-12 sm:h-11 px-6 text-base sm:text-sm"
             >
               {printMutation.isPending
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Printer className="w-4 h-4" />}
-              {printMutation.isPending ? 'Đang gửi lệnh in...' : 'In ảnh'}
+              {printMutation.isPending ? 'Đang gửi lệnh in…' : 'In ảnh'}
             </button>
           </div>
         </div>

@@ -9,9 +9,9 @@ export default function BoothGuestLayout() {
   const { session, exit } = useBoothGuestStore();
 
   const tabClass = ({ isActive }: { isActive: boolean }) => (
-    `h-10 px-4 rounded-lg text-xs font-bold inline-flex items-center gap-1.5 transition-colors ${
+    `h-12 px-4 sm:px-5 rounded-xl text-base font-medium inline-flex flex-1 sm:flex-none items-center justify-center gap-2 transition-colors select-none ${
       isActive
-        ? 'bg-secondary-container text-primary'
+        ? 'bg-primary-subtle text-primary'
         : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
     }`
   );
@@ -20,13 +20,13 @@ export default function BoothGuestLayout() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-20 bg-surface/95 backdrop-blur border-b border-outline-variant">
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shrink-0">
-              <MonitorSmartphone className="h-4 w-4" />
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-on-primary shadow-brand shrink-0">
+              <MonitorSmartphone className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-on-surface truncate">Chế độ booth</p>
-              <p className="text-[11px] text-on-surface-variant truncate">
+              <p className="text-base font-semibold text-on-surface truncate">Chế độ booth</p>
+              <p className="text-sm text-on-surface-variant truncate">
                 {session?.boothCode
                   ? `Booth ${session.boothCode}`
                   : session?.source === 'question'
@@ -36,13 +36,13 @@ export default function BoothGuestLayout() {
             </div>
           </div>
 
-          <nav className="flex items-center gap-1.5">
+          <nav className="order-last sm:order-none w-full sm:w-auto flex items-center gap-1.5 rounded-2xl border border-outline-variant bg-surface-2/60 p-1" aria-label="Chức năng booth">
             <NavLink to="/booth/print-image" className={tabClass}>
-              <Printer className="w-4 h-4" />
+              <Printer className="w-5 h-5" />
               In ảnh
             </NavLink>
             <NavLink to="/booth/recreate-image" className={tabClass}>
-              <Wand2 className="w-4 h-4" />
+              <Wand2 className="w-5 h-5" />
               Tạo lại ảnh
             </NavLink>
           </nav>
@@ -53,9 +53,9 @@ export default function BoothGuestLayout() {
               exit();
               navigate('/auth', { replace: true });
             }}
-            className="h-10 px-4 rounded-lg border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-surface-2 inline-flex items-center gap-1.5 cursor-pointer"
+            className="btn-secondary h-12 px-5 text-base"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-5 h-5" />
             Thoát
           </button>
         </div>

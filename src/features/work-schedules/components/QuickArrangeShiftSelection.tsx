@@ -54,7 +54,7 @@ export default function QuickArrangeShiftSelection({
             ),
           },
           {
-            title: 'Thời gian làm việc',
+            title: 'Số giờ',
             dataIndex: 'paidWorkingHours',
             width: 160,
             render: value => `${value} giờ`,

@@ -57,14 +57,14 @@ export default function BoothPinPage() {
     <div className="relative min-h-screen bg-background flex items-center justify-center p-4 animate-fadeIn overflow-hidden">
       <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
       <div className="absolute inset-0 noise-overlay pointer-events-none" />
-      <div className="relative w-full max-w-md bg-surface border border-outline-variant rounded-2xl shadow-elevated p-6 sm:p-8 space-y-6">
+      <div className="relative w-full max-w-md bg-surface border border-outline-variant rounded-3xl shadow-elevated p-6 sm:p-8 space-y-6">
         <div className="text-center space-y-1">
-          <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-brand">
-            <KeyRound className="h-6 w-6" />
+          <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-on-primary shadow-brand">
+            <KeyRound className="h-7 w-7" />
           </span>
-          <h1 className="text-xl font-bold text-on-surface">Nhập mã PIN</h1>
-          <p className="text-sm text-on-surface-variant">
-            Nhập mã PIN {PIN_LENGTH} chữ số để dùng chức năng in ảnh và tạo lại ảnh trên booth này.
+          <h1 className="text-2xl font-semibold text-on-surface">Nhập mã PIN</h1>
+          <p className="text-base text-on-surface-variant">
+            Nhập {PIN_LENGTH} chữ số để in ảnh và tạo lại ảnh trên booth này.
           </p>
         </div>
 
@@ -88,13 +88,13 @@ export default function BoothPinPage() {
               }}
               aria-label="Mã PIN"
               aria-invalid={Boolean(error)}
-              className={`w-full h-16 text-center text-3xl font-bold tracking-[0.6em] indent-[0.6em] border rounded-xl outline-none transition disabled:bg-surface-2 ${
+              className={`w-full h-16 text-center text-3xl font-semibold tabular-nums tracking-[0.6em] indent-[0.6em] bg-surface text-on-surface border rounded-xl outline-none transition disabled:bg-surface-2 ${
                 error
-                  ? 'border-error focus:ring-2 focus:ring-error/10'
-                  : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
+                  ? 'border-error focus:ring-4 focus:ring-error/15'
+                  : 'border-outline-variant focus:border-primary focus:ring-4 focus:ring-primary/15'
               }`}
             />
-            <div className="mt-2 flex justify-center gap-2">
+            <div className="mt-3 flex justify-center gap-2" aria-hidden="true">
               {Array.from({ length: PIN_LENGTH }).map((_, index) => (
                 <span
                   key={index}
@@ -107,20 +107,20 @@ export default function BoothPinPage() {
           </div>
 
           {error && (
-            <p role="alert" className="rounded-lg bg-error-container px-3 py-2 text-xs font-medium text-on-error-container text-center">
+            <p role="alert" className="rounded-xl bg-error-container px-4 py-3 text-sm font-medium text-on-error-container text-center">
               {error}
             </p>
           )}
 
           {/* Ban phim so cho man hinh cam ung cua booth */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-3">
             {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(digit => (
               <button
                 key={digit}
                 type="button"
                 onClick={() => appendDigit(digit)}
                 disabled={isVerifying}
-                className="h-14 rounded-xl border border-outline-variant bg-surface text-xl font-bold text-on-surface hover:bg-surface-2 active:scale-95 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="h-16 rounded-2xl border border-outline-variant bg-surface text-2xl font-semibold tabular-nums text-on-surface shadow-sm hover:bg-surface-2 active:scale-95 active:bg-primary-subtle transition cursor-pointer select-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {digit}
               </button>
@@ -132,7 +132,7 @@ export default function BoothPinPage() {
                 setError('');
               }}
               disabled={isVerifying}
-              className="h-14 rounded-xl border border-outline-variant bg-surface text-xs font-bold text-on-surface-variant hover:bg-surface-2 active:scale-95 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-16 rounded-2xl border border-outline-variant bg-surface-2/60 text-base font-medium text-on-surface-variant hover:bg-surface-2 active:scale-95 transition cursor-pointer select-none disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Xóa hết
             </button>
@@ -140,7 +140,7 @@ export default function BoothPinPage() {
               type="button"
               onClick={() => appendDigit('0')}
               disabled={isVerifying}
-              className="h-14 rounded-xl border border-outline-variant bg-surface text-xl font-bold text-on-surface hover:bg-surface-2 active:scale-95 transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-16 rounded-2xl border border-outline-variant bg-surface text-2xl font-semibold tabular-nums text-on-surface shadow-sm hover:bg-surface-2 active:scale-95 active:bg-primary-subtle transition cursor-pointer select-none disabled:opacity-60 disabled:cursor-not-allowed"
             >
               0
             </button>
@@ -151,29 +151,30 @@ export default function BoothPinPage() {
                 setError('');
               }}
               disabled={isVerifying}
-              className="h-14 rounded-xl border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-2 active:scale-95 transition cursor-pointer inline-flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-16 rounded-2xl border border-outline-variant bg-surface-2/60 text-on-surface-variant hover:bg-surface-2 active:scale-95 transition cursor-pointer select-none inline-flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
               aria-label="Xóa một ký tự"
+              title="Xóa một ký tự"
             >
-              <Delete className="h-5 w-5" />
+              <Delete className="h-6 w-6" />
             </button>
           </div>
 
           <button
             type="submit"
             disabled={isVerifying || pin.length !== PIN_LENGTH}
-            className="btn-primary w-full h-12"
+            className="btn-primary w-full h-14 rounded-xl text-base"
           >
-            {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {isVerifying ? 'Đang kiểm tra...' : 'Xác nhận'}
+            {isVerifying ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+            {isVerifying ? 'Đang kiểm tra…' : 'Xác nhận'}
           </button>
         </form>
 
         <button
           type="button"
           onClick={() => navigate('/auth')}
-          className="w-full text-xs font-bold text-on-surface-variant hover:text-primary inline-flex items-center justify-center gap-1.5 cursor-pointer"
+          className="w-full h-11 rounded-xl text-sm font-medium text-on-surface-variant hover:bg-surface-2 hover:text-primary inline-flex items-center justify-center gap-1.5 cursor-pointer"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
+          <ArrowLeft className="h-4 w-4" />
           Quay lại đăng nhập
         </button>
       </div>

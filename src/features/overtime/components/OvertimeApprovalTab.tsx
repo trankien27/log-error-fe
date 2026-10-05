@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Loader2, Search, X } from 'lucide-react';
+import { Check, Loader2, Search, TimerReset, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { overtimeService } from '../../../services/api/overtimeService';
 import { usersService } from '../../../services/api/usersService';
 import { OvertimeRequestDto, OvertimeStatus, User } from '../../../types';
+import { EmptyState, PageHeader, SectionCard, TableSkeletonRows } from '../../../components/ui';
 
 function toDateInput(date: Date) {
   const year = date.getFullYear();
@@ -35,7 +36,7 @@ function getStatusClass(status: OvertimeStatus) {
   if (status === 1) return 'badge-warning';
   if (status === 2) return 'badge-success';
   if (status === 3) return 'badge-error';
-  return 'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-surface-2 text-on-surface-variant';
+  return 'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium bg-surface-2 text-on-surface-variant';
 }
 
 export default function OvertimeApprovalTab() {
@@ -70,7 +71,7 @@ export default function OvertimeApprovalTab() {
       });
       setRequests(result);
     } catch (err: any) {
-      toast.error(err.message || 'Không thể tải danh sách OT.');
+      toast.error(err.message || 'Không thể tải danh sách tăng ca. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -89,10 +90,10 @@ export default function OvertimeApprovalTab() {
   const approve = async (item: OvertimeRequestDto) => {
     try {
       await overtimeService.approve(item.id);
-      toast.success('Đã duyệt OT.');
+      toast.success('Đã duyệt tăng ca.');
       await loadRequests();
     } catch (err: any) {
-      toast.error(err.message || 'Không thể duyệt OT.');
+      toast.error(err.message || 'Không thể duyệt tăng ca.');
     }
   };
 
@@ -105,138 +106,172 @@ export default function OvertimeApprovalTab() {
 
     try {
       await overtimeService.reject(rejecting.id, rejectReason.trim());
-      toast.success('Đã từ chối OT.');
+      toast.success('Đã từ chối tăng ca.');
       setRejecting(null);
       setRejectReason('');
       await loadRequests();
     } catch (err: any) {
-      toast.error(err.message || 'Không thể từ chối OT.');
+      toast.error(err.message || 'Không thể từ chối tăng ca.');
     }
   };
 
+  const fieldClass = 'mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface';
+  const labelClass = 'block text-sm font-medium text-on-surface';
+
   return (
-    <div className="space-y-6 text-left animate-fadeIn">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">Duyệt OT</h2>
-          <p className="text-xs text-on-surface-variant mt-1">Chỉ OT đã duyệt mới được ghi nhận vào báo cáo tháng.</p>
-        </div>
-      </div>
+    <div className="text-left animate-fadeIn">
+      <PageHeader
+        title="Duyệt tăng ca"
+        description="Chỉ giờ tăng ca đã duyệt mới được tính vào báo cáo tháng."
+        icon={TimerReset}
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card-surface p-4">
-          <p className="text-xs font-semibold text-on-surface-variant">Đang chờ duyệt</p>
-          <p className="mt-2 text-2xl font-black text-warning">{summary.pending}</p>
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="card-surface p-4">
+            <p className="text-xs font-medium text-on-surface-variant">Đang chờ duyệt</p>
+            <p className="mt-1.5 text-2xl font-semibold text-warning tabular-nums">{summary.pending}</p>
+          </div>
+          <div className="card-surface p-4">
+            <p className="text-xs font-medium text-on-surface-variant">Giờ tăng ca đã duyệt</p>
+            <p className="mt-1.5 text-2xl font-semibold text-success tabular-nums">{formatNumber(summary.approvedHours)}h</p>
+          </div>
         </div>
-        <div className="card-surface p-4">
-          <p className="text-xs font-semibold text-on-surface-variant">Giờ OT đã duyệt trong bộ lọc</p>
-          <p className="mt-2 text-2xl font-black text-success tabular-nums">{formatNumber(summary.approvedHours)}h</p>
-        </div>
-      </div>
 
-      <div className="card-surface p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <label className="block text-sm font-semibold">
-            Từ ngày
-            <input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm" />
-          </label>
-          <label className="block text-sm font-semibold">
-            Đến ngày
-            <input type="date" value={toDate} onChange={event => setToDate(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm" />
-          </label>
-          <label className="block text-sm font-semibold">
-            Trạng thái
-            <select value={status} onChange={event => setStatus(event.target.value ? Number(event.target.value) as OvertimeStatus : '')} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm">
-              <option value="">Tất cả</option>
-              <option value={1}>Chờ duyệt</option>
-              <option value={2}>Đã duyệt</option>
-              <option value={3}>Từ chối</option>
-              <option value={4}>Đã hủy</option>
-            </select>
-          </label>
-          <label className="block text-sm font-semibold">
-            Nhân viên
-            <select value={userId} onChange={event => setUserId(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm">
-              <option value="">Tất cả</option>
-              {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
-            </select>
-          </label>
-          <button type="button" onClick={loadRequests} disabled={isLoading} className="btn-primary h-10 mt-auto">
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            Lọc
-          </button>
-        </div>
-      </div>
+        <SectionCard>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <label className={labelClass}>
+              Từ ngày
+              <input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} className={fieldClass} />
+            </label>
+            <label className={labelClass}>
+              Đến ngày
+              <input type="date" value={toDate} onChange={event => setToDate(event.target.value)} className={fieldClass} />
+            </label>
+            <label className={labelClass}>
+              Trạng thái
+              <select value={status} onChange={event => setStatus(event.target.value ? Number(event.target.value) as OvertimeStatus : '')} className={fieldClass}>
+                <option value="">Tất cả</option>
+                <option value={1}>Chờ duyệt</option>
+                <option value={2}>Đã duyệt</option>
+                <option value={3}>Từ chối</option>
+                <option value={4}>Đã hủy</option>
+              </select>
+            </label>
+            <label className={labelClass}>
+              Nhân viên
+              <select value={userId} onChange={event => setUserId(event.target.value)} className={fieldClass}>
+                <option value="">Tất cả</option>
+                {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
+              </select>
+            </label>
+            <button type="button" onClick={loadRequests} disabled={isLoading} className="btn-primary mt-auto">
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              Lọc
+            </button>
+          </div>
+        </SectionCard>
 
-      <div className="card-surface overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[940px] text-sm">
-            <thead>
-              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold">
-                <th className="py-4 px-5 text-left">Nhân viên</th>
-                <th className="py-4 px-5 text-left">Ngày OT</th>
-                <th className="py-4 px-5 text-left">Thời gian</th>
-                <th className="py-4 px-5 text-right">Số giờ OT</th>
-                <th className="py-4 px-5 text-left">Lý do</th>
-                <th className="py-4 px-5 text-left">Trạng thái</th>
-                <th className="py-4 px-5 text-right">Tác vụ</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant/40">
-              {isLoading ? (
-                <tr><td colSpan={7} className="py-12 text-center font-bold text-on-surface-variant"><Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />Đang tải OT...</td></tr>
-              ) : requests.length === 0 ? (
-                <tr><td colSpan={7} className="py-12"><div className="empty-state border-none bg-transparent"><p className="font-bold text-on-surface-variant">Không có yêu cầu OT phù hợp.</p></div></td></tr>
-              ) : requests.map(item => (
-                <tr key={item.id} className="hover:bg-surface-2">
-                  <td className="py-4 px-5 font-bold text-on-surface">{item.userFullName}</td>
-                  <td className="py-4 px-5 font-semibold">{formatDate(item.workDate)}</td>
-                  <td className="py-4 px-5 font-mono">{formatTime(item.startTime)} - {formatTime(item.endTime)}</td>
-                  <td className="py-4 px-5 text-right font-black text-primary tabular-nums">{formatNumber(item.totalHours)}h</td>
-                  <td className="py-4 px-5 max-w-[260px] whitespace-pre-wrap text-on-surface-variant">{item.reason}</td>
-                  <td className="py-4 px-5">
-                    <span className={getStatusClass(item.status)}>
-                      {getStatusLabel(item.status)}
-                    </span>
-                    {item.rejectReason && <span className="block mt-1 text-[11px] text-error">{item.rejectReason}</span>}
-                  </td>
-                  <td className="py-4 px-5">
-                    <div className="flex justify-end gap-2">
-                      <button type="button" onClick={() => approve(item)} disabled={item.status !== 1} className="h-8 w-8 rounded-lg border border-success/30 text-success inline-flex items-center justify-center hover:bg-success-container/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="Duyệt OT">
-                        <Check className="w-4 h-4" />
-                      </button>
-                      <button type="button" onClick={() => setRejecting(item)} disabled={item.status !== 1} className="h-8 w-8 rounded-lg border border-error/30 text-error inline-flex items-center justify-center hover:bg-error-container/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="Từ chối OT">
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+        <SectionCard bodyClassName="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[940px] text-sm">
+              <thead>
+                <tr className="border-b border-outline-variant">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant bg-surface-2/60">Nhân viên</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant bg-surface-2/60">Ngày</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant bg-surface-2/60">Thời gian</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-on-surface-variant bg-surface-2/60">Số giờ</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant bg-surface-2/60">Lý do</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant bg-surface-2/60">Trạng thái</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-on-surface-variant bg-surface-2/60">Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-outline-variant">
+                {isLoading ? (
+                  <TableSkeletonRows rows={5} columns={7} />
+                ) : requests.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <EmptyState compact icon={TimerReset} title="Không có yêu cầu tăng ca nào" description="Thử đổi khoảng ngày hoặc trạng thái." />
+                    </td>
+                  </tr>
+                ) : requests.map(item => (
+                  <tr key={item.id} className="hover:bg-surface-2/50">
+                    <td className="px-4 py-3 font-medium text-on-surface">{item.userFullName}</td>
+                    <td className="px-4 py-3 text-on-surface">{formatDate(item.workDate)}</td>
+                    <td className="px-4 py-3 font-mono text-on-surface">{formatTime(item.startTime)} - {formatTime(item.endTime)}</td>
+                    <td className="px-4 py-3 text-right font-semibold text-primary tabular-nums">{formatNumber(item.totalHours)}h</td>
+                    <td className="px-4 py-3 max-w-[260px] whitespace-pre-wrap text-on-surface-variant">{item.reason}</td>
+                    <td className="px-4 py-3">
+                      <span className={getStatusClass(item.status)}>
+                        {getStatusLabel(item.status)}
+                      </span>
+                      {item.rejectReason && <span className="block mt-1 text-[11px] text-error">{item.rejectReason}</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => approve(item)}
+                          disabled={item.status !== 1}
+                          className="h-8 w-8 rounded-lg border border-success/30 text-success inline-flex items-center justify-center hover:bg-success-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          title="Duyệt"
+                          aria-label={`Duyệt tăng ca của ${item.userFullName}`}
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRejecting(item)}
+                          disabled={item.status !== 1}
+                          className="h-8 w-8 rounded-lg border border-error/30 text-error inline-flex items-center justify-center hover:bg-error-container transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          title="Từ chối"
+                          aria-label={`Từ chối tăng ca của ${item.userFullName}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
       </div>
 
       {rejecting && (
         <div className="modal-overlay">
           <div className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface shadow-elevated">
             <div className="flex items-center justify-between border-b border-outline-variant px-5 py-4">
-              <h3 className="text-lg font-bold text-on-surface">Từ chối OT</h3>
-              <button type="button" onClick={() => setRejecting(null)} className="h-8 w-8 rounded hover:bg-surface-2 inline-flex items-center justify-center cursor-pointer">
+              <h3 className="text-lg font-semibold text-on-surface">Từ chối tăng ca</h3>
+              <button
+                type="button"
+                onClick={() => setRejecting(null)}
+                aria-label="Đóng"
+                title="Đóng"
+                className="h-9 w-9 rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface inline-flex items-center justify-center cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 space-y-4">
               <p className="text-sm text-on-surface-variant">
-                {rejecting.userFullName} - {formatDate(rejecting.workDate)} - {formatNumber(rejecting.totalHours)}h
+                {rejecting.userFullName} · {formatDate(rejecting.workDate)} · {formatNumber(rejecting.totalHours)}h
               </p>
-              <label className="block text-sm font-semibold">
+              <label className={labelClass}>
                 Lý do từ chối
-                <textarea value={rejectReason} onChange={event => setRejectReason(event.target.value)} rows={4} className="mt-1 w-full resize-none rounded-lg border border-outline-variant px-3 py-2 text-sm" />
+                <textarea
+                  value={rejectReason}
+                  onChange={event => setRejectReason(event.target.value)}
+                  rows={4}
+                  placeholder="Cho nhân viên biết vì sao yêu cầu bị từ chối"
+                  className="mt-1 w-full resize-none rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface"
+                />
               </label>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <button type="button" onClick={() => setRejecting(null)} className="btn-secondary h-10 px-4">Hủy</button>
-                <button type="button" onClick={reject} className="btn-danger h-10 px-5">Từ chối</button>
+                <button type="button" onClick={() => setRejecting(null)} className="btn-secondary">Hủy</button>
+                <button type="button" onClick={reject} className="btn-danger">Từ chối</button>
               </div>
             </div>
           </div>

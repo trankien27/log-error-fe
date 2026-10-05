@@ -20,7 +20,7 @@ export default function AutoArrangeEmployeeRulesStep({ employees, shifts, weekDa
 
   const columns: ColumnsType<AutoArrangeEmployeeRule> = [
     {
-      title: 'User',
+      title: 'Nhân viên',
       dataIndex: 'userName',
       fixed: 'left',
       width: 180,
@@ -32,28 +32,28 @@ export default function AutoArrangeEmployeeRulesStep({ employees, shifts, weekDa
       ),
     },
     {
-      title: 'TargetHours',
+      title: 'Giờ mục tiêu',
       width: 120,
       render: (_, employee) => (
         <InputNumber min={1} step={0.5} value={employee.targetHours} onChange={value => onChange(employee.userId, 'targetHours', value ?? 1)} />
       ),
     },
     {
-      title: 'MaxHours/Day',
+      title: 'Tối đa giờ/ngày',
       width: 130,
       render: (_, employee) => (
         <InputNumber min={1} max={24} step={0.5} value={employee.maxHoursPerDay} onChange={value => onChange(employee.userId, 'maxHoursPerDay', value ?? 1)} />
       ),
     },
     {
-      title: 'MaxHours/Week',
+      title: 'Tối đa giờ/tuần',
       width: 140,
       render: (_, employee) => (
         <InputNumber min={1} step={0.5} value={employee.maxHoursPerWeek} onChange={value => onChange(employee.userId, 'maxHoursPerWeek', value ?? 1)} />
       ),
     },
     {
-      title: 'Max Consecutive Days',
+      title: 'Ngày làm liên tiếp tối đa',
       width: 170,
       render: (_, employee) => (
         <InputNumber min={1} max={7} value={employee.maxConsecutiveWorkingDays} onChange={value => onChange(employee.userId, 'maxConsecutiveWorkingDays', value ?? 1)} />
@@ -105,7 +105,7 @@ export default function AutoArrangeEmployeeRulesStep({ employees, shifts, weekDa
 
   return (
     <div className="space-y-3">
-      <Typography.Title level={5} className="!mb-0">2. Nhập targetHours và giới hạn của từng nhân viên</Typography.Title>
+      <Typography.Title level={5} className="!mb-0">2. Giờ mục tiêu và giới hạn của từng người</Typography.Title>
       {employees.length === 0 ? (
         <Typography.Text type="secondary">Chọn nhân viên ở bước 1 để cấu hình giới hạn.</Typography.Text>
       ) : (

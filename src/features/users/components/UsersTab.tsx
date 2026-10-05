@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import {
   Users as UsersIcon,
@@ -22,12 +21,15 @@ import {
   Loader2,
   Clock,
   Wifi,
-  WifiOff
+  WifiOff,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { usersService } from '../../../services/api/usersService';
 import { User } from '../../../types';
+import { EmptyState, FilterBar, ListSkeleton, PageHeader, SectionCard, TableSkeletonRows, confirmAction } from '../../../components/ui';
 
 const roleOptions: Array<{ value: User['role']; label: string }> = [
   { value: 'Admin', label: 'Admin' },
@@ -141,7 +143,7 @@ export default function UsersTab() {
 
   const handleOpenUserModal = (u: User | null = null) => {
     if (!u && !canCreateUser) {
-      toast.error('Chỉ role 1 mới được tạo người dùng.');
+      toast.error('Chỉ Admin mới được tạo người dùng.');
       return;
     }
 
@@ -185,10 +187,10 @@ export default function UsersTab() {
     try {
       if (currentEditingUser) {
         await saveUser({ ...payload, id: currentEditingUser.id });
-        toast.success('Cập nhật người dùng thành công.');
+        toast.success('Đã cập nhật người dùng.');
       } else {
         await saveUser(payload);
-        toast.success('Thêm người dùng thành công.');
+        toast.success('Đã thêm người dùng.');
       }
       setIsUserModalOpen(false);
     } catch (err: any) {
@@ -197,19 +199,13 @@ export default function UsersTab() {
   };
 
   const handleDeleteUserClick = async (id: string) => {
-    toast.warning(`Xóa người dùng ${id}?`, {
-      action: {
-        label: 'Xóa',
-        onClick: async () => {
-          try {
-            await deleteUser(id);
-            toast.success('Đã xóa người dùng.');
-          } catch (err: any) {
-            toast.error(err.message || 'Không thể xóa người dùng.');
-          }
-        },
-      },
-    });
+    if (!(await confirmAction({ title: 'Xóa người dùng này?', content: 'Thao tác không thể hoàn tác.' }))) return;
+    try {
+      await deleteUser(id);
+      toast.success('Đã xóa người dùng.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa người dùng.');
+    }
   };
 
   const handleOpenPasswordModal = (user: User) => {
@@ -262,83 +258,143 @@ export default function UsersTab() {
         phone: profilePhone,
         department: profileDept
       });
-      toast.success('Cập nhật thông tin hồ sơ thành công.');
+      toast.success('Đã lưu thay đổi.');
     } catch (err: any) {
       toast.error(err.message || 'Không thể cập nhật hồ sơ.');
     }
   };
 
+  const inputClass =
+    'w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant disabled:cursor-not-allowed';
+  const labelClass = 'block text-sm font-medium text-on-surface mb-1.5';
+  const iconButtonClass =
+    'h-8 w-8 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-colors cursor-pointer';
+  const getInitials = (name: string) => name.split(' ').pop()?.substring(0, 2).toUpperCase() || 'US';
+  const getRoleBadgeClass = (role: User['role']) =>
+    getRoleNumber(role) === 1 ? 'badge-error' : getRoleNumber(role) === 3 ? 'badge-warning' : 'badge-info';
+
+  const renderAvatar = (user: User, size: 'sm' | 'lg' = 'sm') => {
+    const sizeClass = size === 'lg' ? 'w-24 h-24 text-3xl border-4 border-surface-2' : 'w-10 h-10 text-sm';
+    return user.avatar ? (
+      <img
+        src={user.avatar}
+        alt={`Ảnh đại diện của ${user.name}`}
+        className={`${sizeClass} rounded-full ${size === 'sm' ? 'border border-outline-variant' : ''} object-cover`}
+      />
+    ) : (
+      <div className={`${sizeClass} rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-semibold`}>
+        {getInitials(user.name)}
+      </div>
+    );
+  };
+
+  const renderUserActions = (user: User) => (
+    <div className="flex justify-end gap-1.5">
+      {canCreateUser && (
+        <button
+          type="button"
+          onClick={() => handleOpenPasswordModal(user)}
+          className={`${iconButtonClass} hover:bg-warning-container hover:text-on-warning-container`}
+          title="Đổi mật khẩu"
+          aria-label={`Đổi mật khẩu cho ${user.name}`}
+        >
+          <KeyRound className="w-3.5 h-3.5" />
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={() => handleOpenUserModal(user)}
+        className={`${iconButtonClass} hover:bg-primary-subtle hover:text-primary`}
+        title="Sửa"
+        aria-label={`Sửa người dùng ${user.name}`}
+      >
+        <Edit2 className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => handleDeleteUserClick(user.id)}
+        className={`${iconButtonClass} hover:bg-error-container hover:text-error`}
+        title="Xóa"
+        aria-label={`Xóa người dùng ${user.name}`}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+
+  const renderUserIdentity = (user: User) => (
+    <button
+      type="button"
+      onClick={() => setSelectedUserProfileUser(user)}
+      className="group flex items-center gap-3 min-w-0 text-left cursor-pointer"
+      aria-label={`Xem hồ sơ ${user.name}`}
+    >
+      <span className="relative shrink-0">
+        {renderAvatar(user)}
+        <span
+          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-surface ${user.isOnline ? 'bg-success' : 'bg-outline-variant'}`}
+          title={user.isOnline ? 'Đang online' : 'Offline'}
+        />
+      </span>
+      <span className="min-w-0">
+        <span className="block font-medium text-on-surface text-sm truncate group-hover:text-primary transition-colors">{user.name}</span>
+        <span className="block text-xs text-on-surface-variant truncate">{user.email}</span>
+      </span>
+    </button>
+  );
+
   return (
     selectedUserProfileUser ? (
-      <motion.div 
-        initial={{ opacity: 0, y: 15 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        className="space-y-6 text-on-surface text-left animate-fadeIn"
-      >
-        {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-xs text-on-surface-variant font-semibold select-none">
+      <div className="space-y-5 text-on-surface text-left animate-fadeIn">
+        <nav className="flex items-center gap-1.5 text-sm text-on-surface-variant select-none" aria-label="Breadcrumb">
           <button
+            type="button"
             onClick={() => setSelectedUserProfileUser(null)}
-            className="hover:text-primary transition-colors hover:underline flex items-center gap-1 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-0.5 hover:text-primary hover:bg-primary-subtle transition-colors cursor-pointer"
           >
-            <UsersIcon className="w-3.5 h-3.5" />
+            <UsersIcon className="w-4 h-4" />
             <span>Người dùng</span>
           </button>
-          <span>/</span>
-          <span className="text-on-surface font-bold">Hồ sơ chi tiết</span>
-        </div>
+          <ChevronRight className="w-3.5 h-3.5" />
+          <span className="font-medium text-on-surface">Hồ sơ</span>
+        </nav>
 
-        {/* Profile Header Block */}
-        <div className="card-surface p-4 sm:p-6 shadow-sm flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden">
-          <div className="absolute right-0 top-0 w-32 h-32 bg-primary/10 rounded-full filter blur-3xl opacity-60 pointer-events-none"></div>
-
-          {/* Photo with overlay effect */}
+        <div className="card-surface p-5 sm:p-6 flex flex-col md:flex-row items-center md:items-start gap-6">
           <div className="relative group cursor-pointer shrink-0">
-            {selectedUserProfileUser.avatar ? (
-              <img
-                src={selectedUserProfileUser.avatar}
-                alt="Profile Avatar Large"
-                className="w-24 h-24 rounded-full border-4 border-surface-2 object-cover shadow-md group-hover:brightness-90 transition-all"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-secondary-container text-on-secondary-container border-4 border-surface-2 flex items-center justify-center font-bold text-3xl shadow-md group-hover:brightness-95 transition-all">
-                {selectedUserProfileUser.name.split(' ').pop()?.substring(0, 2).toUpperCase() || 'US'}
-              </div>
-            )}
+            {renderAvatar(selectedUserProfileUser, 'lg')}
             <div
-              onClick={() => toast.info('Thay đổi ảnh đại diện sẽ được hỗ trợ trong phiên bản kết nối Cloud Storage.')}
-              className="absolute inset-0 bg-on-surface/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-bold"
+              onClick={() => toast.info('Tính năng đổi ảnh đại diện sẽ sớm có.')}
+              className="absolute inset-0 bg-on-surface/50 rounded-full flex flex-col items-center justify-center text-surface opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-medium"
             >
               <Camera className="w-4 h-4 mb-0.5" />
-              Cập nhật
+              Đổi ảnh
             </div>
           </div>
 
-          {/* Name and badges info */}
-          <div className="flex-1 space-y-3 text-center md:text-left">
+          <div className="flex-1 space-y-3 text-center md:text-left min-w-0">
             <div className="flex flex-col md:flex-row items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-on-surface font-sans break-words">{selectedUserProfileUser.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-semibold text-on-surface break-words">{selectedUserProfileUser.name}</h2>
               <span className={selectedUserProfileUser.isOnline ? 'badge-success' : 'badge-info'}>
                 <span className={`w-1.5 h-1.5 rounded-full ${selectedUserProfileUser.isOnline ? 'bg-success animate-pulse' : 'bg-on-surface-variant'}`}></span>
                 {selectedUserProfileUser.isOnline ? 'Đang online' : 'Offline'}
               </span>
             </div>
-            <p className="text-on-surface-variant text-xs font-semibold">
-              {getRoleNumber(selectedUserProfileUser.role) === 1 ? 'Hệ thống Quản trị viên cao cấp (SRE/Admin)' :
-               getRoleNumber(selectedUserProfileUser.role) === 3 ? 'Quản lý đội ngũ IT support' :
-               'Đội ngũ hỗ trợ kỹ thuật hiện trường (IT support)'}
+            <p className="text-on-surface-variant text-sm">
+              {getRoleNumber(selectedUserProfileUser.role) === 1 ? 'Quản trị viên' :
+               getRoleNumber(selectedUserProfileUser.role) === 3 ? 'Quản lý IT support' :
+               'IT support'}
             </p>
 
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs font-medium text-on-surface-variant pt-1">
-              <div className="flex items-center gap-1.5 bg-surface-2 px-2.5 py-1.5 rounded-lg border border-outline-variant">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs text-on-surface-variant pt-1">
+              <div className="flex items-center gap-1.5 bg-surface-2 px-2.5 py-1.5 rounded-lg">
                 <Mail className="w-3.5 h-3.5 text-primary" />
                 <span className="break-all">{selectedUserProfileUser.email}</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-surface-2 px-2.5 py-1.5 rounded-lg border border-outline-variant">
+              <div className="flex items-center gap-1.5 bg-surface-2 px-2.5 py-1.5 rounded-lg">
                 <Phone className="w-3.5 h-3.5 text-success" />
                 <span>{profilePhone}</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-surface-2 px-2.5 py-1.5 rounded-lg border border-outline-variant">
+              <div className="flex items-center gap-1.5 bg-surface-2 px-2.5 py-1.5 rounded-lg">
                 <MapPin className="w-3.5 h-3.5 text-warning" />
                 <span>{profileDept}</span>
               </div>
@@ -346,57 +402,54 @@ export default function UsersTab() {
           </div>
         </div>
 
-        {/* Grid Content splits */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column Editor */}
-          <div className="lg:col-span-8 card-surface p-4 sm:p-6 shadow-sm space-y-6">
-            <div>
-              <h3 className="text-base font-bold text-on-surface font-sans">Chi tiết Hồ sơ & Liên hệ</h3>
-              <p className="text-xs text-on-surface-variant mt-1">Cập nhật thông tin chi tiết và quyền truy cập nghiệp vụ dành cho thành viên.</p>
-            </div>
-
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <SectionCard
+            className="lg:col-span-8"
+            title="Thông tin hồ sơ"
+            description="Cập nhật thông tin liên hệ và vai trò của thành viên."
+          >
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5 cursor-text">
-                  <label className="text-xs font-bold text-on-surface-variant">Họ và tên</label>
+                <div>
+                  <label className={labelClass}>Họ và tên</label>
                   <input
                     type="text"
                     required
                     value={profileName}
                     onChange={e => setProfileName(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2 border border-outline-variant rounded-lg bg-surface-2 hover:bg-surface focus:bg-surface focus:outline-primary transition-all font-medium text-on-surface"
+                    className={inputClass}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant/70">Quản trị Email</label>
+                <div>
+                  <label className={labelClass}>Email</label>
                   <input
                     type="email"
                     readOnly
                     disabled
                     value={selectedUserProfileUser.email}
-                    className="w-full text-xs px-3.5 py-2 border border-outline-variant rounded-lg bg-surface-2 cursor-not-allowed font-medium text-on-surface-variant"
-                    title="Email được đồng bộ hóa nội bộ và không thể thay thế trực tiếp"
+                    className={inputClass}
+                    title="Email được đồng bộ nội bộ, không sửa trực tiếp được"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5 cursor-text">
-                  <label className="text-xs font-bold text-on-surface-variant">Số điện thoại</label>
+                <div>
+                  <label className={labelClass}>Số điện thoại</label>
                   <input
                     type="text"
                     required
                     value={profilePhone}
                     onChange={e => setProfilePhone(e.target.value)}
-                    className="w-full text-xs px-3.5 py-2 border border-outline-variant rounded-lg bg-surface-2 hover:bg-surface focus:bg-surface focus:outline-primary transition-all font-medium text-on-surface"
+                    className={inputClass}
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant">Gán vai trò chức vụ</label>
+                <div>
+                  <label className={labelClass}>Vai trò</label>
                   <select
                     value={profileRole}
                     onChange={e => setProfileRole(e.target.value as any)}
-                    className="w-full text-xs px-3.5 py-2 border border-outline-variant rounded-lg bg-surface-2 hover:bg-surface focus:bg-surface cursor-pointer transition-all font-medium text-on-surface"
+                    className={`${inputClass} cursor-pointer`}
                   >
                     {roleOptions.map(option => (
                       <option key={String(option.value)} value={option.value}>{option.label}</option>
@@ -405,82 +458,73 @@ export default function UsersTab() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 cursor-text">
-                <label className="text-xs font-bold text-on-surface-variant">Văn phòng / Phòng ban</label>
+              <div>
+                <label className={labelClass}>Phòng ban</label>
                 <input
                   type="text"
                   required
                   value={profileDept}
                   onChange={e => setProfileDept(e.target.value)}
-                  className="w-full text-xs px-3.5 py-2 border border-outline-variant rounded-lg bg-surface-2 hover:bg-surface focus:bg-surface focus:outline-primary transition-all font-medium text-on-surface"
+                  className={inputClass}
                 />
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 pt-3 border-t border-outline-variant">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
                 <button
                   type="button"
                   onClick={() => setSelectedUserProfileUser(null)}
-                  className="btn-secondary px-4 py-2"
+                  className="btn-secondary"
                 >
-                  Quay lại Danh bạ
+                  Quay lại
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn-primary px-5 py-2"
+                  className="btn-primary"
                 >
-                  <Save className="w-3.5 h-3.5" />
+                  <Save className="w-4 h-4" />
                   <span>{isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
                 </button>
               </div>
             </form>
-          </div>
+          </SectionCard>
 
-          {/* Right Column Bento Info */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="card-surface p-5 shadow-sm space-y-4">
-              <div className="flex items-center gap-1.5">
-                <TrendingUp className="w-4 h-4 text-success" />
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-on-surface-variant font-sans">Theo dõi đăng nhập</h4>
-              </div>
+          <div className="lg:col-span-4 space-y-5">
+            <SectionCard title="Đăng nhập" icon={TrendingUp}>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-surface-2 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-semibold text-on-surface tabular-nums">{selectedUserProfileUser.loginCount ?? 0}</p>
+                    <p className="text-xs text-on-surface-variant mt-1">Lượt đăng nhập</p>
+                  </div>
+                  <div className="bg-success-container rounded-xl p-4 text-center">
+                    <p className="text-sm font-semibold text-on-success-container tabular-nums">{formatRelativeTime(selectedUserProfileUser.lastSeenAt)}</p>
+                    <p className="text-xs text-on-success-container/80 mt-1">Hoạt động cuối</p>
+                  </div>
+                </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-surface-2 rounded-xl p-4 border border-outline-variant text-center">
-                  <p className="text-2xl font-black text-on-surface font-mono tabular-nums">{selectedUserProfileUser.loginCount ?? 0}</p>
-                  <p className="text-[10px] font-bold text-on-surface-variant mt-1">Lượt đăng nhập</p>
-                </div>
-                <div className="bg-success-container rounded-xl p-3 border border-success/20 text-center">
-                  <p className="text-sm font-black text-on-success-container tabular-nums">{formatRelativeTime(selectedUserProfileUser.lastSeenAt)}</p>
-                  <p className="text-[10px] font-bold text-success mt-1">Hoạt động cuối</p>
-                </div>
-              </div>
-
-              <div className="space-y-2 rounded-xl border border-outline-variant bg-surface-2 p-3 text-xs">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-bold text-on-surface-variant">Đăng nhập cuối</span>
-                  <span className="text-right font-semibold text-on-surface">{formatDateTime(selectedUserProfileUser.lastLoginAt)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="font-bold text-on-surface-variant">Online cuối</span>
-                  <span className="text-right font-semibold text-on-surface">{formatDateTime(selectedUserProfileUser.lastSeenAt)}</span>
+                <div className="space-y-2 rounded-xl bg-surface-2 p-3 text-xs">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-on-surface-variant">Đăng nhập cuối</span>
+                    <span className="text-right font-medium text-on-surface">{formatDateTime(selectedUserProfileUser.lastLoginAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-on-surface-variant">Online cuối</span>
+                    <span className="text-right font-medium text-on-surface">{formatDateTime(selectedUserProfileUser.lastSeenAt)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </SectionCard>
 
-            <div className="card-surface p-5 shadow-sm space-y-4">
-              <div className="flex items-center gap-1.5">
-                <History className="w-4 h-4 text-primary" />
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-on-surface-variant font-sans">Hoạt động gần đây</h4>
-              </div>
-
+            <SectionCard title="Hoạt động gần đây" icon={History}>
               <div className="relative pl-4 border-l-2 border-outline-variant space-y-5 text-xs text-left">
                 <div className="relative">
                   <span className="absolute -left-[23px] top-0 bg-success-container border-2 border-surface rounded-full p-0.5 text-success">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   </span>
                   <div className="space-y-0.5">
-                    <p className="font-bold text-on-surface">Đã đóng ticket #TKT-2034</p>
-                    <p className="text-[10px] text-on-surface-variant">Lỗi máy in bill CH Q1 - 10 phút trước</p>
+                    <p className="font-medium text-on-surface text-sm">Đã đóng ticket #TKT-2034</p>
+                    <p className="text-[11px] text-on-surface-variant">Lỗi máy in bill CH Q1 · 10 phút trước</p>
                   </div>
                 </div>
 
@@ -489,8 +533,8 @@ export default function UsersTab() {
                     <MessageSquare className="w-3.5 h-3.5" />
                   </span>
                   <div className="space-y-0.5">
-                    <p className="font-bold text-on-surface">Bình luận trên #TKT-2041</p>
-                    <p className="text-[10px] text-on-surface-variant">"Nhờ quầy khởi động router" - 1 giờ trước</p>
+                    <p className="font-medium text-on-surface text-sm">Bình luận trên #TKT-2041</p>
+                    <p className="text-[11px] text-on-surface-variant">"Nhờ quầy khởi động router" · 1 giờ trước</p>
                   </div>
                 </div>
 
@@ -499,8 +543,8 @@ export default function UsersTab() {
                     <UserCheck className="w-3.5 h-3.5" />
                   </span>
                   <div className="space-y-0.5">
-                    <p className="font-bold text-on-surface">Đăng ký nhận ca #TKT-2045</p>
-                    <p className="text-[10px] text-on-surface-variant">Màn hình POS Kiosk Q3 - 3 giờ trước</p>
+                    <p className="font-medium text-on-surface text-sm">Nhận ca #TKT-2045</p>
+                    <p className="text-[11px] text-on-surface-variant">Màn hình POS Kiosk Q3 · 3 giờ trước</p>
                   </div>
                 </div>
 
@@ -509,172 +553,120 @@ export default function UsersTab() {
                     <AlertCircle className="w-3.5 h-3.5" />
                   </span>
                   <div className="space-y-0.5">
-                    <p className="font-bold text-on-surface">Cảnh báo máy chủ Server #03</p>
-                    <p className="text-[10px] text-on-surface-variant">Disk usage quá mức 95% - Hôm qua</p>
+                    <p className="font-medium text-on-surface text-sm">Cảnh báo máy chủ Server #03</p>
+                    <p className="text-[11px] text-on-surface-variant">Ổ đĩa đầy trên 95% · Hôm qua</p>
                   </div>
                 </div>
               </div>
-            </div>
+            </SectionCard>
           </div>
         </div>
-      </motion.div>
+      </div>
     ) : (
-      <div className="space-y-6 text-left animate-fadeIn">
-        {/* Screen header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-on-surface font-sans">Danh bạ người dùng & Phân cấp đội ngũ</h2>
-            <p className="text-xs text-on-surface-variant mt-1">Quản trị danh sách nhân sự, phân bổ chức vụ và gán trạng thái vận hành.</p>
-          </div>
-          {canCreateUser && (
-            <button
-              onClick={() => handleOpenUserModal()}
-              className="btn-primary"
-            >
-              <Plus className="w-4 h-4" /> Tạo người dùng
-            </button>
-          )}
-        </div>
+      <div className="space-y-5 text-left animate-fadeIn">
+        <PageHeader
+          title="Người dùng"
+          icon={UsersIcon}
+          description="Quản lý tài khoản, vai trò và trạng thái của đội ngũ."
+          actions={
+            canCreateUser ? (
+              <button type="button" onClick={() => handleOpenUserModal()} className="btn-primary">
+                <Plus className="w-4 h-4" /> Thêm người dùng
+              </button>
+            ) : undefined
+          }
+        />
 
-        {/* Filter Row */}
-        <div className="card-surface p-4 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+        <FilterBar>
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
             <input
               type="text"
-              placeholder="Tìm kiếm theo danh tính hoặc email..."
+              placeholder="Tìm theo tên hoặc email..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-outline-variant rounded-lg text-xs focus:outline-primary"
+              className="h-9 w-full pl-9 pr-3 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface"
+              aria-label="Tìm người dùng"
             />
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="text-xs font-bold text-on-surface-variant whitespace-nowrap">Chức vụ:</span>
-            <select
-              value={userRoleFilter}
-              onChange={e => setUserRoleFilter(e.target.value)}
-              className="text-xs px-3 py-2 bg-surface-2 border border-outline-variant rounded-lg select-none cursor-pointer"
-            >
-              <option value="">Tất cả vai trò</option>
-              {roleOptions.map(option => (
-                <option key={String(option.value)} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
+          <select
+            value={userRoleFilter}
+            onChange={e => setUserRoleFilter(e.target.value)}
+            className="h-9 px-3 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface cursor-pointer"
+            aria-label="Lọc theo vai trò"
+          >
+            <option value="">Tất cả vai trò</option>
+            {roleOptions.map(option => (
+              <option key={String(option.value)} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        </FilterBar>
 
-        {/* User table lists */}
-        <div className="card-surface overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[920px] text-left text-xs border-collapse">
+        <SectionCard bodyClassName="p-0">
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-outline-variant">
+            {isLoading ? (
+              <div className="p-4"><ListSkeleton rows={5} /></div>
+            ) : filteredUsers.length === 0 ? (
+              <EmptyState compact icon={UsersIcon} title="Không tìm thấy người dùng" description="Thử đổi từ khóa hoặc bộ lọc vai trò." />
+            ) : (
+              filteredUsers.map(user => (
+                <div key={user.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    {renderUserIdentity(user)}
+                    <span className={`${getRoleBadgeClass(user.role)} shrink-0`}>{getRoleLabel(user.role)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-on-surface-variant">
+                      <Clock className="w-3.5 h-3.5" />
+                      {user.isOnline ? 'Đang online' : `Cuối: ${formatRelativeTime(user.lastSeenAt)}`}
+                    </span>
+                    {renderUserActions(user)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full min-w-[820px] text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold select-none font-sans">
-                  <th className="py-4 px-5">Họ và Tên</th>
-                  <th className="py-4 px-5">Email</th>
-                  <th className="py-4 px-5">Vai trò (Role)</th>
-                  <th className="py-4 px-5">Online / đăng nhập</th>
-                  <th className="py-4 px-5 text-right font-bold w-24">Hành động</th>
+                <tr className="border-b border-outline-variant select-none">
+                  <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Người dùng</th>
+                  <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Vai trò</th>
+                  <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Hoạt động</th>
+                  <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60 text-right w-32">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/40">
+              <tbody className="divide-y divide-outline-variant">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
-                      Đang tải dữ liệu người dùng...
-                    </td>
-                  </tr>
+                  <TableSkeletonRows rows={6} columns={4} />
                 ) : filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-10 text-center font-sans font-bold text-on-surface-variant">
-                      Không tìm thấy nhân viên nào khớp với điều kiện lọc.
+                    <td colSpan={4}>
+                      <EmptyState compact icon={UsersIcon} title="Không tìm thấy người dùng" description="Thử đổi từ khóa hoặc bộ lọc vai trò." />
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map(user => (
-                    <tr key={user.id} className="hover:bg-surface-2 transition-colors gap-3">
-                      <td className="py-4 px-5">
-                        <div className="flex items-center gap-3">
-                          {user.avatar ? (
-                            <img
-                              src={user.avatar}
-                              alt="User Avatar"
-                              onClick={() => setSelectedUserProfileUser(user)}
-                              className="w-10 h-10 rounded-full border border-outline-variant object-cover cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                            />
-                          ) : (
-                            <div
-                              onClick={() => setSelectedUserProfileUser(user)}
-                              className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-bold text-sm cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-                            >
-                              {user.name.split(' ').pop()?.substring(0, 2).toUpperCase() || 'US'}
-                            </div>
-                          )}
-                          <div>
-                            <p
-                              onClick={() => setSelectedUserProfileUser(user)}
-                              className="font-bold text-on-surface text-sm hover:text-primary hover:underline cursor-pointer transition-colors"
-                            >
-                              {user.name}
-                            </p>
-                          </div>
-                        </div>
+                    <tr key={user.id} className="hover:bg-surface-2/50 transition-colors">
+                      <td className="px-4 py-3 max-w-xs">{renderUserIdentity(user)}</td>
+                      <td className="px-4 py-3">
+                        <span className={getRoleBadgeClass(user.role)}>{getRoleLabel(user.role)}</span>
                       </td>
-                      <td className="py-4 px-5 font-medium text-on-surface-variant">{user.email}</td>
-                      <td className="py-4 px-5">
-                        <span className={
-                          getRoleNumber(user.role) === 1
-                            ? 'badge-error'
-                            : getRoleNumber(user.role) === 3
-                            ? 'badge-warning'
-                            : 'badge-info'
-                        }>
-                          {getRoleLabel(user.role)}
-                        </span>
-                      </td>
-                      <td className="py-4 px-5">
-                        <div className="space-y-1.5">
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${user.isOnline ? 'bg-success-container text-success' : 'bg-surface-2 text-on-surface-variant border border-outline-variant'}`}>
-                            {user.isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-                            {user.isOnline ? 'Đang online' : 'Offline'}
+                      <td className="px-4 py-3">
+                        <div className="space-y-1">
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${user.isOnline ? 'text-success' : 'text-on-surface-variant'}`}>
+                            {user.isOnline ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
+                            {user.isOnline ? `Online · ${formatRelativeTime(user.lastSeenAt)}` : `Cuối: ${formatRelativeTime(user.lastSeenAt)}`}
                           </span>
-                          <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
-                            <Clock className="w-3 h-3" />
-                            <span>{user.isOnline ? formatRelativeTime(user.lastSeenAt) : `Cuối: ${formatRelativeTime(user.lastSeenAt)}`}</span>
-                          </div>
                           <p className="text-[11px] text-on-surface-variant">
                             {user.loginCount ?? 0} lượt đăng nhập
                           </p>
                         </div>
                       </td>
-                      <td className="py-4 px-5 text-right w-24">
-                        <div className="flex justify-end gap-1.5">
-                          {canCreateUser && (
-                            <button
-                              onClick={() => handleOpenPasswordModal(user)}
-                              className="p-1 px-1.5 border rounded hover:bg-warning-container hover:text-warning transition-colors border-outline-variant cursor-pointer"
-                              title="Đổi mật khẩu"
-                              aria-label={`Đổi mật khẩu cho ${user.name}`}
-                            >
-                              <KeyRound className="w-3 h-3" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleOpenUserModal(user)}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant bg-secondary-container text-on-secondary-container shadow-sm transition-[border-color,filter] hover:border-primary/50 hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
-                            title="Chỉnh sửa chi tiết"
-                            aria-label={`Chỉnh sửa người dùng ${user.name}`}
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUserClick(user.id)}
-                            className="p-1 px-1.5 border rounded hover:bg-error-container hover:text-error transition-colors border-outline-variant cursor-pointer"
-                            title="Xóa dữ liệu"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
+                      <td className="px-4 py-3 text-right w-32">{renderUserActions(user)}</td>
                     </tr>
                   ))
                 )}
@@ -682,69 +674,76 @@ export default function UsersTab() {
             </table>
           </div>
 
-          <div className="bg-surface-2 border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 font-sans">
-            <span className="text-xs text-on-surface-variant">Hiển thị {filteredUsers.length} tài khoản cấp cao</span>
+          <div className="border-t border-outline-variant px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <span className="text-sm text-on-surface-variant">{filteredUsers.length} tài khoản</span>
             <div className="flex gap-1 select-none">
-              <button className="px-3 py-1 border border-outline-variant hover:bg-surface text-[11px] rounded transition-all cursor-pointer">Trước</button>
-              <button className="px-3 py-1 border border-primary bg-primary text-on-primary text-[11px] rounded font-bold cursor-pointer">1</button>
-              <button className="px-3 py-1 border border-outline-variant hover:bg-surface text-[11px] rounded cursor-pointer" onClick={() => toast.info('Tất cả địa chỉ thư mục đã được đồng bộ hóa.')}>Sau</button>
+              <button type="button" className="h-8 px-3 border border-outline-variant rounded-lg text-sm text-on-surface hover:bg-surface-2 transition-colors cursor-pointer">Trước</button>
+              <button type="button" className="h-8 min-w-8 px-3 rounded-lg bg-primary text-on-primary text-sm font-medium cursor-pointer" aria-current="page">1</button>
+              <button type="button" className="h-8 px-3 border border-outline-variant rounded-lg text-sm text-on-surface hover:bg-surface-2 transition-colors cursor-pointer" onClick={() => toast.info('Đã hiển thị tất cả người dùng.')}>Sau</button>
             </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* User CRUD Modal */}
         {isUserModalOpen && (
           <div className="modal-overlay">
-            <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
-              <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
-                <h3 className="text-lg font-bold text-on-surface">
-                  {currentEditingUser ? 'Cập nhật người dùng' : 'Tạo người dùng mới'}
+            <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto border border-outline-variant">
+              <div className="flex justify-between items-center gap-3 px-5 py-4 border-b border-outline-variant">
+                <h3 className="text-lg font-semibold text-on-surface">
+                  {currentEditingUser ? 'Sửa người dùng' : 'Thêm người dùng'}
                 </h3>
-                <button onClick={() => setIsUserModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
+                <button
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
+                  aria-label="Đóng"
+                  title="Đóng"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <form onSubmit={handleSaveUserSubmit} className="space-y-4 text-sm text-left">
+              <form onSubmit={handleSaveUserSubmit} className="space-y-4 text-sm text-left p-5">
                 <div>
-                  <label className="block font-medium mb-1">Họ và tên *</label>
+                  <label className={labelClass}>Họ và tên <span className="text-error">*</span></label>
                   <input
                     type="text"
                     required
                     placeholder="Nguyễn Thị Mai"
                     value={userName}
                     onChange={e => setUserName(e.target.value)}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Địa chỉ Email doanh nghiệp *</label>
+                  <label className={labelClass}>Email <span className="text-error">*</span></label>
                   <input
                     type="email"
                     required
                     placeholder="mai.nguyen@company.vn"
                     value={userEmail}
                     onChange={e => setUserEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                    className={inputClass}
                   />
                 </div>
                 {!currentEditingUser && (
                   <div>
-                    <label className="block font-medium mb-1">Mật khẩu ban đầu *</label>
+                    <label className={labelClass}>Mật khẩu ban đầu <span className="text-error">*</span></label>
                     <input
                       type="password"
                       required
                       placeholder="Nhập mật khẩu ban đầu"
                       value={userPassword}
                       onChange={e => setUserPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                      className={inputClass}
                     />
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block font-medium mb-1">Vai trò quyền hạn</label>
+                    <label className={labelClass}>Vai trò</label>
                     <select
                       value={userRole}
                       onChange={e => setUserRole(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface"
+                      className={inputClass}
                     >
                       {roleOptions.map(option => (
                         <option key={String(option.value)} value={option.value}>{option.label}</option>
@@ -752,31 +751,31 @@ export default function UsersTab() {
                     </select>
                   </div>
                   <div>
-                    <label className="block font-medium mb-1">Trạng thái tài khoản</label>
+                    <label className={labelClass}>Trạng thái</label>
                     <select
                       value={userStatus}
                       onChange={e => setUserStatus(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface"
+                      className={inputClass}
                     >
                       <option value="Hoạt động">Hoạt động</option>
                       <option value="Vô hiệu hóa">Vô hiệu hóa</option>
                     </select>
                   </div>
                 </div>
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsUserModalOpen(false)}
-                    className="btn-secondary px-4 py-2"
+                    className="btn-secondary"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="btn-primary px-5 py-2"
+                    className="btn-primary"
                   >
-                    {isLoading ? 'Đang lưu...' : 'Xác nhận'}
+                    {isLoading ? 'Đang lưu...' : 'Lưu'}
                   </button>
                 </div>
               </form>
@@ -786,28 +785,29 @@ export default function UsersTab() {
 
         {passwordTargetUser && (
           <div className="modal-overlay">
-            <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md p-4 sm:p-6 border border-outline-variant text-left">
-              <div className="flex items-start justify-between gap-4 mb-4 pb-3 border-b border-outline-variant">
-                <div>
-                  <h3 className="text-lg font-bold text-on-surface">Đổi mật khẩu người dùng</h3>
-                  <p className="mt-1 text-xs text-on-surface-variant">
-                    Đặt mật khẩu mới cho <span className="font-bold text-on-surface">{passwordTargetUser.name}</span>.
+            <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md border border-outline-variant text-left">
+              <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-outline-variant">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-on-surface">Đổi mật khẩu</h3>
+                  <p className="mt-0.5 text-sm text-on-surface-variant">
+                    Đặt mật khẩu mới cho <span className="font-medium text-on-surface">{passwordTargetUser.name}</span>.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setPasswordTargetUser(null)}
                   disabled={isResettingPassword}
-                  className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer disabled:opacity-50"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer disabled:opacity-50"
                   aria-label="Đóng"
+                  title="Đóng"
                 >
-                  &#x2715;
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <form onSubmit={handleResetUserPassword} className="space-y-4 text-sm">
+              <form onSubmit={handleResetUserPassword} className="space-y-4 text-sm p-5">
                 <div>
-                  <label className="block font-medium mb-1">Mật khẩu mới *</label>
+                  <label className={labelClass}>Mật khẩu mới <span className="text-error">*</span></label>
                   <input
                     type="password"
                     required
@@ -816,11 +816,11 @@ export default function UsersTab() {
                     value={newUserPassword}
                     onChange={event => setNewUserPassword(event.target.value)}
                     placeholder="Tối thiểu 6 ký tự"
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Xác nhận mật khẩu mới *</label>
+                  <label className={labelClass}>Nhập lại mật khẩu <span className="text-error">*</span></label>
                   <input
                     type="password"
                     required
@@ -829,22 +829,22 @@ export default function UsersTab() {
                     value={confirmUserPassword}
                     onChange={event => setConfirmUserPassword(event.target.value)}
                     placeholder="Nhập lại mật khẩu mới"
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                    className={inputClass}
                   />
                 </div>
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setPasswordTargetUser(null)}
                     disabled={isResettingPassword}
-                    className="btn-secondary px-4 py-2"
+                    className="btn-secondary"
                   >
                     Hủy
                   </button>
                   <button
                     type="submit"
                     disabled={isResettingPassword}
-                    className="btn-primary px-5 py-2"
+                    className="btn-primary"
                   >
                     {isResettingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
                     {isResettingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}

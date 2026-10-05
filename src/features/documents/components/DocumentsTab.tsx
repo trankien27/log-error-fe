@@ -13,7 +13,7 @@ import {
   Search,
   Trash2,
   Users,
-  X,
+  NotebookTabs,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { documentsService } from '../../../services/api/documentsService';
@@ -27,6 +27,7 @@ import {
   SaveKnowledgeDocumentRequest,
   User,
 } from '../../../types';
+import { PageHeader, SectionCard, FilterBar, EmptyState, ListSkeleton, Skeleton, confirmAction } from '../../../components/ui';
 import MarkdownEditor from './MarkdownEditor';
 import MarkdownRenderer from './MarkdownRenderer';
 import {
@@ -54,7 +55,7 @@ function formatDateTime(value?: string | null) {
 }
 
 function visibilityLabel(visibility: KnowledgeDocumentVisibility) {
-  return visibility === 1 ? 'Global' : 'Personal';
+  return visibility === 1 ? 'Công khai' : 'Riêng tư';
 }
 
 function editAccessLabel(editAccess: KnowledgeDocumentEditAccess) {
@@ -329,7 +330,7 @@ export default function DocumentsTab() {
             dataUriToFile(pendingImage.dataUri, pendingImage.contentType),
         );
         if (!uploadedImage.url) {
-          throw new Error('Backend chưa trả URL Cloudflare R2 cho ảnh vừa tải lên.');
+          throw new Error('Không nhận được đường dẫn ảnh vừa tải lên.');
         }
 
         content = replaceDataUriWithSrc(content, pendingImage.dataUri, uploadedImage.url);
@@ -355,7 +356,7 @@ export default function DocumentsTab() {
           await documentsService.deleteImage(documentId, orphanImageId);
         } catch {
           // Non-fatal: a leftover image row must not fail the save.
-          toast.warning('Không thể xoá một ảnh không còn được sử dụng.');
+          toast.warning('Không thể xóa một ảnh không còn dùng.');
         }
       }
 
@@ -382,82 +383,102 @@ export default function DocumentsTab() {
 
   const deleteDocument = async () => {
     if (!selectedDocument?.canManageAccess) return;
-    if (!window.confirm(`Xoá tài liệu “${selectedDocument.title}”?`)) return;
+    if (!(await confirmAction({
+      title: 'Xóa tài liệu này?',
+      content: `“${selectedDocument.title}” sẽ bị xóa vĩnh viễn và không thể hoàn tác.`,
+    }))) return;
 
     try {
       await documentsService.delete(selectedDocument.id);
       await refreshDocuments();
       setSelectedDocument(null);
-      toast.success('Đã xoá tài liệu.');
+      toast.success('Đã xóa tài liệu.');
     } catch (error: any) {
-      toast.error(error.message || 'Không thể xoá tài liệu.');
+      toast.error(error.message || 'Không thể xóa tài liệu.');
     }
   };
 
-  return (
-    <div className="mx-auto min-h-[calc(100dvh-112px)] w-full max-w-[1280px] p-3 sm:p-5">
-      {!selectedDocument && !isEditing && !isLoadingDocument ? (
-        <section className="overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card">
-          <div className="border-b border-outline-variant px-4 py-4 sm:px-6">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="flex items-center gap-2 text-xl font-black text-on-surface">
-                  <BookOpenText className="h-5 w-5 text-primary" /> Tài liệu
-                </h1>
-                <p className="mt-1 text-xs font-medium text-on-surface-variant">Chọn một tài liệu để mở nội dung chi tiết.</p>
-              </div>
-              <button type="button" onClick={startCreating} className="btn-primary h-10 px-4" title="Tạo tài liệu mới">
-                <Plus className="h-4 w-4" /> Thêm tài liệu
-              </button>
-            </div>
+  const selectClassName = 'h-9 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface outline-none focus:border-primary';
 
-            <label className="relative block max-w-xl">
+  return (
+    <div className="mx-auto w-full max-w-[1280px] space-y-5 animate-fadeIn">
+      {!selectedDocument && !isEditing && !isLoadingDocument ? (
+        <>
+          <PageHeader
+            title="Tài liệu"
+            description="Hướng dẫn, quy trình và ghi chú dùng chung."
+            icon={NotebookTabs}
+            actions={
+              <button type="button" onClick={startCreating} className="btn-primary">
+                <Plus className="h-4 w-4" /> Tạo tài liệu
+              </button>
+            }
+          />
+
+          <FilterBar>
+            <label className="relative block w-full max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
               <input
                 value={keyword}
                 onChange={event => setKeyword(event.target.value)}
-                placeholder="Tìm trong tài liệu..."
-                className="h-10 w-full rounded-lg border border-outline-variant bg-surface-2 pl-9 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Tìm theo tiêu đề hoặc nội dung…"
+                aria-label="Tìm tài liệu"
+                className="h-10 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-sm text-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </label>
-          </div>
+          </FilterBar>
 
-          <div className="p-3 sm:p-5">
+          <SectionCard bodyClassName="p-0">
             {isLoadingList ? (
-              <div className="flex min-h-[360px] items-center justify-center gap-2 text-sm font-semibold text-on-surface-variant">
-                <Loader2 className="h-4 w-4 animate-spin" /> Đang tải danh sách tài liệu...
+              <div className="p-4 sm:p-5">
+                <ListSkeleton rows={6} />
               </div>
             ) : filteredDocuments.length === 0 ? (
-              <div className="flex min-h-[360px] flex-col items-center justify-center px-6 text-center">
-                <FileText className="mb-3 h-10 w-10 text-on-surface-variant/40" />
-                <p className="text-base font-bold text-on-surface">Chưa có tài liệu</p>
-                <p className="mt-1 text-sm text-on-surface-variant">Tạo tài liệu đầu tiên để bắt đầu ghi chú.</p>
-                <button type="button" onClick={startCreating} className="btn-primary mt-5">
-                  <Plus className="h-4 w-4" /> Tạo tài liệu
-                </button>
-              </div>
+              keyword.trim() ? (
+                <EmptyState
+                  icon={Search}
+                  title="Không tìm thấy tài liệu"
+                  description="Thử tìm với từ khóa khác."
+                />
+              ) : (
+                <EmptyState
+                  icon={FileText}
+                  title="Chưa có tài liệu"
+                  description="Tạo tài liệu đầu tiên để bắt đầu ghi chú."
+                  action={
+                    <button type="button" onClick={startCreating} className="btn-primary">
+                      <Plus className="h-4 w-4" /> Tạo tài liệu
+                    </button>
+                  }
+                />
+              )
             ) : (
-              <div className="overflow-hidden rounded-lg border border-outline-variant">
-                <div className="grid grid-cols-[minmax(0,1fr)_120px_180px] gap-4 border-b border-outline-variant bg-surface-2 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant max-md:hidden">
+              <>
+                <div className="grid grid-cols-[minmax(0,1fr)_130px_180px] gap-4 border-b border-outline-variant bg-surface-2/60 px-4 py-3 text-xs font-medium text-on-surface-variant max-md:hidden">
                   <span>Tiêu đề</span>
                   <span>Phạm vi</span>
                   <span>Cập nhật</span>
                 </div>
-                <div className="divide-y divide-outline-variant/70">
+                <div className="divide-y divide-outline-variant">
                   {filteredDocuments.map(document => (
                     <button
                       key={document.id}
                       type="button"
                       onClick={() => void loadDocument(document.id)}
-                      className="grid w-full gap-2 px-4 py-3 text-left transition-colors hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/25 md:grid-cols-[minmax(0,1fr)_120px_180px] md:items-center md:gap-4"
+                      className="grid w-full gap-2 px-4 py-3 text-left transition-colors hover:bg-surface-2/50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/25 md:grid-cols-[minmax(0,1fr)_130px_180px] md:items-center md:gap-4"
                     >
-                      <span className="min-w-0">
-                        <span className="block truncate text-sm font-extrabold text-on-surface">{document.title}</span>
-                        <span className="mt-1 block truncate text-xs text-on-surface-variant">
-                          {document.preview || 'Tài liệu chưa có nội dung'}
+                      <span className="flex min-w-0 items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                          <FileText className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium text-on-surface">{document.title}</span>
+                          <span className="mt-0.5 block truncate text-xs text-on-surface-variant">
+                            {document.preview || 'Chưa có nội dung'}
+                          </span>
                         </span>
                       </span>
-                      <span className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[10px] font-extrabold ${
+                      <span className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium max-md:ml-11 ${
                         document.visibility === 1
                           ? 'bg-primary-subtle text-primary'
                           : 'bg-surface-2 text-on-surface-variant'
@@ -465,21 +486,30 @@ export default function DocumentsTab() {
                         {document.visibility === 1 ? <Globe2 className="h-3 w-3" /> : <LockKeyhole className="h-3 w-3" />}
                         {visibilityLabel(document.visibility)}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-on-surface-variant/80">
+                      <span className="flex items-center gap-1 text-xs text-on-surface-variant max-md:ml-11">
                         <Clock3 className="h-3.5 w-3.5" /> {formatDateTime(document.updatedAt || document.createdAt)}
                       </span>
                     </button>
                   ))}
                 </div>
-              </div>
+              </>
             )}
-          </div>
-        </section>
+          </SectionCard>
+        </>
       ) : (
-      <main className="min-w-0 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-card">
+      <main className="card-surface min-w-0 overflow-hidden">
         {isLoadingDocument ? (
-          <div className="flex min-h-[560px] items-center justify-center gap-2 text-sm font-semibold text-on-surface-variant">
-            <Loader2 className="h-5 w-5 animate-spin" /> Đang mở tài liệu...
+          <div className="mx-auto max-w-5xl space-y-4 px-5 py-8 sm:px-8" aria-busy="true" aria-label="Đang mở tài liệu">
+            <Skeleton className="h-9 w-28 rounded-lg" />
+            <Skeleton className="h-10 w-2/3" />
+            <Skeleton className="h-4 w-1/3" />
+            <div className="space-y-3 pt-6">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-11/12" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
           </div>
         ) : isEditing ? (
           <form onSubmit={saveDocument} className="min-h-full">
@@ -487,7 +517,7 @@ export default function DocumentsTab() {
               <div className="mx-auto max-w-6xl">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={goBackToList} disabled={isSaving} className="btn-secondary h-9 px-3">
+                    <button type="button" onClick={goBackToList} disabled={isSaving} className="btn-ghost h-9 px-3">
                       <ArrowLeft className="h-4 w-4" /> Danh sách
                     </button>
                     {(isCreating || selectedDocument?.canManageAccess) ? (
@@ -498,11 +528,11 @@ export default function DocumentsTab() {
                             ...current,
                             visibility: Number(event.target.value) as KnowledgeDocumentVisibility,
                           }))}
-                          className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
-                          aria-label="Phạm vi xem tài liệu"
+                          className={selectClassName}
+                          aria-label="Ai có thể xem"
                         >
                           <option value={2}>Chỉ người được cấp quyền xem</option>
-                          <option value={1}>Tất cả người dùng có thể xem</option>
+                          <option value={1}>Mọi người đều xem được</option>
                         </select>
                         <select
                           value={draft.editAccess}
@@ -511,64 +541,61 @@ export default function DocumentsTab() {
                             editAccess: Number(event.target.value) as KnowledgeDocumentEditAccess,
                             editorIds: Number(event.target.value) === 2 ? current.editorIds : [],
                           }))}
-                          className="h-9 rounded-lg border border-outline-variant bg-surface-2 px-3 text-xs font-extrabold text-on-surface outline-none focus:border-primary"
-                          aria-label="Quyền chỉnh sửa tài liệu"
+                          className={selectClassName}
+                          aria-label="Ai có thể sửa"
                         >
                           <option value={1}>Chỉ mình tôi được sửa</option>
                           <option value={2}>Chọn người được sửa</option>
-                          <option value={3}>Tất cả người dùng được sửa</option>
+                          <option value={3}>Mọi người đều sửa được</option>
                         </select>
                       </>
                     ) : (
-                      <span className="inline-flex h-9 items-center rounded-lg bg-primary-subtle px-3 text-xs font-extrabold text-primary">
-                        {editAccessLabel(draft.editAccess)}
+                      <span className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary-subtle px-3 text-xs font-medium text-primary">
+                        <Users className="h-3.5 w-3.5" /> {editAccessLabel(draft.editAccess)}
                       </span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={() => void cancelEditing()} disabled={isSaving} className="btn-secondary h-9 px-3">
-                      <X className="h-4 w-4" /> Huỷ
+                      Hủy
                     </button>
                     <button type="submit" disabled={isSaving} className="btn-primary h-9 px-4">
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                      {isSaving ? 'Đang lưu' : 'Lưu tài liệu'}
+                      {isSaving ? 'Đang lưu…' : 'Lưu tài liệu'}
                     </button>
                   </div>
                 </div>
 
                 {(isCreating || selectedDocument?.canManageAccess) && draft.editAccess === 2 && (
-                  <div className="mb-4 rounded-xl border border-outline-variant bg-surface-2 p-4">
+                  <div className="mb-4 rounded-xl border border-outline-variant bg-surface-2/60 p-4">
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="flex items-center gap-2 text-sm font-extrabold text-on-surface">
-                          <Users className="h-4 w-4 text-primary" /> Chọn người được chỉnh sửa
+                        <p className="flex items-center gap-2 text-sm font-medium text-on-surface">
+                          <Users className="h-4 w-4 text-primary" /> Người được sửa
                         </p>
                         <p className="mt-1 text-xs text-on-surface-variant">
-                          Đã chọn {draft.editorIds.length} người. Họ có thể sửa nội dung và ảnh nhưng không thể xoá tài liệu hay đổi quyền.
+                          Đã chọn {draft.editorIds.length} người. Họ sửa được nội dung nhưng không thể xóa hay đổi quyền.
                         </p>
                       </div>
                       <input
                         value={editorSearch}
                         onChange={event => setEditorSearch(event.target.value)}
-                        placeholder="Tìm theo tên hoặc email..."
-                        className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs text-on-surface outline-none focus:border-primary sm:w-72"
+                        placeholder="Tìm theo tên hoặc email…"
+                        aria-label="Tìm người dùng"
+                        className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface outline-none focus:border-primary sm:w-72"
                       />
                     </div>
 
                     <div className="max-h-52 overflow-y-auto rounded-lg border border-outline-variant bg-surface">
                       {isLoadingEditors ? (
-                        <div className="flex items-center justify-center gap-2 px-4 py-8 text-xs font-semibold text-on-surface-variant">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Đang tải người dùng...
-                        </div>
+                        <ListSkeleton rows={3} className="p-4" />
                       ) : filteredEditors.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-xs font-semibold text-on-surface-variant">
-                          Không tìm thấy người dùng phù hợp.
-                        </div>
+                        <EmptyState compact icon={Users} title="Không tìm thấy người dùng" />
                       ) : (
-                        <div className="divide-y divide-outline-variant/70">
+                        <div className="divide-y divide-outline-variant">
                           {filteredEditors.map(user => (
-                            <label key={user.id} className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-primary/5">
+                            <label key={user.id} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-surface-2/50">
                               <input
                                 type="checkbox"
                                 checked={draft.editorIds.includes(user.id)}
@@ -576,7 +603,7 @@ export default function DocumentsTab() {
                                 className="h-4 w-4 rounded border-outline-variant accent-primary"
                               />
                               <span className="min-w-0">
-                                <span className="block truncate text-sm font-bold text-on-surface">{user.name}</span>
+                                <span className="block truncate text-sm font-medium text-on-surface">{user.name}</span>
                                 <span className="block truncate text-xs text-on-surface-variant">{user.email}</span>
                               </span>
                             </label>
@@ -593,14 +620,15 @@ export default function DocumentsTab() {
                   onChange={event => setDraft(current => ({ ...current, title: event.target.value }))}
                   maxLength={250}
                   placeholder="Tiêu đề tài liệu"
-                  className="w-full border-none bg-transparent py-2 text-3xl font-black tracking-tight text-on-surface outline-none placeholder:text-on-surface-variant/40 sm:text-4xl"
+                  aria-label="Tiêu đề tài liệu"
+                  className="w-full border-none bg-transparent py-2 text-2xl font-semibold tracking-tight text-on-surface outline-none placeholder:text-on-surface-variant/50 sm:text-3xl"
                 />
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  Soạn thảo trực quan; hệ thống tự lưu dưới dạng Markdown. {draft.visibility === 1
-                    ? 'Tất cả tài khoản có thể xem.'
+                  {draft.visibility === 1
+                    ? 'Mọi người đều xem được tài liệu này.'
                     : draft.editAccess === 1
-                      ? 'Chỉ tài khoản của bạn có thể xem.'
-                      : 'Chủ tài liệu và người có quyền chỉnh sửa có thể xem.'}
+                      ? 'Chỉ bạn xem được tài liệu này.'
+                      : 'Bạn và những người được sửa xem được tài liệu này.'}
                 </p>
               </div>
             </div>
@@ -623,10 +651,10 @@ export default function DocumentsTab() {
               <div className="mx-auto max-w-5xl">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={goBackToList} className="btn-secondary h-9 px-3">
+                    <button type="button" onClick={goBackToList} className="btn-ghost h-9 px-3">
                       <ArrowLeft className="h-4 w-4" /> Danh sách
                     </button>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold ${
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
                       selectedDocument.visibility === 1
                         ? 'bg-primary-subtle text-primary'
                         : 'bg-surface-2 text-on-surface-variant'
@@ -634,7 +662,7 @@ export default function DocumentsTab() {
                       {selectedDocument.visibility === 1 ? <Globe2 className="h-3.5 w-3.5" /> : <LockKeyhole className="h-3.5 w-3.5" />}
                       {visibilityLabel(selectedDocument.visibility)}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-subtle px-2.5 py-1 text-[11px] font-extrabold text-primary">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-1 text-xs font-medium text-on-surface-variant">
                       <Users className="h-3.5 w-3.5" /> {editAccessLabel(selectedDocument.editAccess)}
                     </span>
                   </div>
@@ -643,7 +671,7 @@ export default function DocumentsTab() {
                     <div className="flex items-center gap-2">
                       {selectedDocument.canManageAccess && (
                         <button type="button" onClick={() => void deleteDocument()} className="btn-danger h-9 px-3">
-                          <Trash2 className="h-4 w-4" /> Xoá
+                          <Trash2 className="h-4 w-4" /> Xóa
                         </button>
                       )}
                       <button type="button" onClick={startEditing} className="btn-primary h-9 px-4">
@@ -653,11 +681,11 @@ export default function DocumentsTab() {
                   )}
                 </div>
 
-                <h1 className="text-3xl font-black tracking-tight text-on-surface sm:text-4xl">{selectedDocument.title}</h1>
-                <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-on-surface-variant">
+                <h1 className="text-2xl font-semibold tracking-tight text-on-surface sm:text-3xl">{selectedDocument.title}</h1>
+                <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-on-surface-variant">
                   <Clock3 className="h-3.5 w-3.5" />
                   Cập nhật {formatDateTime(selectedDocument.updatedAt || selectedDocument.createdAt)}
-                  {selectedDocument.canEdit && !selectedDocument.canManageAccess && <span>• Bạn được cấp quyền chỉnh sửa</span>}
+                  {selectedDocument.canEdit && !selectedDocument.canManageAccess && <span>• Bạn có quyền chỉnh sửa</span>}
                   {!selectedDocument.canEdit && <span>• Bạn chỉ có quyền xem</span>}
                 </p>
               </div>
@@ -668,18 +696,17 @@ export default function DocumentsTab() {
             </div>
           </div>
         ) : (
-          <div className="flex min-h-[560px] flex-col items-center justify-center px-6 text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-subtle text-primary">
-              <BookOpenText className="h-8 w-8" />
-            </div>
-            <h2 className="text-xl font-black text-on-surface">Kho tài liệu Markdown</h2>
-            <p className="mt-2 max-w-md text-sm leading-6 text-on-surface-variant">
-              Viết hướng dẫn, quy trình và ghi chú. Bạn có thể giữ riêng tư hoặc chia sẻ cho toàn bộ người dùng.
-            </p>
-            <button type="button" onClick={startCreating} className="btn-primary mt-5">
-              <Plus className="h-4 w-4" /> Tạo tài liệu đầu tiên
-            </button>
-          </div>
+          <EmptyState
+            icon={BookOpenText}
+            title="Chưa chọn tài liệu"
+            description="Quay lại danh sách để mở hoặc tạo tài liệu mới."
+            action={
+              <button type="button" onClick={startCreating} className="btn-primary">
+                <Plus className="h-4 w-4" /> Tạo tài liệu
+              </button>
+            }
+            className="min-h-[560px]"
+          />
         )}
       </main>
       )}

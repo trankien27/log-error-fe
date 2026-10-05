@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, Select, Table, Tag, Typography } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { Trash2 } from 'lucide-react';
 import { ColumnsType } from 'antd/es/table';
 import {
   AutoArrangeEmployeeRule,
@@ -144,14 +144,14 @@ export default function AutoArrangePreviewStep({
                       setDraggedItemId(null);
                       setDragOverCell(null);
                     }}
-                    className={`rounded border p-2 space-y-2 transition-all cursor-grab active:cursor-grabbing ${
+                    className={`rounded-lg border p-2 space-y-2 transition-all cursor-grab active:cursor-grabbing ${
                       draggedItemId === item.clientId ? 'opacity-40 ring-2 ring-primary/30' : ''
                     } ${hasError ? 'border-error/30 bg-error-container' : hasWarning ? 'border-warning/30 bg-warning-container' : 'border-outline-variant bg-surface'}`}
-                    title="Kéo thả sang ô nhân viên/ngày khác để đổi ca đề xuất"
+                    title="Kéo thả sang ô khác để đổi người hoặc ngày"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <Tag color={hasError ? 'red' : hasWarning ? 'gold' : 'blue'}>{item.shiftCode}</Tag>
-                      <Button size="small" danger type="text" icon={<DeleteOutlined />} onClick={() => onRemoveItem(item.clientId)} />
+                      <Button size="small" danger type="text" icon={<Trash2 className="h-3.5 w-3.5" />} aria-label="Bỏ ca này" title="Bỏ ca này" onClick={() => onRemoveItem(item.clientId)} />
                     </div>
                     <Select
                       size="small"
@@ -189,7 +189,7 @@ export default function AutoArrangePreviewStep({
                 );
               })}
               {row.itemsByDate[date].length === 0 && (
-                <div className="flex min-h-16 items-center justify-center rounded border border-dashed border-outline-variant text-[11px] font-semibold text-on-surface-variant">
+                <div className="flex min-h-16 items-center justify-center rounded-lg border border-dashed border-outline-variant text-[11px] text-on-surface-variant">
                   Thả ca vào đây
                 </div>
               )}
@@ -199,7 +199,7 @@ export default function AutoArrangePreviewStep({
       },
     })),
     {
-      title: 'Tổng giờ / lệch target',
+      title: 'Tổng giờ (chênh lệch)',
       key: 'total',
       fixed: 'right',
       width: 150,
@@ -215,14 +215,14 @@ export default function AutoArrangePreviewStep({
 
   return (
     <div className="space-y-4">
-      <Typography.Title level={5} className="!mb-0">4. Preview lịch tự động và xác nhận lưu</Typography.Title>
+      <Typography.Title level={5} className="!mb-0">4. Xem trước và lưu lịch</Typography.Title>
       <AutoArrangeSummaryPanel summary={summary} warnings={warnings} conflicts={conflicts} />
       {previewItems.length === 0 ? (
-        <Typography.Text type="secondary">Bấm Preview để hệ thống tự động chia ca.</Typography.Text>
+        <Typography.Text type="secondary">Chưa có ca nào được đề xuất.</Typography.Text>
       ) : (
         <div className="space-y-2">
           <Typography.Text type="secondary" className="block text-xs">
-            Có thể kéo thả thẻ ca sang ô nhân viên/ngày khác để đổi nhanh đề xuất trước khi xác nhận lưu.
+            Bạn có thể kéo thả thẻ ca sang ô khác để đổi nhanh trước khi lưu.
           </Typography.Text>
           <Table
             size="small"

@@ -1,41 +1,17 @@
 import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  AlertTriangle,
-  Bell,
-  Building2,
-  Calendar,
-  Clock3,
-  ClipboardList,
-  Database,
-  History,
-  Images,
-  LayoutDashboard,
-  NotebookTabs,
-  MessageSquare,
-  Printer,
-  RadioTower,
-  ScrollText,
-  Shield,
-  Store,
-  TimerReset,
-  Users,
-  Wand2,
-  X,
-} from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Tooltip } from 'antd';
+import { ChevronsLeft, ChevronsRight, Headset, X } from 'lucide-react';
 import { useLogsStore } from '../../stores/useLogsStore';
 import { useTasksStore } from '../../stores/useTasksStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useUsersStore } from '../../stores/useUsersStore';
-import { useAuthStore } from '../../stores/useAuthStore';
-import { TabType } from '../../types';
+import { useLayoutStore } from '../../stores/useLayoutStore';
+import { getVisibleNavGroups, type NavBadgeKey, type NavItem } from './navigation';
+import { useNavPermissions } from './useNavPermissions';
 
-const navButtonClass = (isActive: boolean) =>
-  `w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all cursor-pointer ${
-    isActive
-      ? 'bg-secondary-container text-on-secondary-container border-l-4 border-primary font-bold'
-      : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
-  }`;
+export const SIDEBAR_WIDTH = 260;
+export const SIDEBAR_COLLAPSED_WIDTH = 72;
 
 type SidebarProps = {
   variant?: 'desktop' | 'mobile';
@@ -43,89 +19,80 @@ type SidebarProps = {
   onClose?: () => void;
 };
 
+function useBadgeCounts(): Record<NavBadgeKey, number> {
+  const newLogs = useLogsStore(state => state.logs.filter(log => log.status === 1).length);
+  const pendingTasks = useTasksStore(state => state.tasks.filter(task => task.status === 'pending').length);
+  const unreadNotifications = useNotificationStore(state => state.notifications.filter(n => !n.isRead).length);
+  return { newLogs, pendingTasks, unreadNotifications };
+}
+
+function formatBadge(count: number) {
+  return count > 99 ? '99+' : String(count);
+}
+
 export default function Sidebar({ variant = 'desktop', open = false, onClose }: SidebarProps) {
-  const location = useLocation();
-  const navigate = useNavigate();
   const isMobile = variant === 'mobile';
+  const isCollapsedSetting = useLayoutStore(state => state.isSidebarCollapsed);
+  const toggleSidebarCollapsed = useLayoutStore(state => state.toggleSidebarCollapsed);
+  const setSelectedUserProfileUser = useUsersStore(state => state.setSelectedUserProfileUser);
+  const permissions = useNavPermissions();
+  const badgeCounts = useBadgeCounts();
+  const groups = getVisibleNavGroups(permissions, { sidebar: true });
+  const isCollapsed = !isMobile && isCollapsedSetting;
 
-  // Zustand State subscriptions
-  const { logs } = useLogsStore();
-  const { tasks } = useTasksStore();
-  const { notifications } = useNotificationStore();
-  const { setSelectedUserProfileUser } = useUsersStore();
-  const { hasAnyRole, getCurrentRoleNumber } = useAuthStore();
-  const isAdmin = hasAnyRole([1, 'Admin']);
-  const canApproveOvertime = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
-  const canViewR2Usage = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
-  const canViewShifts = getCurrentRoleNumber() !== 2;
-
-  const getActiveTab = (): TabType => {
-    const path = location.pathname;
-    if (path === '/overview') return 'overview';
-    if (path === '/error-logs') return 'error_logs';
-    if (path === '/transaction-error-queue') return 'transaction_error_queue';
-    if (path === '/tasks') return 'tasks';
-    if (path === '/recent-activities') return 'recent_activities';
-    if (path === '/api-audit-logs') return 'api_audit_logs';
-    if (path === '/chat') return 'chat';
-    if (path === '/users') return 'users';
-    if (path === '/roles') return 'roles';
-    if (path === '/stores') return 'stores';
-    if (path === '/booths') return 'booths';
-    if (path === '/remote-booth') return 'remote_booth';
-    if (path === '/print-image') return 'print_image';
-    if (path === '/recreate-image') return 'recreate_image';
-    if (path === '/up-frame') return 'up_frame';
-    if (path === '/shifts') return 'shifts';
-    if (path === '/documents') return 'documents';
-    if (path === '/notifications') return 'notifications';
-    if (path === '/schedule') return 'schedule';
-    if (path === '/overtime-approval') return 'overtime_approval';
-    if (path === '/r2-usage') return 'r2_usage';
-    if (path === '/settings') return 'settings';
-    return 'overview';
-  };
-
-  const activeTab = getActiveTab();
-  const newLogsCount = logs.filter(l => l.status === 1).length;
-  const pendingTasksCount = tasks.filter(t => t.status === 'pending').length;
-  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
-
-  const navigateTo = (tab: TabType) => {
-    if (tab === 'users') {
+  const handleNavigate = (item: NavItem) => {
+    if (item.path === '/users') {
       setSelectedUserProfileUser(null);
     }
-    
-    // Router navigation instead of simple state toggle
-    switch (tab) {
-      case 'overview': navigate('/overview'); break;
-      case 'error_logs': navigate('/error-logs'); break;
-      case 'transaction_error_queue': navigate('/transaction-error-queue'); break;
-      case 'tasks': navigate('/tasks'); break;
-      case 'recent_activities': navigate('/recent-activities'); break;
-      case 'api_audit_logs': navigate('/api-audit-logs'); break;
-      case 'chat': navigate('/chat'); break;
-      case 'users': navigate('/users'); break;
-      case 'roles': navigate('/roles'); break;
-      case 'stores': navigate('/stores'); break;
-      case 'booths': navigate('/booths'); break;
-      case 'remote_booth': navigate('/remote-booth'); break;
-      case 'print_image': navigate('/print-image'); break;
-      case 'recreate_image': navigate('/recreate-image'); break;
-      case 'up_frame': navigate('/up-frame'); break;
-      case 'shifts': navigate('/shifts'); break;
-      case 'documents': navigate('/documents'); break;
-      case 'notifications': navigate('/notifications'); break;
-      case 'schedule': navigate('/schedule'); break;
-      case 'overtime_approval': navigate('/overtime-approval'); break;
-      case 'r2_usage': navigate('/r2-usage'); break;
-      case 'settings': navigate('/settings'); break;
-      default: navigate('/overview');
-    }
-
     if (isMobile) {
       onClose?.();
     }
+  };
+
+  const renderItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const badgeCount = item.badge ? badgeCounts[item.badge] : 0;
+    const badgeTone = item.badge === 'pendingTasks' ? 'bg-primary text-on-primary' : 'bg-error text-on-primary';
+
+    const link = (
+      <NavLink
+        to={item.path}
+        onClick={() => handleNavigate(item)}
+        className={({ isActive }) =>
+          `group relative flex items-center gap-3 rounded-xl text-sm transition-colors duration-150 ${
+            isCollapsed ? 'h-10 w-10 justify-center mx-auto' : 'h-10 px-3'
+          } ${
+            isActive
+              ? 'bg-primary-subtle text-primary font-semibold'
+              : 'text-on-surface-variant font-medium hover:bg-surface-2 hover:text-on-surface'
+          }`
+        }
+      >
+        <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+        {!isCollapsed && <span className="truncate">{item.label}</span>}
+        {badgeCount > 0 && (
+          isCollapsed ? (
+            <span className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-surface ${badgeTone}`} />
+          ) : (
+            <span className={`ml-auto min-w-5 h-5 px-1.5 inline-flex items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${badgeTone}`}>
+              {formatBadge(badgeCount)}
+            </span>
+          )
+        )}
+      </NavLink>
+    );
+
+    return (
+      <li key={item.path}>
+        {isCollapsed ? (
+          <Tooltip title={badgeCount > 0 ? `${item.label} (${formatBadge(badgeCount)})` : item.label} placement="right">
+            {link}
+          </Tooltip>
+        ) : (
+          link
+        )}
+      </li>
+    );
   };
 
   return (
@@ -135,195 +102,72 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
           type="button"
           aria-label="Đóng menu điều hướng"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-on-surface/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-on-surface/40 backdrop-blur-sm lg:hidden"
         />
       )}
 
       <aside
         aria-hidden={isMobile && !open}
-        className={`w-[280px] bg-surface border-r border-outline-variant flex-col fixed left-0 top-0 h-full transition-transform duration-200 ${
+        style={{ width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
+        className={`bg-surface border-r border-outline-variant flex-col fixed left-0 top-0 h-full transition-[width,transform] duration-200 ${
           isMobile
-            ? `z-50 flex lg:hidden shadow-2xl ${open ? 'translate-x-0' : '-translate-x-full'}`
+            ? `z-50 flex lg:hidden shadow-elevated ${open ? 'translate-x-0' : '-translate-x-full'}`
             : 'z-20 hidden lg:flex'
         }`}
       >
-        <div className="h-[64px] flex items-center px-6 border-b border-outline-variant shrink-0 justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-primary tracking-tight">IT Support</span>
+        <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="h-9 w-9 shrink-0 rounded-xl bg-primary text-on-primary inline-flex items-center justify-center shadow-brand">
+              <Headset className="h-5 w-5" />
+            </span>
+            {!isCollapsed && (
+              <div className="min-w-0 leading-tight">
+                <p className="text-[15px] font-bold text-on-surface truncate">IT Support</p>
+                <p className="text-xs text-on-surface-variant truncate">Hệ thống quản trị nội bộ</p>
+              </div>
+            )}
           </div>
-          {isMobile ? (
+          {isMobile && (
             <button
               type="button"
               onClick={onClose}
-              className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 cursor-pointer"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 cursor-pointer"
               aria-label="Đóng menu"
             >
               <X className="w-4 h-4" />
             </button>
-          ) : (
-            <span className="w-2.5 h-2.5 bg-success rounded-full animate-ping"></span>
           )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 flex flex-col justify-between">
-          <ul className="space-y-1 px-2">
-            <li>
-              <button onClick={() => navigateTo('overview')} className={navButtonClass(activeTab === 'overview')}>
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Tổng quan</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('error_logs')} className={navButtonClass(activeTab === 'error_logs')}>
-                <AlertTriangle className="w-4 h-4" />
-                <span>Log lỗi</span>
-                {newLogsCount > 0 && (
-                  <span className="ml-auto bg-error text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
-                    {newLogsCount}
-                  </span>
-                )}
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('tasks')} className={navButtonClass(activeTab === 'tasks')}>
-                <ClipboardList className="w-4 h-4" />
-                <span>Công việc</span>
-                {pendingTasksCount > 0 && (
-                  <span className="ml-auto bg-primary text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
-                    {pendingTasksCount}
-                  </span>
-                )}
-              </button>
-            </li>
-            {isAdmin && (
-              <li>
-                <button onClick={() => navigateTo('recent_activities')} className={navButtonClass(activeTab === 'recent_activities')}>
-                  <History className="w-4 h-4" />
-                  <span>Hoạt động gần đây</span>
-                </button>
-              </li>
-            )}
-            {isAdmin && (
-              <li>
-                <button onClick={() => navigateTo('api_audit_logs')} className={navButtonClass(activeTab === 'api_audit_logs')}>
-                  <ScrollText className="w-4 h-4" />
-                  <span>Audit API</span>
-                </button>
-              </li>
-            )}
-            <li>
-              <button onClick={() => navigateTo('chat')} className={navButtonClass(activeTab === 'chat')}>
-                <MessageSquare className="w-4 h-4" />
-                <span>Chat</span>
-              </button>
-            </li>
-            {isAdmin && (
-              <>
-                <li>
-                  <button onClick={() => navigateTo('users')} className={navButtonClass(activeTab === 'users')}>
-                    <Users className="w-4 h-4" />
-                    <span>Người dùng</span>
-                  </button>
-                </li>
-                <li>
-                  <button onClick={() => navigateTo('roles')} className={navButtonClass(activeTab === 'roles')}>
-                    <Shield className="w-4 h-4" />
-                    <span>Vai trò</span>
-                  </button>
-                </li>
-              </>
-            )}
-            <li>
-              <button onClick={() => navigateTo('stores')} className={navButtonClass(activeTab === 'stores')}>
-                <Building2 className="w-4 h-4" />
-                <span>Cửa hàng</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('booths')} className={navButtonClass(activeTab === 'booths')}>
-                <Store className="w-4 h-4" />
-                <span>Booth</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('transaction_error_queue')} className={navButtonClass(activeTab === 'transaction_error_queue')}>
-                <AlertTriangle className="w-4 h-4" />
-                <span>Queue lỗi</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('remote_booth')} className={navButtonClass(activeTab === 'remote_booth')}>
-                <RadioTower className="w-4 h-4" />
-                <span>Remote Booth</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('print_image')} className={navButtonClass(activeTab === 'print_image')}>
-                <Printer className="w-4 h-4" />
-                <span>In ảnh</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('recreate_image')} className={navButtonClass(activeTab === 'recreate_image')}>
-                <Wand2 className="w-4 h-4" />
-                <span>Tạo lại ảnh</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('up_frame')} className={navButtonClass(activeTab === 'up_frame')}>
-                <Images className="w-4 h-4" />
-                <span>Up frame</span>
-              </button>
-            </li>
-            {canViewShifts && (
-              <li>
-                <button onClick={() => navigateTo('shifts')} className={navButtonClass(activeTab === 'shifts')}>
-                  <Clock3 className="w-4 h-4" />
-                  <span>Ca làm việc</span>
-                </button>
-              </li>
-            )}
-            <li>
-              <button onClick={() => navigateTo('documents')} className={navButtonClass(activeTab === 'documents')}>
-                <NotebookTabs className="w-4 h-4" />
-                <span>Tài liệu</span>
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('notifications')} className={navButtonClass(activeTab === 'notifications')}>
-                <Bell className="w-4 h-4" />
-                <span>Thông báo</span>
-                {unreadNotificationsCount > 0 && (
-                  <span className="ml-auto bg-error text-white font-sans text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
-                    {unreadNotificationsCount}
-                  </span>
-                )}
-              </button>
-            </li>
-            <li>
-              <button onClick={() => navigateTo('schedule')} className={navButtonClass(activeTab === 'schedule')}>
-                <Calendar className="w-4 h-4" />
-                <span>Lịch làm việc</span>
-              </button>
-            </li>
-            {canApproveOvertime && (
-              <li>
-                <button onClick={() => navigateTo('overtime_approval')} className={navButtonClass(activeTab === 'overtime_approval')}>
-                  <TimerReset className="w-4 h-4" />
-                  <span>Duyệt OT</span>
-                </button>
-              </li>
-            )}
-            {canViewR2Usage && (
-              <li>
-                <button onClick={() => navigateTo('r2_usage')} className={navButtonClass(activeTab === 'r2_usage')}>
-                  <Database className="w-4 h-4" />
-                  <span>Hạn mức R2</span>
-                </button>
-              </li>
-            )}
-          </ul>
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1">
+          {groups.map((group, index) => (
+            <div key={group.label} className={index === 0 ? '' : 'mt-5'}>
+              {isCollapsed ? (
+                index > 0 && <div className="mx-auto mb-3 h-px w-8 bg-outline-variant" />
+              ) : (
+                <p className="px-3 mb-1.5 text-xs font-medium text-on-surface-variant/80">{group.label}</p>
+              )}
+              <ul className="space-y-0.5">{group.items.map(renderItem)}</ul>
+            </div>
+          ))}
         </nav>
+
+        {!isMobile && (
+          <div className="border-t border-outline-variant p-3 shrink-0">
+            <button
+              type="button"
+              onClick={toggleSidebarCollapsed}
+              className={`h-9 inline-flex items-center gap-2 rounded-lg text-sm font-medium text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer ${
+                isCollapsed ? 'w-10 justify-center mx-auto flex' : 'w-full px-3'
+              }`}
+              aria-label={isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+              title={isCollapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+            >
+              {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+              {!isCollapsed && <span>Thu gọn</span>}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );

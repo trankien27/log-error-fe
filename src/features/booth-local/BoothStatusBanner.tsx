@@ -22,12 +22,12 @@ export default function BoothStatusBanner({
     ? {
         className: 'border-success/30 bg-success-container text-on-success-container',
         title: `Thiết bị là booth${boothInfo?.boothCode ? ` · ${boothInfo.boothCode}` : ''}`,
-        description: `Đã kết nối app booth tại ${BOOTH_LOCAL_BASE_URL}. Dữ liệu và lệnh đều chạy trên chính máy này.`,
+        description: `Đã kết nối app booth tại ${BOOTH_LOCAL_BASE_URL}. Mọi thao tác chạy ngay trên máy này.`,
       }
     : status === 'checking'
       ? {
           className: 'border-outline-variant bg-surface-2 text-on-surface-variant',
-          title: 'Đang kiểm tra thiết bị...',
+          title: 'Đang kiểm tra thiết bị…',
           description: `Đang thử kết nối ${BOOTH_LOCAL_BASE_URL}.`,
         }
       : {
@@ -38,26 +38,28 @@ export default function BoothStatusBanner({
         };
 
   return (
-    <div className={`rounded-xl border p-3 flex items-start gap-2.5 ${banner.className}`}>
-      {status === 'checking'
-        ? <Loader2 className="w-4 h-4 shrink-0 mt-0.5 animate-spin" />
-        : status === 'unavailable'
-          ? <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          : <MonitorSmartphone className="w-4 h-4 shrink-0 mt-0.5" />}
-      <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold">{banner.title}</p>
-        <p className="text-[11px] font-medium mt-0.5 break-words">{banner.description}</p>
+    <div role="status" className={`rounded-2xl border px-4 py-3.5 flex flex-col gap-3 sm:flex-row sm:items-center ${banner.className}`}>
+      <div className="flex flex-1 min-w-0 items-start gap-3">
+        {status === 'checking'
+          ? <Loader2 className="w-5 h-5 shrink-0 mt-0.5 animate-spin" />
+          : status === 'unavailable'
+            ? <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            : <MonitorSmartphone className="w-5 h-5 shrink-0 mt-0.5" />}
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-semibold">{banner.title}</p>
+          <p className="text-sm mt-0.5 break-words opacity-90">{banner.description}</p>
+        </div>
       </div>
       <button
         type="button"
         onClick={onRecheck}
         disabled={status === 'checking'}
-        className="shrink-0 h-8 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface text-[11px] font-bold inline-flex items-center gap-1.5 cursor-pointer hover:bg-surface-2 disabled:opacity-60 disabled:cursor-not-allowed"
+        className="shrink-0 h-11 px-4 rounded-xl border border-outline-variant bg-surface text-on-surface text-sm font-medium inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-surface-2 active:scale-[0.98] transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {status === 'checking'
-          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          : <RefreshCw className="w-3.5 h-3.5" />}
-        Kiểm tra
+          ? <Loader2 className="w-4 h-4 animate-spin" />
+          : <RefreshCw className="w-4 h-4" />}
+        Kiểm tra lại
       </button>
     </div>
   );

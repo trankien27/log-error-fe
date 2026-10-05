@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { AlertTriangle, ChevronLeft, ChevronRight, Clock, Plus, Search, Copy, Edit2, KeyRound, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Clock, Plus, Search, Copy, Edit2, KeyRound, Loader2, RefreshCw, Store, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { boothsService } from '../../../services/api/boothsService';
 import { lookupService } from '../../../services/api/lookupService';
 import { useBoothsStore } from '../../../stores/useBoothsStore';
 import { Booth } from '../../../types';
+import { EmptyState, FilterBar, PageHeader, SectionCard, Skeleton, TableSkeletonRows, confirmAction } from '../../../components/ui';
 
 const syncedAtFormatter = new Intl.DateTimeFormat('vi-VN', {
   dateStyle: 'short',
@@ -87,11 +88,11 @@ export default function BoothsTab() {
   const syncBoothsMutation = useMutation({
     mutationFn: boothsService.syncBooths,
     onSuccess: result => {
-      toast.success(`Đã sync booth: +${result.added}, cập nhật ${result.updated}, xóa ${result.deleted}.`);
+      toast.success(`Đã đồng bộ booth: +${result.added}, cập nhật ${result.updated}, xóa ${result.deleted}.`);
       fetchBooths();
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Không thể sync booth.');
+      toast.error(error instanceof Error ? error.message : 'Không thể đồng bộ booth.');
     },
   });
 
@@ -130,7 +131,7 @@ export default function BoothsTab() {
   const handleSaveBoothSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!boothNameField.trim() || !boothUltraviewField.trim()) {
-      toast.error('Vui lòng điền đủ Tên Booth và ID Ultraview.');
+      toast.error('Vui lòng nhập tên booth và ID UltraView.');
       return;
     }
 
@@ -144,27 +145,21 @@ export default function BoothsTab() {
 
     try {
       await saveBooth(payload, !!currentEditingBooth);
-      toast.success(currentEditingBooth ? 'Cập nhật Booth thành công.' : 'Thêm Booth thành công.');
+      toast.success(currentEditingBooth ? 'Đã cập nhật booth.' : 'Đã thêm booth.');
       setIsBoothModalOpen(false);
     } catch (err: any) {
-      toast.error(err.message || 'Không thể lưu Booth.');
+      toast.error(err.message || 'Không thể lưu booth.');
     }
   };
 
   const handleDeleteBoothClick = async (id: string) => {
-    toast.warning(`Xóa Booth ${id}?`, {
-      action: {
-        label: 'Xóa',
-        onClick: async () => {
-          try {
-            await deleteBooth(id);
-            toast.success('Đã xóa Booth.');
-          } catch (err: any) {
-            toast.error(err.message || 'Không thể xóa Booth.');
-          }
-        },
-      },
-    });
+    if (!(await confirmAction({ title: `Xóa booth ${id}?`, content: 'Thao tác không thể hoàn tác.' }))) return;
+    try {
+      await deleteBooth(id);
+      toast.success('Đã xóa booth.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa booth.');
+    }
   };
 
   const handleViewAgentKey = (booth: Booth) => {
@@ -193,146 +188,158 @@ export default function BoothsTab() {
     }
   };
 
-  return (
-    <div className="space-y-6 text-left animate-fadeIn">
-      {/* Screen title */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">Quản trị danh sách Trạm Booth hỗ trợ</h2>
-          <p className="text-xs text-on-surface-variant mt-1">Danh sách điều kiểm mẫu máy tại hiện trường. Đi kèm ID đăng nhập UltraView để nhân viên kỹ thuật kết nối lập tức.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold text-on-surface-variant">
-            <Clock className="w-4 h-4 text-primary" />
-            <span>Cập nhật gần nhất: {formatSyncedAt(latestBoothSyncedAt)}</span>
-          </div>
-          <button
-            onClick={() => handleOpenBoothModal()}
-            className="btn-primary"
-          >
-            <Plus className="w-4 h-4" /> Thêm Booth
-          </button>
-        </div>
-      </div>
+  const iconButtonClass =
+    'h-8 w-8 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
+  const inputClass =
+    'w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant';
+  const labelClass = 'block text-sm font-medium text-on-surface mb-1.5';
 
-      {/* Page Filters or search */}
-      <div className="card-surface p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+  return (
+    <div className="space-y-5 text-left animate-fadeIn">
+      <PageHeader
+        title="Booth"
+        icon={Store}
+        description="Danh sách booth tại cửa hàng kèm ID UltraView để kết nối hỗ trợ nhanh."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => fetchBooths()}
+              disabled={isLoading || syncBoothsMutation.isPending}
+              className="btn-secondary"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Làm mới
+            </button>
+            <button
+              type="button"
+              onClick={() => syncBoothsMutation.mutate()}
+              disabled={syncBoothsMutation.isPending || isLoading}
+              className="btn-secondary"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
+              Đồng bộ booth
+            </button>
+            <button type="button" onClick={() => handleOpenBoothModal()} className="btn-primary">
+              <Plus className="w-4 h-4" /> Thêm booth
+            </button>
+          </>
+        }
+      />
+
+      <FilterBar
+        actions={
+          <div className="flex flex-wrap items-center gap-3 text-xs text-on-surface-variant">
+            <span className="font-medium">{boothTotalItems} booth</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-primary" />
+              Cập nhật: {formatSyncedAt(latestBoothSyncedAt)}
+            </span>
+          </div>
+        }
+      >
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
           <input
             type="text"
-            placeholder="Tìm theo tên hoặc code booth..."
+            placeholder="Tìm theo tên hoặc mã booth..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-outline-variant rounded-lg text-xs"
+            className="h-9 w-full pl-9 pr-3 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface"
+            aria-label="Tìm booth"
           />
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-on-surface-variant font-medium text-center md:text-left">
-            {boothTotalItems} booth
-          </span>
-          <button
-            type="button"
-            onClick={() => syncBoothsMutation.mutate()}
-            disabled={syncBoothsMutation.isPending || isLoading}
-            className="h-9 px-3 border border-success/30 rounded-lg bg-surface text-success hover:bg-success-container text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
-            Sync Booth
-          </button>
-          <button
-            type="button"
-            onClick={() => fetchBooths()}
-            disabled={isLoading || syncBoothsMutation.isPending}
-            className="h-9 px-3 border border-outline-variant rounded-lg hover:bg-surface-2 text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
-      </div>
+      </FilterBar>
 
       {error && (
-        <div className="rounded-lg border border-error/30 bg-error-container p-3 text-xs font-medium text-on-error-container flex items-start gap-2">
+        <div className="rounded-xl border border-error/30 bg-error-container p-3 text-sm text-on-error-container flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Data table booths */}
-      <div className="card-surface overflow-hidden">
+      <SectionCard bodyClassName="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-xs border-collapse">
+          <table className="w-full min-w-[900px] text-left text-sm border-collapse">
             <thead>
-              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold select-none font-sans">
-                <th className="py-4 px-5">Mã Trạm Booth</th>
-                <th className="py-4 px-5">Tên Trạm Kỹ Thuật</th>
-                <th className="py-4 px-5">ID Kết Nối Từ Xa</th>
-                <th className="py-4 px-5">Cửa hàng/Chi nhánh liên quan</th>
-                <th className="py-4 px-5 w-56">Đồng bộ lần cuối</th>
-                <th className="py-4 px-5 text-right w-36">Tác vụ</th>
+              <tr className="border-b border-outline-variant select-none">
+                <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Mã booth</th>
+                <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Tên booth</th>
+                <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">ID UltraView</th>
+                <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Cửa hàng</th>
+                <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60 w-48">Đồng bộ lần cuối</th>
+                <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60 text-right w-36">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/40">
+            <tbody className="divide-y divide-outline-variant">
               {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="py-10 text-center font-sans font-bold text-on-surface-variant">
-                    Đang tải dữ liệu Booth...
-                  </td>
-                </tr>
+                <TableSkeletonRows rows={6} columns={6} />
               ) : booths.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center font-sans font-bold text-on-surface-variant">
-                    Không tìm thấy booth nào khớp với điều kiện tìm kiếm.
+                  <td colSpan={6}>
+                    <EmptyState
+                      compact
+                      icon={Store}
+                      title="Không tìm thấy booth"
+                      description="Thử đổi từ khóa tìm kiếm hoặc đồng bộ lại."
+                    />
                   </td>
                 </tr>
               ) : (
                 booths.map(b => (
-                  <tr key={b.id} className="hover:bg-surface-2/60 transition-colors group">
-                    <td className="py-4 px-5 font-mono font-bold text-primary text-sm">{b.code || b.id}</td>
-                    <td className="py-4 px-5">
-                      <span className="font-bold text-on-surface text-sm block">{b.name}</span>
-                      <span className="text-[10px] text-on-surface-variant">Hỗ trợ UltraView tự động kết nối</span>
+                  <tr key={b.id} className="hover:bg-surface-2/50 transition-colors group">
+                    <td className="px-4 py-3 font-mono font-medium text-primary text-sm">{b.code || b.id}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-on-surface text-sm block">{b.name}</span>
+                      <span className="text-[11px] text-on-surface-variant">Kết nối qua UltraView</span>
                     </td>
-                    <td className="py-4 px-5 font-mono">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-secondary-container px-2.5 py-1 rounded text-xs text-on-secondary-container font-bold select-all tracking-wider font-mono">
+                    <td className="px-4 py-3 font-mono">
+                      <div className="flex items-center gap-1.5">
+                        <span className="bg-secondary-container px-2 py-0.5 rounded-md text-xs text-on-secondary-container font-medium select-all font-mono">
                           {b.ultraviewId}
                         </span>
                         <button
-                          onClick={() => copyToClipboard(b.ultraviewId, `Đã sao chép UltraView ID: ${b.ultraviewId}`)}
-                          className="p-1 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-all outline-none cursor-pointer"
+                          type="button"
+                          onClick={() => copyToClipboard(b.ultraviewId, `Đã sao chép ID: ${b.ultraviewId}`)}
+                          className="h-7 w-7 inline-flex items-center justify-center rounded-md text-on-surface-variant hover:text-primary hover:bg-primary-subtle transition-colors cursor-pointer"
                           title="Sao chép ID"
+                          aria-label="Sao chép ID UltraView"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
-                    <td className="py-4 px-5 text-on-surface-variant font-medium">{b.relatedStores}</td>
-                    <td className="py-4 px-5 text-on-surface-variant font-medium tabular-nums">
+                    <td className="px-4 py-3 text-on-surface-variant">{b.relatedStores}</td>
+                    <td className="px-4 py-3 text-on-surface-variant tabular-nums">
                       {formatSyncedAt(b.lastSyncedAt)}
                     </td>
-                    <td className="py-4 px-5 text-right w-36">
+                    <td className="px-4 py-3 text-right w-36">
                       <div className="flex justify-end gap-1.5">
                         <button
+                          type="button"
                           onClick={() => handleViewAgentKey(b)}
-                          className="p-1 px-1.5 border rounded hover:bg-warning-container hover:text-warning transition-colors border-outline-variant cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                          title="View Agent Key"
+                          className={`${iconButtonClass} hover:bg-warning-container hover:text-on-warning-container`}
+                          title="Xem AgentKey"
+                          aria-label="Xem AgentKey"
                           disabled={viewAgentKeyMutation.isPending}
                         >
                           <KeyRound className="w-3.5 h-3.5" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleOpenBoothModal(b)}
-                          className="p-1 px-1.5 border rounded hover:bg-primary/10 hover:text-primary transition-colors border-outline-variant cursor-pointer"
-                          title="Sửa thông tin"
+                          className={`${iconButtonClass} hover:bg-primary-subtle hover:text-primary`}
+                          title="Sửa"
+                          aria-label="Sửa booth"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleDeleteBoothClick(b.id)}
-                          className="p-1 px-1.5 border rounded hover:bg-error-container hover:text-error transition-colors border-outline-variant cursor-pointer"
-                          title="Xóa Booth"
+                          className={`${iconButtonClass} hover:bg-error-container hover:text-error`}
+                          title="Xóa"
+                          aria-label="Xóa booth"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -345,13 +352,14 @@ export default function BoothsTab() {
           </table>
         </div>
 
-        <div className="border-t border-outline-variant bg-surface-2 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-on-surface-variant">
+        <div className="border-t border-outline-variant px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-on-surface-variant">
             <span>Hiển thị</span>
             <select
               value={boothPageSize}
               onChange={event => setBoothPageSize(Number(event.target.value))}
-              className="h-8 px-2 border border-outline-variant rounded-lg bg-surface text-xs font-bold focus:outline-primary"
+              className="h-8 px-2 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface"
+              aria-label="Số booth mỗi trang"
             >
               {[10, 20, 50, 100].map(size => (
                 <option key={size} value={size}>{size}</option>
@@ -361,7 +369,7 @@ export default function BoothsTab() {
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-3">
-            <span className="text-xs font-semibold text-on-surface-variant">
+            <span className="text-sm text-on-surface-variant tabular-nums">
               Trang {boothTotalPages === 0 ? 0 : boothPageIndex + 1}/{boothTotalPages}
             </span>
             <div className="flex items-center gap-1">
@@ -371,6 +379,7 @@ export default function BoothsTab() {
                 disabled={isLoading || boothPageIndex <= 0}
                 className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Trang trước"
+                title="Trang trước"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -380,31 +389,39 @@ export default function BoothsTab() {
                 disabled={isLoading || boothTotalPages === 0 || boothPageIndex + 1 >= boothTotalPages}
                 className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 aria-label="Trang sau"
+                title="Trang sau"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </SectionCard>
 
-      {/* Booth CRUD Modal */}
       {isBoothModalOpen && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
-              <h3 className="text-lg font-bold text-on-surface">
-                {currentEditingBooth ? `Chỉnh sửa Booth: ${currentEditingBooth.id}` : 'Đăng ký trạm hỗ trợ (Booth) mới'}
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto border border-outline-variant text-left">
+            <div className="flex justify-between items-center gap-3 px-5 py-4 border-b border-outline-variant">
+              <h3 className="text-lg font-semibold text-on-surface truncate">
+                {currentEditingBooth ? `Sửa booth ${currentEditingBooth.id}` : 'Thêm booth'}
               </h3>
-              <button onClick={() => setIsBoothModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
+              <button
+                type="button"
+                onClick={() => setIsBoothModalOpen(false)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
+                aria-label="Đóng"
+                title="Đóng"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <form onSubmit={handleSaveBoothSubmit} className="space-y-4 text-sm">
+            <form onSubmit={handleSaveBoothSubmit} className="space-y-4 text-sm p-5">
               <div>
-                <label className="block font-medium mb-1">Chọn Booth từ hệ thống</label>
+                <label className={labelClass}>Chọn booth từ hệ thống</label>
                 <LazySearchDropdown
                   value={boothNameField}
-                  placeholder="Tìm Booth theo mã hoặc tên..."
-                  emptyText="Không tìm thấy Booth."
+                  placeholder="Tìm booth theo mã hoặc tên..."
+                  emptyText="Không tìm thấy booth."
                   loadOptions={loadBooths}
                   onSelect={item => {
                     setBoothIdField(item.code || String(item.id));
@@ -416,7 +433,7 @@ export default function BoothsTab() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Mã trạm (ID) *</label>
+                  <label className={labelClass}>Mã booth <span className="text-error">*</span></label>
                   <input
                     type="text"
                     required
@@ -424,34 +441,34 @@ export default function BoothsTab() {
                     value={boothIdField}
                     onChange={e => setBoothIdField(e.target.value)}
                     disabled={!!currentEditingBooth}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary bg-surface-2"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">UltraView / TeamView ID *</label>
+                  <label className={labelClass}>ID UltraView <span className="text-error">*</span></label>
                   <input
                     type="text"
                     required
                     placeholder="Ví dụ: 12 345 678"
                     value={boothUltraviewField}
                     onChange={e => setBoothUltraviewField(e.target.value)}
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                    className={inputClass}
                   />
                 </div>
               </div>
               <div>
-                <label className="block font-medium mb-1">Tên Booth / Vị trí phân công *</label>
+                <label className={labelClass}>Tên booth <span className="text-error">*</span></label>
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: Kiosk Tự Phục Vụ Tầng G"
+                  placeholder="Ví dụ: Kiosk tự phục vụ tầng G"
                   value={boothNameField}
                   onChange={e => setBoothNameField(e.target.value)}
-                  className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary"
+                  className={inputClass}
                 />
               </div>
               <div>
-                <label className="block font-medium mb-1">Địa điểm / Cửa hàng liên quan</label>
+                <label className={labelClass}>Cửa hàng</label>
                 <LazySearchDropdown
                   value={boothStoresField}
                   placeholder="Chọn cửa hàng..."
@@ -461,20 +478,20 @@ export default function BoothsTab() {
                   onSelect={item => setBoothStoresField(item.name)}
                 />
               </div>
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsBoothModalOpen(false)}
-                  className="btn-secondary px-4 py-2"
+                  className="btn-secondary"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn-primary px-5 py-2"
+                  className="btn-primary"
                 >
-                  {isLoading ? 'Đang lưu...' : 'Xác nhận'}
+                  {isLoading ? 'Đang lưu...' : 'Lưu'}
                 </button>
               </div>
             </form>
@@ -484,83 +501,90 @@ export default function BoothsTab() {
 
       {agentKeyBooth && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-start gap-4 mb-4 pb-2 border-b border-outline-variant">
-              <div>
-                <h3 className="text-lg font-bold text-on-surface">View AgentKey cho {agentKeyBooth.code || agentKeyBooth.id}</h3>
-                <p className="text-xs text-on-surface-variant mt-1">{agentKeyBooth.name}</p>
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto border border-outline-variant text-left">
+            <div className="flex justify-between items-start gap-4 px-5 py-4 border-b border-outline-variant">
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-on-surface">AgentKey · {agentKeyBooth.code || agentKeyBooth.id}</h3>
+                <p className="text-sm text-on-surface-variant mt-0.5 truncate">{agentKeyBooth.name}</p>
               </div>
               <button
                 type="button"
                 onClick={closeAgentKeyModal}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 cursor-pointer transition-colors"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer transition-colors"
                 aria-label="Đóng"
+                title="Đóng"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="rounded-lg border border-warning/30 bg-warning-container p-3 text-xs font-medium text-on-warning-container flex items-start gap-2 mb-4">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>Key này dùng cấu hình local agent tại booth trong appsettings.json, không public.</span>
-            </div>
-
-            {viewAgentKeyMutation.isPending ? (
-              <div className="py-8 text-center text-sm font-bold text-on-surface-variant">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                Đang tải AgentKey...
+            <div className="p-5">
+              <div className="rounded-xl border border-warning/30 bg-warning-container p-3 text-sm text-on-warning-container flex items-start gap-2 mb-4">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>Key dùng để cấu hình agent tại booth (appsettings.json). Vui lòng không chia sẻ công khai.</span>
               </div>
-            ) : viewAgentKey ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-on-surface-variant mb-1.5">AgentKey</label>
-                  <div className="rounded-lg border border-outline-variant bg-surface-2 p-3 font-mono text-xs text-on-surface break-all select-all">
-                    {viewAgentKey}
+
+              {viewAgentKeyMutation.isPending ? (
+                <div className="space-y-2 py-2" aria-busy="true" aria-label="Đang tải AgentKey">
+                  <Skeleton className="h-3.5 w-20" />
+                  <Skeleton className="h-11 w-full" />
+                </div>
+              ) : viewAgentKey ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-on-surface-variant mb-1.5">AgentKey</label>
+                    <div className="rounded-lg border border-outline-variant bg-surface-2 p-3 font-mono text-xs text-on-surface break-all select-all">
+                      {viewAgentKey}
+                    </div>
+                  </div>
+                  <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={closeAgentKeyModal}
+                      disabled={generateAgentKeyMutation.isPending}
+                      className="btn-secondary"
+                    >
+                      Đóng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateAgentKey}
+                      disabled={generateAgentKeyMutation.isPending}
+                      className="btn-secondary"
+                    >
+                      {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                      Tạo nếu chưa có
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(viewAgentKey, 'Đã sao chép AgentKey.')}
+                      disabled={generateAgentKeyMutation.isPending}
+                      className="btn-primary"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Sao chép
+                    </button>
                   </div>
                 </div>
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={closeAgentKeyModal}
-                    disabled={generateAgentKeyMutation.isPending}
-                    className="btn-secondary px-4 py-2"
-                  >
-                    Đóng
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleGenerateAgentKey}
-                    disabled={generateAgentKeyMutation.isPending}
-                    className="px-5 py-2 border border-warning/30 bg-warning-container text-on-warning-container rounded-lg hover:brightness-95 cursor-pointer inline-flex items-center justify-center gap-2 font-bold disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-                  >
-                    {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                    Tạo nếu chưa có
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(viewAgentKey, 'Đã sao chép AgentKey.')}
-                    disabled={generateAgentKeyMutation.isPending}
-                    className="btn-primary px-5 py-2"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copy
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <p className="text-sm font-bold text-error">Booth này chưa có AgentKey.</p>
-                <button
-                  type="button"
-                  onClick={handleGenerateAgentKey}
-                  disabled={generateAgentKeyMutation.isPending}
-                  className="btn-primary mt-4 px-5 py-2 text-sm"
-                >
-                  {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                  Gen key
-                </button>
-              </div>
-            )}
+              ) : (
+                <EmptyState
+                  compact
+                  icon={KeyRound}
+                  title="Booth này chưa có AgentKey"
+                  action={
+                    <button
+                      type="button"
+                      onClick={handleGenerateAgentKey}
+                      disabled={generateAgentKeyMutation.isPending}
+                      className="btn-primary"
+                    >
+                      {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                      Tạo AgentKey
+                    </button>
+                  }
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

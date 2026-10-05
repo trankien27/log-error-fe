@@ -183,7 +183,7 @@ export default function ThemeUploadDialog({
     }
     const parsedOrderNo = orderNo.trim() === '' ? null : Number(orderNo);
     if (parsedOrderNo !== null && (!Number.isInteger(parsedOrderNo) || parsedOrderNo < 0)) {
-      toast.error('Order No phải là số nguyên không âm.');
+      toast.error('Thứ tự hiển thị phải là số nguyên không âm.');
       return;
     }
     const existing = profiles.find(item => item.name.toLocaleLowerCase('vi') === profileName.toLocaleLowerCase('vi'));
@@ -297,7 +297,7 @@ export default function ThemeUploadDialog({
     }
     const parsedOrderNo = orderNo.trim() === '' ? undefined : Number(orderNo);
     if (parsedOrderNo !== undefined && (!Number.isInteger(parsedOrderNo) || parsedOrderNo < 0)) {
-      toast.error('Order No phải là số nguyên không âm.');
+      toast.error('Thứ tự hiển thị phải là số nguyên không âm.');
       return;
     }
 
@@ -314,50 +314,50 @@ export default function ThemeUploadDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
-      <div role="dialog" aria-modal="true" aria-labelledby="theme-upload-title" className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-2xl">
-        <div className="flex items-center justify-between border-b border-outline-variant px-6 py-4">
+    <div className="modal-overlay !z-[100]">
+      <div role="dialog" aria-modal="true" aria-labelledby="theme-upload-title" className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-elevated">
+        <div className="flex items-start justify-between gap-3 border-b border-outline-variant px-5 py-4 sm:px-6">
           <div>
-            <h2 id="theme-upload-title" className="text-lg font-black text-on-surface">Upload theme lên FunStudio</h2>
-            <p className="mt-1 text-xs text-on-surface-variant">Ảnh đã map layout sẽ được gửi cùng thumbnail.</p>
+            <h2 id="theme-upload-title" className="text-lg font-semibold text-on-surface">Tải theme lên FunStudio</h2>
+            <p className="mt-0.5 text-sm text-on-surface-variant">Ảnh đã khớp layout sẽ được gửi kèm thumbnail.</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-2 text-on-surface-variant hover:bg-surface-2" aria-label="Đóng">
+          <button type="button" onClick={onClose} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer" aria-label="Đóng" title="Đóng">
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="overflow-y-auto px-6 py-5">
-          <div className="mb-5 rounded-xl border border-outline-variant bg-surface-2 p-4">
-            <p className="mb-3 text-xs font-black uppercase tracking-wide text-on-surface-variant">Profile upload dùng chung</p>
-            <p className="mb-3 text-xs text-on-surface-variant">Mọi người đều dùng được profile đã lưu. Người tạo hoặc Admin có thể sửa và xóa.</p>
+        <div className="overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="mb-5 rounded-xl border border-outline-variant bg-surface-2/60 p-4">
+            <p className="mb-1 text-sm font-medium text-on-surface">Profile dùng chung</p>
+            <p className="mb-3 text-xs text-on-surface-variant">Ai cũng dùng được profile đã lưu. Người tạo hoặc Admin có thể sửa, xóa.</p>
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <select value={selectedProfile} onChange={event => loadProfile(Number(event.target.value))} disabled={loadingProfiles} className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface disabled:opacity-50">
-                <option value={0}>{loadingProfiles ? 'Đang tải profile...' : 'Chọn profile đã lưu'}</option>
+              <select value={selectedProfile} onChange={event => loadProfile(Number(event.target.value))} disabled={loadingProfiles} className="h-10 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary disabled:opacity-50">
+                <option value={0}>{loadingProfiles ? 'Đang tải profile…' : 'Chọn profile đã lưu'}</option>
                 {profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
               </select>
-              <button type="button" disabled={savingProfile || !profiles.find(item => item.id === selectedProfile)?.canManage} onClick={() => void deleteProfile()} className="inline-flex items-center justify-center gap-2 rounded-lg border border-error/30 px-3 py-2 text-sm font-bold text-error disabled:opacity-40">
+              <button type="button" disabled={savingProfile || !profiles.find(item => item.id === selectedProfile)?.canManage} onClick={() => void deleteProfile()} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-error/30 bg-surface px-3 text-sm font-medium text-error hover:bg-error-container cursor-pointer disabled:cursor-not-allowed disabled:opacity-40">
                 <Trash2 className="h-4 w-4" /> Xóa
               </button>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input value={newProfileName} onChange={event => setNewProfileName(event.target.value)} placeholder="Tên profile mới" className="rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface" />
-              <button type="button" onClick={() => void saveProfile()} disabled={savingProfile || loadingProfiles} className="inline-flex items-center justify-center gap-2 rounded-lg bg-secondary-container px-3 py-2 text-sm font-bold text-on-secondary-container disabled:opacity-50">
-                <Save className="h-4 w-4" /> {savingProfile ? 'Đang lưu...' : 'Lưu profile'}
+              <input value={newProfileName} onChange={event => setNewProfileName(event.target.value)} placeholder="Tên profile mới" aria-label="Tên profile" className="h-10 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+              <button type="button" onClick={() => void saveProfile()} disabled={savingProfile || loadingProfiles} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-secondary-container px-3 text-sm font-medium text-on-secondary-container hover:brightness-95 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+                <Save className="h-4 w-4" /> {savingProfile ? 'Đang lưu…' : 'Lưu profile'}
               </button>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-bold text-on-surface">Tên theme *</span>
-              <input value={name} onChange={event => setName(event.target.value)} className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface" />
+              <span className="mb-1.5 block text-sm font-medium text-on-surface">Tên theme <span className="text-error">*</span></span>
+              <input value={name} onChange={event => setName(event.target.value)} className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
             </label>
 
             <label>
-              <span className="mb-1.5 block text-sm font-bold text-on-surface">Màu chủ đạo</span>
+              <span className="mb-1.5 block text-sm font-medium text-on-surface">Màu chủ đạo</span>
               <div className="flex gap-2">
                 <input type="color" value={color} onChange={event => setColor(event.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-outline-variant bg-surface p-1" />
-                <input value={color} onChange={event => setColor(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface" />
+                <input value={color} onChange={event => setColor(event.target.value)} aria-label="Mã màu" className="h-10 min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface px-3 font-mono text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
               </div>
             </label>
 
@@ -371,7 +371,7 @@ export default function ThemeUploadDialog({
               }}
               className="sm:col-span-2"
             >
-              <span id="theme-category-label" className="mb-1.5 block text-sm font-bold text-on-surface">Danh mục *</span>
+              <span id="theme-category-label" className="mb-1.5 block text-sm font-medium text-on-surface">Danh mục *</span>
               <button
                 ref={categoryButtonRef}
                 type="button"
@@ -383,7 +383,7 @@ export default function ThemeUploadDialog({
                   setCategorySearch('');
                   setActiveCategoryIndex(0);
                 }}
-                className="flex w-full items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-left text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="flex w-full items-center justify-between gap-2 rounded-lg border border-outline-variant bg-surface h-10 px-3 text-left text-sm text-on-surface cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
               >
                 <span id="theme-category-value" className={categoryId ? 'truncate' : 'truncate text-on-surface-variant'}>
                   {categories.find(category => category.id === categoryId)?.name ||
@@ -392,7 +392,7 @@ export default function ThemeUploadDialog({
                 <ChevronDown className="h-4 w-4 shrink-0 text-on-surface-variant" />
               </button>
               {categoryPickerOpen && (
-                <div className="mt-1 overflow-hidden rounded-lg border border-outline-variant bg-surface shadow-lg">
+                <div className="mt-1 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-elevated">
                   <div className="relative border-b border-outline-variant p-2">
                     <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
                     <input
@@ -407,7 +407,7 @@ export default function ThemeUploadDialog({
                       value={categorySearch}
                       onChange={event => { setCategorySearch(event.target.value); setActiveCategoryIndex(0); }}
                       onKeyDown={handleCategorySearchKeyDown}
-                      placeholder="Gõ tên danh mục..."
+                      placeholder="Gõ tên danh mục…"
                       className="w-full rounded-lg border border-outline-variant bg-surface py-2 pl-9 pr-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
                     />
                   </div>
@@ -421,7 +421,7 @@ export default function ThemeUploadDialog({
                         type="button"
                         onMouseEnter={() => setActiveCategoryIndex(index)}
                         onClick={() => chooseCategory(category.id)}
-                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface ${index === activeCategoryIndex ? 'bg-primary/10' : 'hover:bg-surface-2'}`}
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm text-on-surface cursor-pointer ${index === activeCategoryIndex ? 'bg-primary-subtle' : 'hover:bg-surface-2'}`}
                       >
                         <span className="truncate">{category.name}</span>
                         {category.id === categoryId && <Check className="h-4 w-4 shrink-0 text-primary" />}
@@ -436,54 +436,54 @@ export default function ThemeUploadDialog({
             </div>
 
             <label>
-              <span className="mb-1.5 block text-sm font-bold text-on-surface">Order No</span>
-              <input type="number" min={0} step={1} value={orderNo} onChange={event => setOrderNo(event.target.value)} placeholder="Để trống nếu không đặt" className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface" />
+              <span className="mb-1.5 block text-sm font-medium text-on-surface">Thứ tự hiển thị</span>
+              <input type="number" min={0} step={1} value={orderNo} onChange={event => setOrderNo(event.target.value)} placeholder="Để trống nếu không cần" className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
             </label>
 
             <label>
-              <span className="mb-1.5 block text-sm font-bold text-on-surface">Layout List ID</span>
-              <input type="number" min={1} value={layoutListId} onChange={event => setLayoutListId(event.target.value)} className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2.5 text-sm text-on-surface" />
+              <span className="mb-1.5 block text-sm font-medium text-on-surface">Layout List ID</span>
+              <input type="number" min={1} value={layoutListId} onChange={event => setLayoutListId(event.target.value)} className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
             </label>
 
             <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-bold text-on-surface">Thumbnail</span>
-              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => setThumbnail(event.target.files?.[0] || null)} className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-secondary-container file:px-3 file:py-2 file:font-bold file:text-on-secondary-container" />
-              {!thumbnail && fallbackThumbnailName && <span className="mt-1 block text-xs text-primary">Dùng ảnh chưa map: {fallbackThumbnailName}</span>}
+              <span className="mb-1.5 block text-sm font-medium text-on-surface">Thumbnail</span>
+              <input type="file" accept="image/png,image/jpeg,image/webp" onChange={event => setThumbnail(event.target.files?.[0] || null)} className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-lg file:border-0 file:bg-secondary-container file:px-3 file:py-2 file:text-sm file:font-medium file:text-on-secondary-container file:cursor-pointer" />
+              {!thumbnail && fallbackThumbnailName && <span className="mt-1 block text-xs text-primary">Sẽ dùng ảnh chưa khớp layout: {fallbackThumbnailName}</span>}
             </label>
 
             <div className="sm:col-span-2">
               <div className="mb-1.5 flex items-center justify-between gap-3">
-                <span className="text-sm font-bold text-on-surface">Theme lists</span>
+                <span className="text-sm font-medium text-on-surface">Danh sách theme</span>
                 <span className="text-xs text-on-surface-variant">Đã chọn {selectedThemeListIds.length}</span>
               </div>
-              <input value={themeListSearch} onChange={event => setThemeListSearch(event.target.value)} placeholder="Tìm theme list..." className="mb-2 w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm text-on-surface" />
+              <input value={themeListSearch} onChange={event => setThemeListSearch(event.target.value)} placeholder="Tìm danh sách theme…" aria-label="Tìm danh sách theme" className="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
               <div className="grid max-h-44 gap-1 overflow-y-auto rounded-lg border border-outline-variant p-2 sm:grid-cols-2">
                 {visibleThemeLists.map(item => {
                   const selected = selectedThemeListIds.includes(item.id);
                   return (
-                    <button key={item.id} type="button" onClick={() => toggleThemeList(item.id)} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm ${selected ? 'bg-secondary-container font-bold text-on-secondary-container' : 'text-on-surface hover:bg-surface-2'}`}>
-                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-on-primary' : 'border-outline'}`}>
+                    <button key={item.id} type="button" onClick={() => toggleThemeList(item.id)} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm cursor-pointer ${selected ? 'bg-primary-subtle font-medium text-on-surface' : 'text-on-surface hover:bg-surface-2'}`}>
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${selected ? 'border-primary bg-primary text-on-primary' : 'border-on-surface-variant/50 bg-surface'}`}>
                         {selected && <Check className="h-3 w-3" />}
                       </span>
                       <span className="truncate">{item.name}</span>
                     </button>
                   );
                 })}
-                {visibleThemeLists.length === 0 && <p className="p-3 text-sm text-on-surface-variant">Không tìm thấy theme list.</p>}
+                {visibleThemeLists.length === 0 && <p className="p-3 text-sm text-on-surface-variant">Không tìm thấy danh sách theme.</p>}
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm font-bold text-on-surface sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-on-surface cursor-pointer sm:col-span-2">
               <input type="checkbox" checked={isLiveView} onChange={event => setIsLiveView(event.target.checked)} className="h-4 w-4 accent-primary" />
               Hiển thị trên Liveview
             </label>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-outline-variant px-6 py-4">
-          <button type="button" onClick={onClose} disabled={loading} className="rounded-lg border border-outline-variant px-4 py-2.5 text-sm font-bold text-on-surface disabled:opacity-50">Hủy</button>
-          <button type="button" onClick={() => void submit()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-on-primary shadow-sm disabled:opacity-50">
-            <Upload className="h-4 w-4" /> {loading ? 'Đang upload...' : 'Upload theme'}
+        <div className="flex justify-end gap-3 border-t border-outline-variant px-5 py-4 sm:px-6">
+          <button type="button" onClick={onClose} disabled={loading} className="btn-secondary">Hủy</button>
+          <button type="button" onClick={() => void submit()} disabled={loading} className="btn-primary">
+            <Upload className="h-4 w-4" /> {loading ? 'Đang tải lên…' : 'Tải theme lên'}
           </button>
         </div>
       </div>

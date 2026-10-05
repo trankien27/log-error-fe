@@ -14,6 +14,7 @@ import { useChatStore } from '../../../stores/useChatStore';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { ChatConversation, ChatMessage, ChatUser } from '../../../types';
+import { PageHeader, EmptyState, ListSkeleton, Skeleton } from '../../../components/ui';
 
 function getChatUserName(user?: ChatUser | null) {
   if (!user) return 'Người dùng';
@@ -97,7 +98,7 @@ export default function ChatTab() {
     });
 
     startConnection().catch((err: any) => {
-      toast.error(err.message || 'Không thể kết nối realtime chat.');
+      toast.error(err.message || 'Không thể kết nối trò chuyện thời gian thực.');
     });
   }, [fetchConversations, startConnection]);
 
@@ -183,12 +184,12 @@ export default function ChatTab() {
         key={message.id}
         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
       >
-        <div className={`max-w-[72%] ${isMine ? 'text-right' : 'text-left'}`}>
+        <div className={`max-w-[80%] sm:max-w-[72%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
           <div
-            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
               isMine
                 ? 'bg-primary text-on-primary rounded-br-md'
-                : 'bg-surface border border-outline-variant text-on-surface rounded-bl-md'
+                : 'bg-surface-2 text-on-surface rounded-bl-md'
             }`}
           >
             {message.deletedAt ? (
@@ -197,7 +198,7 @@ export default function ChatTab() {
               message.content
             )}
           </div>
-          <div className="mt-1 px-1 text-[10px] text-on-surface-variant font-medium">
+          <div className="mt-1 px-1 text-[11px] text-on-surface-variant">
             {formatTime(message.createdAt)}
             {message.editedAt && <span> · đã sửa</span>}
           </div>
@@ -214,46 +215,55 @@ export default function ChatTab() {
   const connectionReady = connection?.state === 'Connected';
 
   return (
-    <div className="h-auto xl:h-[calc(100vh-112px)] min-h-[calc(100dvh-96px)] xl:min-h-[620px] text-left animate-fadeIn">
-      <div className="h-full grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-4">
-        <section className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[340px] xl:min-h-0">
-          <div className="p-4 border-b border-outline-variant space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-bold text-on-surface">Tin nhắn</h2>
-                <p className="text-[11px] text-on-surface-variant mt-0.5">Trao đổi trực tiếp giữa người dùng</p>
-              </div>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold ${
-                  connectionReady
-                    ? 'bg-success-container text-on-success-container border border-success/20'
-                    : 'bg-surface-2 text-on-surface-variant border border-outline-variant'
-                }`}
-                title={connectionReady ? 'SignalR connected' : 'SignalR disconnected'}
-              >
-                {connectionReady ? <Wifi className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
-                {isConnecting ? 'Đang nối' : connectionReady ? 'Realtime' : 'Offline'}
-              </span>
-            </div>
+    <div className="flex flex-col h-auto xl:h-[calc(100vh-112px)] min-h-[calc(100dvh-96px)] xl:min-h-[620px] text-left animate-fadeIn">
+      <PageHeader
+        title="Trò chuyện"
+        description="Nhắn tin trực tiếp với đồng nghiệp."
+        icon={MessageSquare}
+        actions={
+          <span
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium ${
+              connectionReady
+                ? 'bg-success-container text-on-success-container'
+                : 'bg-surface-2 text-on-surface-variant'
+            }`}
+            title={connectionReady ? 'Đã kết nối thời gian thực' : 'Chưa kết nối thời gian thực'}
+          >
+            {isConnecting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : connectionReady ? (
+              <Wifi className="w-3.5 h-3.5" />
+            ) : (
+              <WifiOff className="w-3.5 h-3.5" />
+            )}
+            {isConnecting ? 'Đang kết nối' : connectionReady ? 'Trực tuyến' : 'Ngoại tuyến'}
+          </span>
+        }
+      />
 
+      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[340px_1fr] gap-4">
+        <section className="card-surface overflow-hidden flex flex-col min-h-[340px] xl:min-h-0">
+          <div className="p-3 border-b border-outline-variant space-y-2.5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
               <input
                 value={searchQuery}
                 onChange={event => setSearchQuery(event.target.value)}
-                placeholder="Tìm hội thoại..."
-                className="w-full pl-9 pr-3 py-2.5 bg-surface-2 border border-outline-variant rounded-lg text-xs focus:outline-primary"
+                placeholder="Tìm hội thoại…"
+                aria-label="Tìm hội thoại"
+                className="w-full h-10 pl-9 pr-3 bg-surface-2 border border-transparent rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:bg-surface transition-colors"
               />
             </div>
 
             <div className="relative">
-              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary" />
+              <Plus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
               <select
                 value={selectedReceiverId}
                 onChange={event => handleSelectReceiver(event.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 bg-surface border border-outline-variant rounded-lg text-xs font-semibold focus:outline-primary cursor-pointer"
+                aria-label="Bắt đầu cuộc trò chuyện mới"
+                className="w-full h-10 pl-9 pr-3 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-primary cursor-pointer"
               >
-                <option value="">Tạo chat 1-1 mới</option>
+                <option value="">Cuộc trò chuyện mới</option>
                 {directUsers.map(user => (
                   <option key={user.id} value={user.id}>
                     {user.name} - {user.email}
@@ -263,128 +273,145 @@ export default function ChatTab() {
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="flex-1 min-h-0 overflow-y-auto p-2">
             {isLoadingConversations ? (
-              <div className="py-14 text-center text-xs font-bold text-on-surface-variant">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                Đang tải hội thoại...
-              </div>
+              <ListSkeleton rows={6} className="p-2" />
             ) : filteredConversations.length === 0 ? (
-              <div className="empty-state border-none bg-transparent py-14">
-                <MessageSquare className="w-8 h-8 text-on-surface-variant/50 mb-2" />
-                <p className="text-xs font-semibold text-on-surface-variant">Chưa có hội thoại phù hợp.</p>
-              </div>
+              <EmptyState
+                compact
+                icon={MessageSquare}
+                title={searchQuery.trim() ? 'Không tìm thấy hội thoại' : 'Chưa có hội thoại'}
+                description={searchQuery.trim() ? 'Thử tìm với từ khóa khác.' : 'Chọn một người để bắt đầu trò chuyện.'}
+              />
             ) : (
-              filteredConversations.map(conversation => {
-                const name = getChatUserName(conversation.otherUser);
-                const isActive = conversation.id === activeConversationId;
-                const hasUnread = conversation.unreadCount > 0;
+              <div className="space-y-0.5">
+                {filteredConversations.map(conversation => {
+                  const name = getChatUserName(conversation.otherUser);
+                  const isActive = conversation.id === activeConversationId;
+                  const hasUnread = conversation.unreadCount > 0;
 
-                return (
-                  <button
-                    key={conversation.id}
-                    onClick={() => handleSelectConversation(conversation)}
-                    className={`w-full px-4 py-3 flex gap-3 text-left border-b border-outline-variant/40 transition-colors cursor-pointer ${
-                      isActive ? 'bg-primary/10' : 'hover:bg-surface-2'
-                    }`}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-black shrink-0">
-                      {getInitials(name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className={`text-sm text-on-surface truncate ${hasUnread ? 'font-black' : 'font-bold'}`}>{name}</p>
-                        <span className={`text-[10px] shrink-0 ${hasUnread ? 'font-black text-primary' : 'text-on-surface-variant'}`}>
-                          {formatTime(conversation.lastMessage?.createdAt || conversation.updatedAt)}
-                        </span>
+                  return (
+                    <button
+                      key={conversation.id}
+                      type="button"
+                      onClick={() => handleSelectConversation(conversation)}
+                      className={`w-full px-3 py-2.5 flex items-center gap-3 text-left rounded-xl transition-colors cursor-pointer ${
+                        isActive ? 'bg-primary-subtle' : 'hover:bg-surface-2'
+                      }`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
+                        isActive ? 'bg-primary text-on-primary' : 'bg-secondary-container text-on-secondary-container'
+                      }`}>
+                        {getInitials(name)}
                       </div>
-                      <p className={`text-xs truncate mt-0.5 ${hasUnread ? 'font-black text-on-surface' : 'text-on-surface-variant'}`}>
-                        {conversation.lastMessage?.content || conversation.otherUser?.email || 'Chưa có tin nhắn'}
-                      </p>
-                    </div>
-                    {hasUnread && (
-                      <span className="self-center bg-primary text-on-primary text-[10px] font-bold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center">
-                        {conversation.unreadCount}
-                      </span>
-                    )}
-                  </button>
-                );
-              })
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`text-sm truncate ${hasUnread ? 'font-semibold text-on-surface' : 'font-medium text-on-surface'}`}>{name}</p>
+                          <span className={`text-[11px] shrink-0 ${hasUnread ? 'font-medium text-primary' : 'text-on-surface-variant'}`}>
+                            {formatTime(conversation.lastMessage?.createdAt || conversation.updatedAt)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-0.5">
+                          <p className={`text-xs truncate ${hasUnread ? 'font-medium text-on-surface' : 'text-on-surface-variant'}`}>
+                            {conversation.lastMessage?.content || conversation.otherUser?.email || 'Chưa có tin nhắn'}
+                          </p>
+                          {hasUnread && (
+                            <span className="shrink-0 bg-primary text-on-primary text-[11px] font-semibold min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center">
+                              {conversation.unreadCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
         </section>
 
-        <section className="bg-surface-2 border border-outline-variant rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[460px] xl:min-h-0">
-          <header className="h-[68px] bg-surface border-b border-outline-variant px-5 py-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-black shrink-0">
-                {getInitials(activeTitle)}
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-bold text-on-surface truncate">{activeTitle}</h3>
-                <p className="text-[11px] text-on-surface-variant truncate">
-                  {activeConversation?.otherUser?.email || selectedReceiver?.email || 'Chọn người nhận để bắt đầu'}
-                </p>
-              </div>
+        <section className="card-surface overflow-hidden flex flex-col min-h-[460px] xl:min-h-0">
+          {!receiverId ? (
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                icon={MessageSquare}
+                title="Chưa chọn cuộc trò chuyện"
+                description="Chọn một hội thoại bên trái hoặc bắt đầu cuộc trò chuyện mới."
+              />
             </div>
-            {activeConversationId && (
-              <button
-                onClick={() => markAsRead(activeConversationId).catch((err: any) => toast.error(err.message))}
-                className="inline-flex items-center gap-1.5 px-3 py-2 border border-outline-variant rounded-lg text-xs font-bold text-primary bg-surface hover:bg-primary/10 transition-colors cursor-pointer"
-              >
-                <CheckCheck className="w-4 h-4" />
-                Đã đọc
-              </button>
-            )}
-          </header>
-
-          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-3">
-            {!receiverId ? (
-              <div className="h-full flex items-center justify-center text-center">
-                <div>
-                  <MessageSquare className="w-10 h-10 text-on-surface-variant/40 mx-auto mb-3" />
-                  <p className="text-sm font-bold text-on-surface-variant">Chọn hội thoại hoặc người nhận mới</p>
+          ) : (
+            <>
+              <header className="min-h-[64px] border-b border-outline-variant px-4 sm:px-5 py-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-xs font-semibold shrink-0">
+                    {getInitials(activeTitle)}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-[15px] font-semibold text-on-surface truncate">{activeTitle}</h3>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {activeConversation?.otherUser?.email || selectedReceiver?.email || 'Bắt đầu cuộc trò chuyện mới'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : isLoadingMessages && activeConversationId ? (
-              <div className="py-14 text-center text-xs font-bold text-on-surface-variant">
-                <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                Đang tải tin nhắn...
-              </div>
-            ) : activeMessages.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-center">
-                <p className="text-sm font-semibold text-on-surface-variant">Chưa có tin nhắn trong hội thoại này.</p>
-              </div>
-            ) : (
-              activeMessages.map(renderMessage)
-            )}
-            <div ref={messagesEndRef} />
-          </div>
+                {activeConversationId && (
+                  <button
+                    type="button"
+                    onClick={() => markAsRead(activeConversationId).catch((err: any) => toast.error(err.message))}
+                    className="btn-ghost h-8 px-3 text-sm"
+                    title="Đánh dấu đã đọc"
+                  >
+                    <CheckCheck className="w-4 h-4" />
+                    <span className="hidden sm:inline">Đã đọc</span>
+                  </button>
+                )}
+              </header>
 
-          <form onSubmit={handleSubmit} className="bg-surface border-t border-outline-variant p-3 sm:p-4 flex flex-col sm:flex-row sm:items-end gap-3">
-            <textarea
-              value={content}
-              onChange={event => setContent(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  handleSubmit(event);
-                }
-              }}
-              disabled={!receiverId || isSending}
-              rows={2}
-              placeholder={receiverId ? 'Nhập tin nhắn...' : 'Chọn người nhận trước khi gửi'}
-              className="flex-1 resize-none rounded-lg border border-outline-variant bg-surface-2 px-3 py-2 text-sm focus:outline-primary disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={!receiverId || !content.trim() || isSending}
-              className="btn-primary h-10 w-full sm:w-auto px-4"
-            >
-              {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              Gửi
-            </button>
-          </form>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-5 py-4 space-y-3">
+                {isLoadingMessages && activeConversationId ? (
+                  <div className="space-y-4" aria-busy="true" aria-label="Đang tải tin nhắn">
+                    <Skeleton className="h-10 w-2/5 rounded-2xl" />
+                    <Skeleton className="h-10 w-1/2 rounded-2xl ml-auto" />
+                    <Skeleton className="h-14 w-3/5 rounded-2xl" />
+                    <Skeleton className="h-10 w-1/3 rounded-2xl ml-auto" />
+                  </div>
+                ) : activeMessages.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <EmptyState compact icon={MessageSquare} title="Chưa có tin nhắn" description="Gửi lời chào để bắt đầu nhé." />
+                  </div>
+                ) : (
+                  activeMessages.map(renderMessage)
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <form onSubmit={handleSubmit} className="border-t border-outline-variant p-3 sm:p-4 flex items-end gap-2">
+                <textarea
+                  value={content}
+                  onChange={event => setContent(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      handleSubmit(event);
+                    }
+                  }}
+                  disabled={!receiverId || isSending}
+                  rows={1}
+                  aria-label="Nội dung tin nhắn"
+                  placeholder="Nhập tin nhắn… (Shift + Enter để xuống dòng)"
+                  className="flex-1 min-h-[44px] max-h-40 resize-none rounded-xl border border-outline-variant bg-surface-2 px-4 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary focus:bg-surface transition-colors disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={!receiverId || !content.trim() || isSending}
+                  className="h-11 w-11 shrink-0 inline-flex items-center justify-center rounded-xl bg-primary text-on-primary hover:bg-primary-hover active:bg-primary-active transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Gửi tin nhắn"
+                  title="Gửi tin nhắn"
+                >
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </button>
+              </form>
+            </>
+          )}
         </section>
       </div>
     </div>
