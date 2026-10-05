@@ -13,17 +13,17 @@ export default function AutoArrangeSummaryPanel({ summary, warnings, conflicts }
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Statistic title="CoverageRate" value={summary.coverageRate} suffix="%" precision={1} />
+        <Statistic title="Tỷ lệ phủ ca" value={summary.coverageRate} suffix="%" precision={1} />
         <Statistic title="Ca đủ người" value={summary.enoughShiftCount} />
         <Statistic title="Ca thiếu người" value={summary.understaffedShiftCount} />
-        <Statistic title="NV thiếu giờ" value={summary.underTargetEmployeeCount} />
-        <Statistic title="NV vượt giờ" value={summary.overTargetEmployeeCount} />
+        <Statistic title="Nhân viên thiếu giờ" value={summary.underTargetEmployeeCount} />
+        <Statistic title="Nhân viên vượt giờ" value={summary.overTargetEmployeeCount} />
       </div>
       {warnings.length > 0 && (
         <Alert
           type="warning"
           showIcon
-          message="Cảnh báo preview"
+          message="Cảnh báo"
           description={<ul className="pl-4 list-disc">{warnings.map(item => <li key={item}>{item}</li>)}</ul>}
         />
       )}

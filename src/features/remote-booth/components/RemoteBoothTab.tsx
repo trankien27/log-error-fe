@@ -14,6 +14,7 @@ import {
   remoteDeployService,
 } from '../../../services/api/remoteDeployService';
 import { boothsService } from '../../../services/api/boothsService';
+import { EmptyState, FilterBar, PageHeader, Skeleton, TableSkeletonRows, confirmAction } from '../../../components/ui';
 
 type TaskOption = {
   value: RemoteDeployTaskType;
@@ -31,10 +32,10 @@ type MultiDeployResult = {
 };
 
 const taskOptions: TaskOption[] = [
-  { value: 'update-version', label: 'Update Version' },
-  { value: 'fs-async-transaction', label: 'Deploy FSAsyncTransaction' },
-  { value: 'fs-update-sync', label: 'Deploy FSUpdateSync' },
-  { value: 'app-form', label: 'Deploy AppForm' },
+  { value: 'update-version', label: 'Cập nhật phiên bản' },
+  { value: 'fs-async-transaction', label: 'Triển khai FSAsyncTransaction' },
+  { value: 'fs-update-sync', label: 'Triển khai FSUpdateSync' },
+  { value: 'app-form', label: 'Triển khai AppForm' },
 ];
 
 // URL goi cai dat agent moi (GitHub Release). Task UPDATE_AGENT_SERVICE se tai ban nay,
@@ -43,24 +44,24 @@ const DEFAULT_AGENT_RELEASE_URL = 'https://github.com/trankien27/fun-agent/relea
 const MACHINE_PAGE_SIZE = 30;
 
 const endpointLabels: Record<RemoteDeployTaskType, string> = {
-  'update-version': 'Update Version',
+  'update-version': 'Cập nhật phiên bản',
   'fs-async-transaction': 'FSAsyncTransaction',
   'fs-update-sync': 'FSUpdateSync',
   'app-form': 'AppForm',
 };
 
 const taskTypeLabels: Record<string, string> = {
-  UPDATE_VERSION: 'Update Version',
-  DEPLOY_FS_ASYNC_TRANSACTION: 'Deploy FSAsyncTransaction',
-  DEPLOY_FS_UPDATE_SYNC: 'Deploy FSUpdateSync',
-  DEPLOY_APP_FORM: 'Deploy AppForm',
+  UPDATE_VERSION: 'Cập nhật phiên bản',
+  DEPLOY_FS_ASYNC_TRANSACTION: 'Triển khai FSAsyncTransaction',
+  DEPLOY_FS_UPDATE_SYNC: 'Triển khai FSUpdateSync',
+  DEPLOY_APP_FORM: 'Triển khai AppForm',
   RUN_POWERSHELL_ADMIN: 'PowerShell Admin',
   RUN_POWERSHELL_USER: 'PowerShell User',
   RUN_POWERSHELL_FILE_ADMIN: 'PowerShell File Admin',
   RUN_POWERSHELL_FILE_USER: 'PowerShell File User',
   GET_TRANSACTIONS: 'Lấy giao dịch',
-  PRINT_IMAGE: 'Print Image',
-  UPDATE_AGENT_SERVICE: 'Update Agent Service',
+  PRINT_IMAGE: 'In ảnh',
+  UPDATE_AGENT_SERVICE: 'Cập nhật agent',
 };
 
 const priorityTransactionColumns = [
@@ -108,8 +109,8 @@ const getMachineStatusLabel = (machine: RemoteMachine) => (
 
 const getMachineStatusClass = (machine: RemoteMachine) => (
   isMachineOnline(machine)
-    ? 'bg-success-container text-success'
-    : 'bg-error-container text-error'
+    ? 'bg-success-container text-on-success-container'
+    : 'bg-error-container text-on-error-container'
 );
 
 const getMachineLastSeenLabel = (machine: RemoteMachine) => (
@@ -118,9 +119,9 @@ const getMachineLastSeenLabel = (machine: RemoteMachine) => (
 
 const getHistoryStatusClass = (status: string) => {
   const normalized = status.toUpperCase();
-  if (normalized === 'SUCCESS' || normalized === 'COMPLETED') return 'bg-success-container text-success';
-  if (normalized === 'FAILED' || normalized === 'TIMED_OUT') return 'bg-error-container text-error';
-  return 'bg-secondary-container text-primary';
+  if (normalized === 'SUCCESS' || normalized === 'COMPLETED') return 'bg-success-container text-on-success-container';
+  if (normalized === 'FAILED' || normalized === 'TIMED_OUT') return 'bg-error-container text-on-error-container';
+  return 'bg-secondary-container text-on-secondary-container';
 };
 
 const getHistoryTaskLabel = (item: RemoteTaskHistoryItem) => (
@@ -472,10 +473,10 @@ export default function RemoteBoothTab() {
       setDeployResult(result);
       setDeployError('');
       historyQuery.refetch();
-      toast.success('Đã gửi task deploy.');
+      toast.success('Đã gửi tác vụ triển khai.');
     },
     onError: error => {
-      const message = getErrorMessage(error, 'Không thể gửi task deploy.');
+      const message = getErrorMessage(error, 'Không thể gửi tác vụ triển khai.');
       setDeployError(message);
       setDeployResult(null);
       toast.error(message);
@@ -489,7 +490,7 @@ export default function RemoteBoothTab() {
       setDeployResult(result);
       setDeployError('');
       historyQuery.refetch();
-      toast.success('Đã gửi task cập nhật agent. Theo dõi kết quả SUCCESS/FAILED ở bảng Lịch sử.');
+      toast.success('Đã gửi lệnh cập nhật agent. Theo dõi kết quả trong Lịch sử tác vụ.');
     },
     onError: error => {
       const message = getErrorMessage(error, 'Không thể gửi task cập nhật agent.');
@@ -524,7 +525,7 @@ export default function RemoteBoothTab() {
               machineCode: machine.machineCode,
               boothName: getMachineBoothName(machine),
               ok: false,
-              error: getErrorMessage(error, 'Không thể gửi task deploy.'),
+              error: getErrorMessage(error, 'Không thể gửi tác vụ triển khai.'),
             } satisfies MultiDeployResult;
           }
         }),
@@ -536,10 +537,10 @@ export default function RemoteBoothTab() {
       setDeployError('');
       historyQuery.refetch();
       const okCount = results.filter(result => result.ok).length;
-      toast.success(`Đã gửi deploy tới ${okCount}/${results.length} booth.`);
+      toast.success(`Đã gửi tới ${okCount}/${results.length} booth.`);
     },
     onError: error => {
-      const message = getErrorMessage(error, 'Không thể gửi multi deploy.');
+      const message = getErrorMessage(error, 'Không thể triển khai hàng loạt.');
       setDeployError(message);
       setMultiDeployResults([]);
       toast.error(message);
@@ -578,7 +579,7 @@ export default function RemoteBoothTab() {
       setDeployResult(result);
       setDeployError('');
       historyQuery.refetch();
-      toast.success('Đã gửi task PowerShell.');
+      toast.success('Đã gửi lệnh PowerShell.');
     },
     onError: error => {
       const message = getErrorMessage(error, 'Không thể gửi task PowerShell.');
@@ -653,7 +654,7 @@ export default function RemoteBoothTab() {
     mutationFn: remoteDeployService.getTaskStatus,
     onSuccess: result => {
       setDeployResult(result);
-      toast.success('Đã tải trạng thái task.');
+      toast.success('Đã cập nhật trạng thái.');
     },
     onError: error => {
       toast.error(getErrorMessage(error, 'Không thể kiểm tra trạng thái task.'));
@@ -704,15 +705,18 @@ export default function RemoteBoothTab() {
     }
   };
 
-  const confirmUpdateAgentService = (machine: RemoteMachine) => {
+  const confirmUpdateAgentService = async (machine: RemoteMachine) => {
     if (updateAgentServiceMutation.isPending) return;
 
     const boothLabel = getMachineBoothName(machine) || machine.machineCode;
-    const confirmed = window.confirm(
-      `Cập nhật agent trên "${boothLabel}"?\n\n` +
-        'Agent sẽ tải bản mới, tự dừng service, thay file rồi khởi động lại. ' +
-        'Quá trình restart diễn ra sau vài giây; xác nhận bản mới qua version agent trong danh sách booth.',
-    );
+    const confirmed = await confirmAction({
+      title: `Cập nhật agent trên "${boothLabel}"?`,
+      content:
+        'Agent sẽ tải bản mới, tự dừng service, thay file rồi khởi động lại sau vài giây. ' +
+        'Bạn có thể kiểm tra phiên bản agent mới trong danh sách booth.',
+      okText: 'Cập nhật',
+      danger: false,
+    });
     if (!confirmed) return;
 
     setSelectedMachine(machine);
@@ -751,7 +755,7 @@ export default function RemoteBoothTab() {
     }
 
     if (action === 'update-agent') {
-      confirmUpdateAgentService(machine);
+      void confirmUpdateAgentService(machine);
       return;
     }
 
@@ -785,7 +789,7 @@ export default function RemoteBoothTab() {
   const toggleMachineSelection = (machineCode: string) => {
     const machine = machines.find(item => item.machineCode === machineCode);
     if (machine && !isMachineOnline(machine)) {
-      toast.error('Booth đang offline, không thể chọn deploy.');
+      toast.error('Booth đang offline, không thể chọn.');
       return;
     }
 
@@ -987,66 +991,25 @@ export default function RemoteBoothTab() {
   const resultStatus = deployResult?.completed?.status || deployResult?.state?.status || deployResult?.status;
   const resultPayload = deployResult?.completed || deployResult?.state || deployResult?.result || deployResult;
 
+  const selectClass =
+    'h-9 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface cursor-pointer disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-on-surface-variant';
+  const thClass = 'px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60';
+
   return (
-    <div className="space-y-5 sm:space-y-6 text-left animate-fadeIn">
-      <div className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">Remote Booth</h2>
-          <p className="text-xs text-on-surface-variant mt-1">Theo dõi agent booth đang online và gửi gói deploy từ xa.</p>
-        </div>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(260px,420px)_minmax(180px,240px)]">
-            <label className="relative block w-full">
-              <span className="sr-only">Tìm booth remote</span>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-              <input
-                value={machineSearch}
-                onChange={event => {
-                  setMachineSearch(event.target.value);
-                  setMachinePageIndex(1);
-                }}
-                placeholder="Tìm tên booth hoặc mã booth..."
-                className="w-full h-11 sm:h-10 pl-9 pr-9 border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary text-sm sm:text-xs font-medium placeholder:text-on-surface-variant"
-              />
-              {machineSearch && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMachineSearch('');
-                    setMachinePageIndex(1);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-2 inline-flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  aria-label="Xóa tìm kiếm"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </label>
-            <select
-              value={storeFilter}
-              onChange={event => {
-                setStoreFilter(event.target.value);
-                setMachinePageIndex(1);
-              }}
-              className="h-11 sm:h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm sm:text-xs font-bold text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-              aria-label="Lọc booth theo store"
-            >
-              <option value="">Tất cả store</option>
-              {storeOptions.map(store => (
-                <option key={store.value} value={store.value}>
-                  {store.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
+    <div className="space-y-5 text-left animate-fadeIn">
+      <PageHeader
+        title="Điều khiển từ xa"
+        icon={RadioTower}
+        description="Theo dõi agent tại booth và gửi tác vụ từ xa."
+        actions={
+          <>
             <button
               type="button"
               onClick={() => {
                 setIsHistoryModalOpen(true);
                 historyQuery.refetch();
               }}
-              className="h-11 sm:h-10 bg-surface border border-outline-variant text-on-surface-variant hover:bg-surface-2 px-4 rounded-lg text-sm sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="btn-secondary"
             >
               <History className="w-4 h-4" />
               Lịch sử tác vụ
@@ -1055,112 +1018,163 @@ export default function RemoteBoothTab() {
               type="button"
               onClick={openMultiDeployPanel}
               disabled={selectedMachines.length === 0}
-              className="btn-primary h-11 sm:h-10 text-sm sm:text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="btn-primary"
             >
               <ClipboardList className="w-4 h-4" />
-              Deploy ({selectedMachines.length})
+              Triển khai ({selectedMachines.length})
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
+
+      <FilterBar>
+        <label className="relative block w-full sm:w-96">
+          <span className="sr-only">Tìm booth</span>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+          <input
+            value={machineSearch}
+            onChange={event => {
+              setMachineSearch(event.target.value);
+              setMachinePageIndex(1);
+            }}
+            placeholder="Tìm tên booth hoặc mã máy..."
+            className="w-full h-9 pl-9 pr-9 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant"
+          />
+          {machineSearch && (
+            <button
+              type="button"
+              onClick={() => {
+                setMachineSearch('');
+                setMachinePageIndex(1);
+              }}
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-2 inline-flex items-center justify-center"
+              aria-label="Xóa tìm kiếm"
+              title="Xóa tìm kiếm"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </label>
+        <select
+          value={storeFilter}
+          onChange={event => {
+            setStoreFilter(event.target.value);
+            setMachinePageIndex(1);
+          }}
+          className={`${selectClass} w-full sm:w-60`}
+          aria-label="Lọc booth theo cửa hàng"
+        >
+          <option value="">Tất cả cửa hàng</option>
+          {storeOptions.map(store => (
+            <option key={store.value} value={store.value}>
+              {store.label}
+            </option>
+          ))}
+        </select>
+      </FilterBar>
 
       {selectedMachines.length > 0 && (
-        <div className="bg-surface-2 border border-outline-variant rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-          <span className="font-bold text-on-surface-variant">Đã chọn {selectedMachines.length} booth để multi deploy.</span>
+        <div className="bg-primary-subtle rounded-xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
+          <span className="font-medium text-on-surface">Đã chọn {selectedMachines.length} booth để triển khai hàng loạt.</span>
           <button
             type="button"
             onClick={() => setSelectedMachineCodes([])}
-            className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer"
+            className="btn-ghost h-8 px-3"
           >
-            Bỏ chọn tất cả
+            Bỏ chọn
           </button>
         </div>
       )}
 
-      <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <div className="card-surface overflow-hidden">
         <div className="hidden lg:block overflow-x-auto">
-          <table className="w-full min-w-[1160px] text-left text-xs border-collapse">
+          <table className="w-full min-w-[1160px] text-left text-sm border-collapse">
             <thead>
-              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold select-none font-sans">
-                <th className="py-4 px-5 w-12">
+              <tr className="border-b border-outline-variant select-none">
+                <th className={`${thClass} w-12`}>
                   <input
                     type="checkbox"
                     checked={allFilteredSelected}
                     onChange={toggleAllFilteredMachines}
                     disabled={onlineFilteredMachines.length === 0}
-                    className="h-6 w-6 accent-primary cursor-pointer disabled:cursor-not-allowed"
+                    className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed"
                     aria-label="Chọn tất cả booth đang lọc"
                   />
                 </th>
-                <th className="py-4 px-5">MachineCode</th>
-                <th className="py-4 px-5">Tên Booth</th>
-                <th className="py-4 px-5">AgentVersion</th>
-                <th className="py-4 px-5">ConnectedAt</th>
-                <th className="py-4 px-5">ConnectionId</th>
-                <th className="py-4 px-5">Status</th>
-                <th className="py-4 px-5 text-right w-64">Action</th>
+                <th className={thClass}>Mã máy</th>
+                <th className={thClass}>Tên booth</th>
+                <th className={thClass}>Phiên bản agent</th>
+                <th className={thClass}>Kết nối lúc</th>
+                <th className={thClass}>Connection ID</th>
+                <th className={thClass}>Trạng thái</th>
+                <th className={`${thClass} text-right w-56`}>Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/40">
+            <tbody className="divide-y divide-outline-variant">
               {machinesQuery.isLoading ? (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center font-sans font-bold text-on-surface-variant">
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                    Đang tải danh sách Booth Agent...
-                  </td>
-                </tr>
+                <TableSkeletonRows rows={6} columns={8} />
               ) : machinesQuery.isError ? (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center font-sans font-bold text-error">
-                    <AlertCircle className="w-5 h-5 mx-auto mb-2" />
-                    {getErrorMessage(machinesQuery.error, 'Không thể tải danh sách Booth Agent.')}
+                  <td colSpan={8}>
+                    <EmptyState
+                      compact
+                      icon={AlertCircle}
+                      title="Không thể tải danh sách booth"
+                      description={getErrorMessage(machinesQuery.error, 'Vui lòng thử lại.')}
+                    />
                   </td>
                 </tr>
               ) : machines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center">
-                    <RadioTower className="w-8 h-8 mx-auto mb-3 text-on-surface-variant" />
-                    <p className="font-bold text-on-surface-variant">Chưa có booth nào.</p>
-                    <p className="text-xs text-on-surface-variant mt-1">Bấm Sync Booth hoặc kiểm tra cấu hình danh sách booth.</p>
+                  <td colSpan={8}>
+                    <EmptyState
+                      compact
+                      icon={RadioTower}
+                      title="Chưa có booth nào"
+                      description="Hãy đồng bộ booth hoặc kiểm tra cấu hình agent."
+                    />
                   </td>
                 </tr>
               ) : filteredMachines.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center">
-                    <Search className="w-8 h-8 mx-auto mb-3 text-on-surface-variant" />
-                    <p className="font-bold text-on-surface-variant">Không tìm thấy booth phù hợp.</p>
-                    <p className="text-xs text-on-surface-variant mt-1">Thử tìm theo tên booth, MachineCode hoặc phiên bản agent.</p>
+                  <td colSpan={8}>
+                    <EmptyState
+                      compact
+                      icon={Search}
+                      title="Không tìm thấy booth phù hợp"
+                      description="Thử tìm theo tên booth, mã máy hoặc phiên bản agent."
+                    />
                   </td>
                 </tr>
               ) : (
                 pagedMachines.map(machine => (
-                  <tr key={machine.connectionId || machine.machineCode} className="hover:bg-surface-2 transition-colors group">
-                    <td className="py-4 px-5">
+                  <tr key={machine.connectionId || machine.machineCode} className="hover:bg-surface-2/50 transition-colors group">
+                    <td className="px-4 py-3">
                       <input
                         type="checkbox"
                         checked={selectedMachineCodeSet.has(machine.machineCode)}
                         onChange={() => toggleMachineSelection(machine.machineCode)}
                         disabled={!isMachineOnline(machine)}
-                        className="h-6 w-6 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                        className="h-4 w-4 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Chọn booth ${machine.machineCode}`}
                       />
                     </td>
-                    <td className="py-4 px-5 font-mono font-bold text-primary text-sm">{machine.machineCode}</td>
-                    <td className="py-4 px-5 font-semibold text-on-surface">
-                      {getMachineBoothName(machine) || <span className="text-on-surface-variant font-medium">N/A</span>}
+                    <td className="px-4 py-3 font-mono font-medium text-primary">{machine.machineCode}</td>
+                    <td className="px-4 py-3 font-medium text-on-surface">
+                      {getMachineBoothName(machine) || <span className="text-on-surface-variant font-normal">—</span>}
                     </td>
-                    <td className="py-4 px-5 font-mono text-on-surface-variant">{machine.agentVersion || 'N/A'}</td>
-                    <td className="py-4 px-5 text-on-surface-variant font-medium">{getMachineLastSeenLabel(machine)}</td>
-                    <td className="py-4 px-5 font-mono text-[11px] text-on-surface-variant max-w-[280px] truncate" title={machine.connectionId}>
+                    <td className="px-4 py-3 font-mono text-xs text-on-surface-variant">{machine.agentVersion || '—'}</td>
+                    <td className="px-4 py-3 text-on-surface-variant tabular-nums">{getMachineLastSeenLabel(machine)}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-on-surface-variant max-w-[260px] truncate" title={machine.connectionId}>
                       {machine.connectionId}
                     </td>
-                    <td className="py-4 px-5">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold ${getMachineStatusClass(machine)}`}>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${getMachineStatusClass(machine)}`}>
                         {isMachineOnline(machine) ? <CheckCircle2 className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
                         {getMachineStatusLabel(machine)}
                       </span>
                     </td>
-                    <td className="py-4 px-5">
+                    <td className="px-4 py-3">
                       <select
                         value=""
                         onChange={event => {
@@ -1168,14 +1182,14 @@ export default function RemoteBoothTab() {
                           event.currentTarget.value = '';
                         }}
                         disabled={!isMachineOnline(machine)}
-                        className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-xs font-bold text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-on-surface-variant"
+                        className={`${selectClass} w-full`}
                         aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                       >
                         <option value="">{isMachineOnline(machine) ? 'Chọn thao tác' : 'Booth offline'}</option>
-                        <option value="deploy">Deploy</option>
+                        <option value="deploy">Triển khai</option>
                         <option value="powershell">PowerShell</option>
-                        <option value="update-agent">Update Agent Service</option>
-                        <option value="print">Print Image</option>
+                        <option value="update-agent">Cập nhật agent</option>
+                        <option value="print">In ảnh</option>
                       </select>
                     </td>
                   </tr>
@@ -1186,45 +1200,54 @@ export default function RemoteBoothTab() {
         </div>
 
         <div className="lg:hidden">
-          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant bg-surface-2">
-            <label className="flex items-center gap-2 text-sm font-bold text-on-surface-variant">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-outline-variant bg-surface-2/60">
+            <label className="flex items-center gap-2 text-sm font-medium text-on-surface">
               <input
                 type="checkbox"
                 checked={allFilteredSelected}
                 onChange={toggleAllFilteredMachines}
                 disabled={onlineFilteredMachines.length === 0}
-                className="h-6 w-6 accent-primary cursor-pointer disabled:cursor-not-allowed"
+                className="h-5 w-5 accent-primary cursor-pointer disabled:cursor-not-allowed"
                 aria-label="Chọn tất cả booth đang lọc"
               />
               Chọn tất cả
             </label>
-            <span className="text-xs font-bold text-on-surface-variant">{filteredMachines.length}/{machines.length} booth</span>
+            <span className="text-xs text-on-surface-variant">{filteredMachines.length}/{machines.length} booth</span>
           </div>
 
           {machinesQuery.isLoading ? (
-            <div className="py-10 text-center font-sans font-bold text-on-surface-variant">
-              <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-              Đang tải danh sách Booth Agent...
+            <div className="p-4 space-y-4" aria-busy="true" aria-label="Đang tải">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="space-y-2">
+                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ))}
             </div>
           ) : machinesQuery.isError ? (
-            <div className="py-10 text-center font-sans font-bold text-error px-4">
-              <AlertCircle className="w-5 h-5 mx-auto mb-2" />
-              {getErrorMessage(machinesQuery.error, 'Không thể tải danh sách Booth Agent.')}
-            </div>
+            <EmptyState
+              compact
+              icon={AlertCircle}
+              title="Không thể tải danh sách booth"
+              description={getErrorMessage(machinesQuery.error, 'Vui lòng thử lại.')}
+            />
           ) : machines.length === 0 ? (
-            <div className="py-12 text-center px-4">
-              <RadioTower className="w-8 h-8 mx-auto mb-3 text-on-surface-variant" />
-              <p className="font-bold text-on-surface-variant">Chưa có booth nào.</p>
-              <p className="text-xs text-on-surface-variant mt-1">Bấm Sync Booth hoặc kiểm tra cấu hình danh sách booth.</p>
-            </div>
+            <EmptyState
+              compact
+              icon={RadioTower}
+              title="Chưa có booth nào"
+              description="Hãy đồng bộ booth hoặc kiểm tra cấu hình agent."
+            />
           ) : filteredMachines.length === 0 ? (
-            <div className="py-12 text-center px-4">
-              <Search className="w-8 h-8 mx-auto mb-3 text-on-surface-variant" />
-              <p className="font-bold text-on-surface-variant">Không tìm thấy booth phù hợp.</p>
-              <p className="text-xs text-on-surface-variant mt-1">Thử tìm theo tên booth, MachineCode hoặc phiên bản agent.</p>
-            </div>
+            <EmptyState
+              compact
+              icon={Search}
+              title="Không tìm thấy booth phù hợp"
+              description="Thử tìm theo tên booth, mã máy hoặc phiên bản agent."
+            />
           ) : (
-            <div className="divide-y divide-outline-variant/40">
+            <div className="divide-y divide-outline-variant">
               {pagedMachines.map(machine => (
                 <article key={machine.connectionId || machine.machineCode} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
@@ -1234,30 +1257,30 @@ export default function RemoteBoothTab() {
                         checked={selectedMachineCodeSet.has(machine.machineCode)}
                         onChange={() => toggleMachineSelection(machine.machineCode)}
                         disabled={!isMachineOnline(machine)}
-                        className="h-6 w-6 mt-0.5 accent-primary cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
+                        className="h-5 w-5 mt-0.5 accent-primary cursor-pointer shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`Chọn booth ${machine.machineCode}`}
                       />
                       <span className="min-w-0">
-                        <span className="block font-mono font-bold text-primary text-sm truncate">{machine.machineCode}</span>
-                        <span className="block text-sm font-semibold text-on-surface truncate">
-                          {getMachineBoothName(machine) || 'N/A'}
+                        <span className="block font-mono font-medium text-primary text-sm truncate">{machine.machineCode}</span>
+                        <span className="block text-sm font-medium text-on-surface truncate">
+                          {getMachineBoothName(machine) || '—'}
                         </span>
                       </span>
                     </label>
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-xs shrink-0 ${getMachineStatusClass(machine)}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium text-xs shrink-0 ${getMachineStatusClass(machine)}`}>
                       {isMachineOnline(machine) ? <CheckCircle2 className="w-3.5 h-3.5" /> : <WifiOff className="w-3.5 h-3.5" />}
                       {getMachineStatusLabel(machine)}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-lg bg-surface-2 border border-outline-variant p-2 min-w-0">
-                      <p className="text-on-surface-variant font-bold uppercase">Version</p>
-                      <p className="font-mono font-semibold text-on-surface-variant truncate">{machine.agentVersion || 'N/A'}</p>
+                    <div className="rounded-lg bg-surface-2 p-2 min-w-0">
+                      <p className="text-on-surface-variant">Phiên bản</p>
+                      <p className="font-mono font-medium text-on-surface truncate">{machine.agentVersion || '—'}</p>
                     </div>
-                    <div className="rounded-lg bg-surface-2 border border-outline-variant p-2 min-w-0">
-                      <p className="text-on-surface-variant font-bold uppercase">Connected</p>
-                      <p className="font-semibold text-on-surface-variant truncate">{getMachineLastSeenLabel(machine)}</p>
+                    <div className="rounded-lg bg-surface-2 p-2 min-w-0">
+                      <p className="text-on-surface-variant">Kết nối lúc</p>
+                      <p className="font-medium text-on-surface truncate">{getMachineLastSeenLabel(machine)}</p>
                     </div>
                   </div>
 
@@ -1268,14 +1291,14 @@ export default function RemoteBoothTab() {
                       event.currentTarget.value = '';
                     }}
                     disabled={!isMachineOnline(machine)}
-                    className="h-11 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm font-bold text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-on-surface-variant"
+                    className={`${selectClass} h-10 w-full`}
                     aria-label={`Chọn thao tác cho booth ${machine.machineCode}`}
                   >
                     <option value="">{isMachineOnline(machine) ? 'Chọn thao tác' : 'Booth offline'}</option>
-                    <option value="deploy">Deploy</option>
+                    <option value="deploy">Triển khai</option>
                     <option value="powershell">PowerShell</option>
-                    <option value="update-agent">Update Agent Service</option>
-                    <option value="print">Print Image</option>
+                    <option value="update-agent">Cập nhật agent</option>
+                    <option value="print">In ảnh</option>
                   </select>
                 </article>
               ))}
@@ -1284,11 +1307,11 @@ export default function RemoteBoothTab() {
         </div>
 
         {!machinesQuery.isLoading && !machinesQuery.isError && filteredMachines.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-outline-variant bg-surface-2 px-4 py-3 text-xs font-semibold text-on-surface-variant sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-t border-outline-variant px-4 py-3 text-sm text-on-surface-variant sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Hiển thị {machinePageStart}-{machinePageEnd} của {filteredMachines.length} booth
+              {machinePageStart}–{machinePageEnd} / {filteredMachines.length} booth
               {onlineFilteredMachines.length !== filteredMachines.length
-                ? ` · ${onlineFilteredMachines.length} online có thể thao tác`
+                ? ` · ${onlineFilteredMachines.length} đang online`
                 : ''}
             </span>
             <div className="flex items-center justify-between gap-2 sm:justify-end">
@@ -1296,19 +1319,19 @@ export default function RemoteBoothTab() {
                 type="button"
                 onClick={() => setMachinePageIndex(page => Math.max(1, page - 1))}
                 disabled={safeMachinePageIndex <= 1}
-                className="h-9 rounded-lg border border-outline-variant bg-surface px-3 font-bold text-on-surface-variant hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-8 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface hover:bg-surface-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-45"
                 aria-label="Trang booth trước"
               >
                 Trước
               </button>
-              <span className="min-w-20 text-center text-on-surface-variant">
+              <span className="min-w-20 text-center tabular-nums">
                 Trang {safeMachinePageIndex}/{machineTotalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setMachinePageIndex(page => Math.min(machineTotalPages, page + 1))}
                 disabled={safeMachinePageIndex >= machineTotalPages}
-                className="h-9 rounded-lg border border-outline-variant bg-surface px-3 font-bold text-on-surface-variant hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-8 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface hover:bg-surface-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-45"
                 aria-label="Trang booth sau"
               >
                 Sau
@@ -1327,32 +1350,35 @@ export default function RemoteBoothTab() {
             className="absolute inset-0 cursor-default"
           />
 
-          <section className="relative z-10 flex h-[92dvh] w-full max-w-7xl flex-col overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-2xl">
-            <div className="flex flex-col gap-3 border-b border-outline-variant bg-surface-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-sm font-black text-on-surface inline-flex items-center gap-2">
-                  <History className="h-4 w-4 text-primary" />
-                  Lịch sử tác vụ
-                </h3>
-                <p className="mt-1 text-[11px] font-semibold text-on-surface-variant">
-                  Lưu ai đã chạy tác vụ gì trên máy nào trong Remote Booth.
-                </p>
+          <section className="relative z-10 flex h-[92dvh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface shadow-elevated">
+            <div className="flex flex-col gap-3 border-b border-outline-variant px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
+                  <History className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-on-surface">Lịch sử tác vụ</h3>
+                  <p className="mt-0.5 text-sm text-on-surface-variant">
+                    Ai đã chạy tác vụ gì, trên máy nào.
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => historyQuery.refetch()}
                   disabled={historyQuery.isFetching}
-                  className="h-9 rounded-lg border border-outline-variant bg-surface px-3 text-xs font-bold text-on-surface-variant inline-flex items-center justify-center gap-1.5 hover:bg-surface-2 disabled:opacity-60"
+                  className="btn-secondary h-9"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${historyQuery.isFetching ? 'animate-spin' : ''}`} />
-                  Refresh
+                  <RefreshCw className={`h-4 w-4 ${historyQuery.isFetching ? 'animate-spin' : ''}`} />
+                  Làm mới
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsHistoryModalOpen(false)}
-                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface"
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
                   aria-label="Đóng"
+                  title="Đóng"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -1360,65 +1386,64 @@ export default function RemoteBoothTab() {
             </div>
 
             <div className="flex-1 overflow-auto">
-              <table className="w-full min-w-[980px] text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-surface border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant font-bold">
-                    <th className="py-3 px-4">Thời gian</th>
-                    <th className="py-3 px-4">Người thao tác</th>
-                    <th className="py-3 px-4">Tác vụ</th>
-                    <th className="py-3 px-4">Máy / Booth</th>
-                    <th className="py-3 px-4">Trạng thái</th>
-                    <th className="py-3 px-4">TaskId</th>
-                    <th className="py-3 px-4">Kết quả</th>
+              <table className="w-full min-w-[980px] text-left text-sm border-collapse">
+                <thead className="sticky top-0 z-[1]">
+                  <tr className="border-b border-outline-variant bg-surface">
+                    <th className={thClass}>Thời gian</th>
+                    <th className={thClass}>Người thao tác</th>
+                    <th className={thClass}>Tác vụ</th>
+                    <th className={thClass}>Máy / booth</th>
+                    <th className={thClass}>Trạng thái</th>
+                    <th className={thClass}>Task ID</th>
+                    <th className={thClass}>Kết quả</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-outline-variant/40">
+                <tbody className="divide-y divide-outline-variant">
                   {historyQuery.isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="py-10 text-center font-bold text-on-surface-variant">
-                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                        Đang tải lịch sử tác vụ...
-                      </td>
-                    </tr>
+                    <TableSkeletonRows rows={8} columns={7} />
                   ) : historyQuery.isError ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center font-bold text-error">
-                        <AlertCircle className="w-5 h-5 mx-auto mb-2" />
-                        {getErrorMessage(historyQuery.error, 'Không thể tải lịch sử tác vụ.')}
+                      <td colSpan={7}>
+                        <EmptyState
+                          compact
+                          icon={AlertCircle}
+                          title="Không thể tải lịch sử tác vụ"
+                          description={getErrorMessage(historyQuery.error, 'Vui lòng thử lại.')}
+                        />
                       </td>
                     </tr>
                   ) : (historyQuery.data ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center font-bold text-on-surface-variant">
-                        Chưa có lịch sử tác vụ.
+                      <td colSpan={7}>
+                        <EmptyState compact icon={History} title="Chưa có lịch sử tác vụ" />
                       </td>
                     </tr>
                   ) : (
                     (historyQuery.data ?? []).map(item => (
-                      <tr key={item.id} className="hover:bg-surface-2">
-                        <td className="py-3 px-4 whitespace-nowrap font-semibold text-on-surface-variant">
+                      <tr key={item.id} className="hover:bg-surface-2/50 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap text-on-surface-variant tabular-nums">
                           {formatDateTime(item.createdAt)}
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="block font-bold text-on-surface">{item.actorName || 'Unknown'}</span>
-                          {item.actorEmail && <span className="block text-[11px] text-on-surface-variant">{item.actorEmail}</span>}
+                        <td className="px-4 py-3">
+                          <span className="block font-medium text-on-surface">{item.actorName || 'Không rõ'}</span>
+                          {item.actorEmail && <span className="block text-xs text-on-surface-variant">{item.actorEmail}</span>}
                         </td>
-                        <td className="py-3 px-4 font-bold text-on-surface">{getHistoryTaskLabel(item)}</td>
-                        <td className="py-3 px-4">
-                          <span className="block font-mono font-bold text-primary">{item.machineCode}</span>
-                          <span className="block text-[11px] font-semibold text-on-surface-variant">
-                            {item.boothName || 'N/A'}{item.storeName ? ` · ${item.storeName}` : ''}
+                        <td className="px-4 py-3 font-medium text-on-surface">{getHistoryTaskLabel(item)}</td>
+                        <td className="px-4 py-3">
+                          <span className="block font-mono font-medium text-primary">{item.machineCode}</span>
+                          <span className="block text-xs text-on-surface-variant">
+                            {item.boothName || '—'}{item.storeName ? ` · ${item.storeName}` : ''}
                           </span>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-black ${getHistoryStatusClass(item.status)}`}>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getHistoryStatusClass(item.status)}`}>
                             {item.status || 'N/A'}
                           </span>
                         </td>
-                        <td className="py-3 px-4 max-w-[180px] truncate font-mono text-[11px] text-on-surface-variant" title={item.taskId || ''}>
-                          {item.taskId || 'N/A'}
+                        <td className="px-4 py-3 max-w-[180px] truncate font-mono text-[11px] text-on-surface-variant" title={item.taskId || ''}>
+                          {item.taskId || '—'}
                         </td>
-                        <td className="py-3 px-4 max-w-[280px] truncate text-[11px] font-medium text-on-surface-variant" title={item.resultSummary || item.payloadJson}>
+                        <td className="px-4 py-3 max-w-[280px] truncate text-xs text-on-surface-variant" title={item.resultSummary || item.payloadJson}>
                           {item.resultSummary || item.payloadJson}
                         </td>
                       </tr>
@@ -1448,42 +1473,38 @@ export default function RemoteBoothTab() {
           <aside
             className={
               panelMode === 'powershell'
-                ? 'relative z-10 h-[92dvh] w-full max-w-6xl overflow-hidden rounded-lg border border-[#3a3a3a] bg-[#0b0b0b] shadow-2xl'
-                : `bg-surface h-[92dvh] sm:h-full w-full shadow-2xl border-t sm:border-t-0 sm:border-l border-outline-variant overflow-y-auto rounded-t-2xl sm:rounded-none ${panelMode === 'print' ? 'sm:max-w-5xl' : 'sm:max-w-xl'}`
+                ? 'relative z-10 h-[92dvh] w-full max-w-6xl overflow-hidden rounded-xl border border-on-surface-variant/40 bg-on-surface text-surface shadow-elevated'
+                : `bg-surface h-[92dvh] sm:h-full w-full shadow-elevated border-t sm:border-t-0 sm:border-l border-outline-variant overflow-y-auto rounded-t-2xl sm:rounded-none ${panelMode === 'print' ? 'sm:max-w-5xl' : 'sm:max-w-xl'}`
             }
           >
             {panelMode === 'powershell' ? (
-              <div className="bg-[#2b2b2b] border-b border-[#3a3a3a]">
+              <div className="bg-on-surface border-b border-surface/15">
                 <div className="flex h-11 items-center justify-between gap-3 px-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <div className="flex h-8 min-w-0 items-center gap-2 rounded-t-md bg-[#111111] px-3 text-slate-100">
-                      <Terminal className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate font-mono text-xs font-bold">
-                        C:\WINDOWS\system32\cmd... · {isMultiDeploy ? `${activeMachines.length} booth` : activeMachines[0].machineCode}
-                      </span>
-                      <button type="button" onClick={closeDeployPanel} className="ml-2 text-slate-400 hover:text-white" aria-label="Đóng tab">
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                    <button type="button" className="hidden h-8 w-8 items-center justify-center rounded text-slate-300 hover:bg-white/10 sm:inline-flex" aria-label="Tab mới">
-                      +
-                    </button>
+                  <div className="flex h-8 min-w-0 items-center gap-2 rounded-t-md bg-surface/10 px-3 text-surface">
+                    <Terminal className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate font-mono text-xs font-medium">
+                      PowerShell · {isMultiDeploy ? `${activeMachines.length} booth` : activeMachines[0].machineCode}
+                    </span>
                   </div>
-                  <div className="flex h-11 items-center text-slate-200">
-                    <button type="button" className="h-11 w-11 hover:bg-white/10" aria-label="Thu nhỏ">-</button>
-                    <button type="button" className="h-11 w-11 hover:bg-white/10" aria-label="Phóng to">□</button>
-                    <button type="button" onClick={closeDeployPanel} className="h-11 w-11 hover:bg-red-600" aria-label="Đóng">×</button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={closeDeployPanel}
+                    className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-surface/70 hover:bg-error hover:text-on-primary transition-colors cursor-pointer"
+                    aria-label="Đóng"
+                    title="Đóng"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             ) : (
             <div className="sticky top-0 bg-surface border-b border-outline-variant p-4 sm:p-5 flex items-start justify-between gap-4 z-20">
               <div className="min-w-0">
-                <h3 className="text-base sm:text-lg font-bold text-on-surface truncate">
-                  {panelMode === 'deploy' ? 'Deploy tới' : 'In ảnh tại'}{' '}
+                <h3 className="text-lg font-semibold text-on-surface truncate">
+                  {panelMode === 'deploy' ? 'Triển khai tới' : 'In ảnh tại'}{' '}
                   {isMultiDeploy ? `${activeMachines.length} booth` : activeMachines[0].machineCode}
                 </h3>
-                <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">
+                <p className="text-sm text-on-surface-variant mt-0.5 line-clamp-2">
                   {isMultiDeploy
                     ? activeMachines.map(machine => getMachineBoothName(machine) || machine.machineCode).join(', ')
                     : `Agent ${activeMachines[0].agentVersion || 'N/A'} · ${formatDateTime(activeMachines[0].connectedAt)}`}
@@ -1492,8 +1513,9 @@ export default function RemoteBoothTab() {
               <button
                 type="button"
                 onClick={closeDeployPanel}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 cursor-pointer"
+                className="h-8 w-8 shrink-0 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
                 aria-label="Đóng"
+                title="Đóng"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1504,12 +1526,12 @@ export default function RemoteBoothTab() {
               onSubmit={panelMode === 'deploy' ? handleSubmit : panelMode === 'powershell' ? handlePowerShellSubmit : handlePrintSubmit}
               className={
                 panelMode === 'powershell'
-                  ? 'flex h-[calc(92dvh-45px)] flex-col overflow-y-auto bg-[#0b0b0b] p-3 sm:p-4 pb-0 text-sm text-slate-100'
+                  ? 'flex h-[calc(92dvh-45px)] flex-col gap-4 overflow-y-auto bg-on-surface p-3 sm:p-4 pb-0 text-sm text-surface'
                   : 'p-4 sm:p-5 pb-6 space-y-5 text-sm'
               }
             >
               {panelMode !== 'powershell' && (
-              <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-2 border border-outline-variant p-1">
+              <div className="grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1">
                 <button
                   type="button"
                   onClick={() => {
@@ -1517,12 +1539,12 @@ export default function RemoteBoothTab() {
                     setDeployError('');
                     setDeployResult(null);
                   }}
-                  className={`h-10 sm:h-9 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`h-9 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                     panelMode === 'deploy' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <ClipboardList className="w-3.5 h-3.5" />
-                  Deploy
+                  Triển khai
                 </button>
                 <button
                   type="button"
@@ -1533,7 +1555,7 @@ export default function RemoteBoothTab() {
                     setDeployResult(null);
                   }}
                   disabled={isMultiDeploy}
-                  className={`h-10 sm:h-9 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface ${
+                  className={`h-9 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-on-surface-variant hover:text-on-surface ${
                     isMultiDeploy ? 'opacity-40 cursor-not-allowed hover:text-on-surface-variant' : ''
                   }`}
                 >
@@ -1552,13 +1574,13 @@ export default function RemoteBoothTab() {
                     }
                   }}
                   disabled={isMultiDeploy}
-                  className={`h-10 sm:h-9 rounded-lg text-xs font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  className={`h-9 rounded-lg text-sm font-medium inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                     panelMode === 'print' ? 'bg-surface text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
                   } ${isMultiDeploy ? 'opacity-40 cursor-not-allowed hover:text-on-surface-variant' : ''
                   }`}
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Print
+                  In ảnh
                 </button>
               </div>
               )}
@@ -1566,11 +1588,11 @@ export default function RemoteBoothTab() {
               {panelMode === 'deploy' ? (
               <>
                 {isMultiDeploy && (
-                  <div className="rounded-xl border border-outline-variant bg-surface-2 p-3">
-                    <p className="text-xs font-bold text-on-surface-variant mb-2">Target deploy ({activeMachines.length} booth)</p>
+                  <div className="rounded-xl bg-surface-2 p-3">
+                    <p className="text-xs font-medium text-on-surface-variant mb-2">Triển khai tới ({activeMachines.length} booth)</p>
                     <div className="flex flex-wrap gap-2">
                       {activeMachines.map(machine => (
-                        <span key={machine.machineCode} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-outline-variant text-[11px] font-bold text-on-surface-variant">
+                        <span key={machine.machineCode} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-outline-variant text-xs text-on-surface-variant">
                           <span className="font-mono text-primary">{machine.machineCode}</span>
                           {getMachineBoothName(machine) && <span className="text-on-surface-variant">· {getMachineBoothName(machine)}</span>}
                         </span>
@@ -1580,7 +1602,7 @@ export default function RemoteBoothTab() {
                 )}
 
                 <div>
-                <label className="block text-xs font-bold text-on-surface-variant mb-1.5">Loại task</label>
+                <label className="block text-sm font-medium text-on-surface mb-1.5">Loại tác vụ</label>
                 <select
                   value={taskType}
                   onChange={event => {
@@ -1594,7 +1616,7 @@ export default function RemoteBoothTab() {
                       setUpdateVersionMode('api');
                     }
                   }}
-                  className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary bg-surface"
+                  className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
                 >
                   {taskOptions.map(option => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -1603,7 +1625,7 @@ export default function RemoteBoothTab() {
               </div>
 
               {taskType === 'update-version' && (
-                <div className="rounded-xl border border-outline-variant bg-surface-2 p-3 space-y-3">
+                <div className="rounded-xl bg-surface-2 p-3 space-y-3">
                   <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-1">
                     <button
                       type="button"
@@ -1611,11 +1633,11 @@ export default function RemoteBoothTab() {
                         setUpdateVersionMode('api');
                         setDeployError('');
                       }}
-                      className={`h-8 px-3 rounded-md text-xs font-bold transition-colors ${
+                      className={`h-8 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                         updateVersionMode === 'api' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
                       }`}
                     >
-                      Update version
+                      Chọn phiên bản
                     </button>
                     <button
                       type="button"
@@ -1623,7 +1645,7 @@ export default function RemoteBoothTab() {
                         setUpdateVersionMode('manual');
                         setDeployError('');
                       }}
-                      className={`h-8 px-3 rounded-md text-xs font-bold transition-colors ${
+                      className={`h-8 px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                         updateVersionMode === 'manual' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
                       }`}
                     >
@@ -1633,7 +1655,7 @@ export default function RemoteBoothTab() {
 
                   {updateVersionMode === 'api' && (
                     <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1.5">Version fileType 2 *</label>
+                      <label className="block text-sm font-medium text-on-surface mb-1.5">Phiên bản <span className="text-error">*</span></label>
                       <select
                         required
                         value={selectedUpdateVersionId}
@@ -1642,10 +1664,10 @@ export default function RemoteBoothTab() {
                           setDeployError('');
                         }}
                         disabled={updateVersionsQuery.isLoading}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary bg-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
+                        className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
                       >
                         <option value="">
-                          {updateVersionsQuery.isLoading ? 'Đang tải version...' : 'Chọn version'}
+                          {updateVersionsQuery.isLoading ? 'Đang tải phiên bản...' : 'Chọn phiên bản'}
                         </option>
                         {(updateVersionsQuery.data ?? []).map(version => (
                           <option key={version.id} value={version.id}>
@@ -1654,7 +1676,7 @@ export default function RemoteBoothTab() {
                         ))}
                       </select>
                       {updateVersionsQuery.isError && (
-                        <p className="mt-1.5 text-[11px] font-medium text-error">Không thể tải danh sách version từ FunStudio.</p>
+                        <p className="mt-1.5 text-[11px] font-medium text-error">Không thể tải danh sách phiên bản từ FunStudio.</p>
                       )}
                     </div>
                   )}
@@ -1663,8 +1685,8 @@ export default function RemoteBoothTab() {
 
               {(taskType !== 'update-version' || updateVersionMode === 'manual') && (
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant mb-1.5">
-                    {taskType === 'update-version' ? 'DownloadUrl thủ công *' : 'DownloadUrl *'}
+                  <label className="block text-sm font-medium text-on-surface mb-1.5">
+                    {taskType === 'update-version' ? 'Download URL (thủ công)' : 'Download URL'} <span className="text-error">*</span>
                   </label>
                   <input
                     type="url"
@@ -1675,75 +1697,75 @@ export default function RemoteBoothTab() {
                       setDownloadUrl(event.target.value);
                       setDeployError('');
                     }}
-                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary font-mono text-xs"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-xs text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant font-mono"
                   />
                 </div>
               )}
 
-              <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-on-surface-variant cursor-pointer">
+              <label className="flex items-center gap-2 min-h-10 text-sm text-on-surface cursor-pointer">
                 <input
                   type="checkbox"
                   checked={waitForResult}
                   onChange={event => setWaitForResult(event.target.checked)}
-                  className="h-5 w-5 accent-primary"
+                  className="h-4 w-4 accent-primary"
                 />
-                Wait for result
+                Chờ kết quả
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant mb-1.5">TimeoutSeconds</label>
+                  <label className="block text-sm font-medium text-on-surface mb-1.5">Timeout (giây)</label>
                   <input
                     type="number"
                     min={1}
                     value={timeoutSeconds}
                     onChange={event => setTimeoutSeconds(Number(event.target.value))}
-                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant mb-1.5">WaitTimeoutSeconds</label>
+                  <label className="block text-sm font-medium text-on-surface mb-1.5">Thời gian chờ kết quả (giây)</label>
                   <input
                     type="number"
                     min={1}
                     value={waitTimeoutSeconds}
                     onChange={event => setWaitTimeoutSeconds(Number(event.target.value))}
                     disabled={!waitForResult}
-                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary disabled:bg-surface-2 disabled:text-on-surface-variant"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
                   />
                 </div>
               </div>
 
-              <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-on-surface-variant cursor-pointer">
+              <label className="flex items-center gap-2 min-h-10 text-sm text-on-surface cursor-pointer">
                 <input
                   type="checkbox"
                   checked={cleanTargetBeforeExtract}
                   onChange={event => setCleanTargetBeforeExtract(event.target.checked)}
-                  className="h-5 w-5 accent-primary"
+                  className="h-4 w-4 accent-primary"
                 />
-                Clean target before extract
+                Xóa thư mục đích trước khi giải nén
               </label>
               </>
               ) : panelMode === 'powershell' ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <label className="block text-xs font-bold text-on-surface-variant">
+                  <label className="block text-xs font-medium text-surface/70">
                     Kiểu chạy
                     <select
                       value={powerShellMode}
                       onChange={event => setPowerShellMode(event.target.value as RemotePowerShellMode)}
-                      className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary bg-surface text-xs"
+                      className="mt-1.5 w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50"
                     >
-                      <option value="inline">Inline script</option>
+                      <option value="inline">Lệnh trực tiếp</option>
                       <option value="file">File .ps1</option>
                     </select>
                   </label>
-                  <label className="block text-xs font-bold text-on-surface-variant">
-                    Run as
+                  <label className="block text-xs font-medium text-surface/70">
+                    Chạy với quyền
                     <select
                       value={powerShellRunAs}
                       onChange={event => setPowerShellRunAs(event.target.value as RemotePowerShellRunAs)}
-                      className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary bg-surface text-xs"
+                      className="mt-1.5 w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50"
                     >
                       <option value="admin">Admin</option>
                       <option value="user">User</option>
@@ -1752,8 +1774,8 @@ export default function RemoteBoothTab() {
                 </div>
 
                 {powerShellMode === 'inline' ? (
-                  <label className="block text-xs font-bold text-on-surface-variant">
-                    Command
+                  <label className="block text-xs font-medium text-surface/70">
+                    Lệnh
                     <textarea
                       required
                       value={powerShellScript}
@@ -1761,14 +1783,14 @@ export default function RemoteBoothTab() {
                         setPowerShellScript(event.target.value);
                         setDeployError('');
                       }}
-                      className="mt-1.5 min-h-72 w-full resize-y rounded-lg border border-[#2f2f2f] bg-[#0d0d0d] px-3 py-2 font-mono text-xs leading-relaxed text-white focus:outline-emerald-500 placeholder:text-slate-500"
+                      className="mt-1.5 min-h-72 w-full resize-y rounded-lg border border-surface/20 bg-on-surface px-3 py-2 font-mono text-xs leading-relaxed text-surface placeholder:text-surface/40"
                       spellCheck={false}
                     />
                   </label>
                 ) : (
                   <div className="space-y-3">
-                    <label className="block text-xs font-bold text-on-surface-variant">
-                      ScriptPath
+                    <label className="block text-xs font-medium text-surface/70">
+                      Đường dẫn script
                       <input
                         required
                         placeholder="D:\\FunStudio\\scripts\\test.ps1"
@@ -1777,33 +1799,33 @@ export default function RemoteBoothTab() {
                           setPowerShellScriptPath(event.target.value);
                           setDeployError('');
                         }}
-                        className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary font-mono text-xs"
+                        className="mt-1.5 w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50 font-mono"
                       />
                     </label>
-                    <label className="block text-xs font-bold text-on-surface-variant">
-                      Arguments
+                    <label className="block text-xs font-medium text-surface/70">
+                      Tham số
                       <input
                         placeholder="-Name booth01"
                         value={powerShellArguments}
                         onChange={event => setPowerShellArguments(event.target.value)}
-                        className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary font-mono text-xs"
+                        className="mt-1.5 w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50 font-mono"
                       />
                     </label>
                   </div>
                 )}
 
-                <label className="block text-xs font-bold text-on-surface-variant">
-                  WorkingDirectory
+                <label className="block text-xs font-medium text-surface/70">
+                  Thư mục làm việc
                   <input
                     placeholder="D:\\FunStudio"
                     value={powerShellWorkingDirectory}
                     onChange={event => setPowerShellWorkingDirectory(event.target.value)}
-                    className="mt-1.5 w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary font-mono text-xs"
+                    className="mt-1.5 w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50 font-mono"
                   />
                 </label>
 
-                <label className="block text-xs font-bold text-on-surface-variant">
-                  Environment Variables
+                <label className="block text-xs font-medium text-surface/70">
+                  Biến môi trường
                   <textarea
                     placeholder={'KEY=VALUE\nTEST=123'}
                     value={powerShellEnvironmentText}
@@ -1811,41 +1833,41 @@ export default function RemoteBoothTab() {
                       setPowerShellEnvironmentText(event.target.value);
                       setDeployError('');
                     }}
-                    className="mt-1.5 min-h-24 w-full resize-y rounded-lg border border-outline-variant px-3 py-2 font-mono text-xs focus:outline-primary"
+                    className="mt-1.5 min-h-24 w-full resize-y rounded-lg border border-surface/20 bg-on-surface px-3 py-2 font-mono text-xs text-surface placeholder:text-surface/40"
                     spellCheck={false}
                   />
                 </label>
 
-                <label className="flex items-center gap-2 min-h-11 text-xs font-bold text-on-surface-variant cursor-pointer">
+                <label className="flex items-center gap-2 min-h-10 text-sm text-surface/80 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={waitForResult}
                     onChange={event => setWaitForResult(event.target.checked)}
-                    className="h-5 w-5 accent-primary"
+                    className="h-4 w-4 accent-primary"
                   />
-                  Wait for result
+                  Chờ kết quả
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1.5">TimeoutSeconds</label>
+                    <label className="block text-xs font-medium text-surface/70 mb-1.5">Timeout (giây)</label>
                     <input
                       type="number"
                       min={1}
                       value={powerShellTimeoutSeconds}
                       onChange={event => setPowerShellTimeoutSeconds(Number(event.target.value))}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary"
+                      className="w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-on-surface-variant mb-1.5">WaitTimeoutSeconds</label>
+                    <label className="block text-xs font-medium text-surface/70 mb-1.5">Thời gian chờ kết quả (giây)</label>
                     <input
                       type="number"
                       min={1}
                       value={waitTimeoutSeconds}
                       onChange={event => setWaitTimeoutSeconds(Number(event.target.value))}
                       disabled={!waitForResult}
-                      className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary disabled:bg-surface-2 disabled:text-on-surface-variant"
+                      className="w-full h-10 px-3 rounded-lg border border-surface/20 bg-on-surface text-xs text-surface placeholder:text-surface/40 disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -1855,23 +1877,23 @@ export default function RemoteBoothTab() {
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
                     <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1.5">Layout ID</label>
+                      <label className="block text-sm font-medium text-on-surface mb-1.5">Layout ID</label>
                       <input
                         type="number"
                         min={0}
                         value={printLayoutId}
                         onChange={event => setPrintLayoutId(Number(event.target.value))}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary"
+                        className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-on-surface-variant mb-1.5">Number of image</label>
+                      <label className="block text-sm font-medium text-on-surface mb-1.5">Số ảnh</label>
                       <input
                         type="number"
                         min={1}
                         value={printNumberOfImage}
                         onChange={event => setPrintNumberOfImage(Number(event.target.value))}
-                        className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary"
+                        className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant"
                       />
                     </div>
                   </div>
@@ -1879,15 +1901,15 @@ export default function RemoteBoothTab() {
                     type="button"
                     onClick={handleRefreshTransactions}
                     disabled={transactionsMutation.isPending}
-                    className="h-11 sm:h-10 px-4 border border-outline-variant rounded-lg hover:bg-surface-2 text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="btn-secondary"
                   >
                     {transactionsMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                    Refresh transactions
+                    Tải lại giao dịch
                   </button>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-on-surface-variant mb-1.5">Code giao dịch</label>
+                  <label className="block text-sm font-medium text-on-surface mb-1.5">Code giao dịch</label>
                   <select
                     value={selectedTransactionId}
                     onChange={event => {
@@ -1896,7 +1918,7 @@ export default function RemoteBoothTab() {
                       setSelectedTransactionId(nextTransactionId);
                       applyPrintDefaultsFromTransaction(nextTransaction, setPrintLayoutId, setPrintNumberOfImage);
                     }}
-                    className="w-full h-11 sm:h-10 px-3 border border-outline-variant rounded-lg focus:outline-primary bg-surface font-mono text-xs"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-xs text-on-surface disabled:bg-surface-2 disabled:text-on-surface-variant font-mono"
                   >
                     <option value="">Chọn code giao dịch</option>
                     {transactions.map(item => (
@@ -1908,27 +1930,25 @@ export default function RemoteBoothTab() {
                 </div>
 
                 <div className="border border-outline-variant rounded-xl overflow-hidden">
-                  <div className="bg-surface-2 border-b border-outline-variant px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="bg-surface-2/60 border-b border-outline-variant px-4 py-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-bold text-on-surface">Danh sách giao dịch</p>
+                      <p className="font-semibold text-on-surface">Danh sách giao dịch</p>
                       <p className="text-[11px] text-on-surface-variant">{transactions.length} giao dịch từ booth</p>
                     </div>
                     {transactionsMutation.isPending && <Loader2 className="w-4 h-4 animate-spin text-on-surface-variant" />}
                   </div>
                   <div className="max-h-[420px] overflow-auto">
                     {transactionsMutation.isPending ? (
-                      <div className="py-12 text-center text-xs font-bold text-on-surface-variant">
-                        <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
-                        Đang tải giao dịch...
+                      <div className="p-4 space-y-3" aria-busy="true" aria-label="Đang tải giao dịch">
+                        {Array.from({ length: 5 }, (_, index) => (
+                          <Skeleton key={index} className="h-8 w-full" />
+                        ))}
                       </div>
                     ) : transactions.length === 0 ? (
-                      <div className="py-12 text-center text-xs font-bold text-on-surface-variant">
-                        <Images className="w-6 h-6 mx-auto mb-2 text-on-surface-variant" />
-                        Chưa có giao dịch để hiển thị.
-                      </div>
+                      <EmptyState compact icon={Images} title="Chưa có giao dịch" description="Nhấn Tải lại giao dịch để lấy dữ liệu từ booth." />
                     ) : (
                       <>
-                        <div className="sm:hidden divide-y divide-outline-variant/40">
+                        <div className="sm:hidden divide-y divide-outline-variant">
                           {transactions.map(item => {
                             const selected = selectedTransactionId === item.transactionId;
                             return (
@@ -1942,23 +1962,23 @@ export default function RemoteBoothTab() {
                                 className={`w-full text-left p-3 space-y-2 ${selected ? 'bg-secondary-container' : 'bg-surface hover:bg-surface-2'}`}
                               >
                                 <div className="flex items-start justify-between gap-3">
-                                  <span className="font-mono font-bold text-primary text-xs break-all">{item.code || item.transactionId}</span>
+                                  <span className="font-mono font-medium text-primary text-xs break-all">{item.code || item.transactionId}</span>
                                   {selected && (
-                                    <span className="shrink-0 rounded-full bg-primary text-on-primary px-2 py-0.5 text-[10px] font-bold">Đang chọn</span>
+                                    <span className="shrink-0 rounded-full bg-primary text-on-primary px-2 py-0.5 text-[11px] font-medium">Đang chọn</span>
                                   )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 text-[11px] text-on-surface-variant">
                                   <span>
-                                    <span className="block text-on-surface-variant font-bold">Layout</span>
-                                    <span className="font-semibold">{formatCellValue(getTransactionValue(item, 'LayoutId')) || 'N/A'}</span>
+                                    <span className="block text-on-surface-variant">Layout</span>
+                                    <span className="font-medium text-on-surface">{formatCellValue(getTransactionValue(item, 'LayoutId')) || '—'}</span>
                                   </span>
                                   <span>
-                                    <span className="block text-on-surface-variant font-bold">Số ảnh</span>
-                                    <span className="font-semibold">{formatCellValue(getTransactionValue(item, 'PrintNumber')) || 'N/A'}</span>
+                                    <span className="block text-on-surface-variant">Số ảnh</span>
+                                    <span className="font-medium text-on-surface">{formatCellValue(getTransactionValue(item, 'PrintNumber')) || '—'}</span>
                                   </span>
                                   <span className="col-span-2">
-                                    <span className="block text-on-surface-variant font-bold">Thời gian</span>
-                                    <span className="font-semibold">{formatCellValue(getTransactionValue(item, 'RecordAt') ?? getTransactionValue(item, 'CreatedTime')) || 'N/A'}</span>
+                                    <span className="block text-on-surface-variant">Thời gian</span>
+                                    <span className="font-medium text-on-surface">{formatCellValue(getTransactionValue(item, 'RecordAt') ?? getTransactionValue(item, 'CreatedTime')) || '—'}</span>
                                   </span>
                                 </div>
                               </button>
@@ -1968,7 +1988,7 @@ export default function RemoteBoothTab() {
 
                         <table className="hidden sm:table w-max min-w-full text-left text-[11px] border-collapse">
                           <thead>
-                            <tr className="bg-surface-2 text-on-surface-variant uppercase tracking-wider sticky top-0 z-10">
+                            <tr className="bg-surface-2 text-on-surface-variant font-medium sticky top-0 z-10">
                               <th className="py-2.5 px-3 border-b border-r border-outline-variant whitespace-nowrap">Code</th>
                               {transactionColumns.map(column => (
                                 <th key={column} className="py-2.5 px-3 border-b border-r border-outline-variant whitespace-nowrap">
@@ -1987,7 +2007,7 @@ export default function RemoteBoothTab() {
                                 }}
                                 className={`cursor-pointer hover:bg-surface-2 ${selectedTransactionId === item.transactionId ? 'bg-secondary-container' : ''}`}
                               >
-                                <td className="py-2 px-3 border-b border-r border-outline-variant font-mono font-bold text-primary whitespace-nowrap">
+                                <td className="py-2 px-3 border-b border-r border-outline-variant font-mono font-medium text-primary whitespace-nowrap">
                                   {item.code || item.transactionId}
                                 </td>
                                 {transactionColumns.map(column => (
@@ -2011,7 +2031,7 @@ export default function RemoteBoothTab() {
               )}
 
               {deployError && (
-                <div className="rounded-lg border border-error/30 bg-error-container p-3 text-xs font-medium text-on-error-container flex items-start gap-2">
+                <div className="rounded-xl border border-error/30 bg-error-container p-3 text-sm text-on-error-container flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{deployError}</span>
                 </div>
@@ -2020,18 +2040,18 @@ export default function RemoteBoothTab() {
               <div
                 className={
                   panelMode === 'powershell'
-                    ? 'sticky bottom-0 -mx-3 sm:-mx-4 mt-auto border-t border-[#252525] bg-[#0b0b0b]/95 px-3 py-3 backdrop-blur sm:px-4 z-10'
+                    ? 'sticky bottom-0 -mx-3 sm:-mx-4 mt-auto border-t border-surface/15 bg-on-surface/95 px-3 py-3 backdrop-blur sm:px-4 z-10'
                     : 'sticky bottom-0 -mx-4 sm:-mx-5 px-4 sm:px-5 py-3 bg-surface/95 backdrop-blur border-t border-outline-variant z-10'
                 }
               >
                 <button
                   type="submit"
                   disabled={deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || transactionsMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl}
-                  className={`w-full h-12 px-5 text-white cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 font-bold ${
+                  className={
                     panelMode === 'powershell'
-                      ? 'rounded-md bg-emerald-600 hover:bg-emerald-500'
-                      : 'bg-primary rounded-lg hover:bg-primary-hover active:bg-primary-active shadow-brand'
-                  }`}
+                      ? 'w-full h-11 px-5 rounded-lg bg-success text-on-primary font-medium inline-flex items-center justify-center gap-2 cursor-pointer transition-[filter] hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed'
+                      : 'btn-primary w-full h-11'
+                  }
                 >
                   {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -2045,21 +2065,21 @@ export default function RemoteBoothTab() {
                     <FileCode2 className="w-4 h-4" />
                   )}
                   {deployMutation.isPending || multiDeployMutation.isPending || powerShellMutation.isPending || printImageMutation.isPending || isResolvingVersionUrl
-                    ? isResolvingVersionUrl ? 'Đang lấy fileUrl...' : 'Đang gửi...'
+                    ? isResolvingVersionUrl ? 'Đang lấy file...' : 'Đang gửi...'
                     : panelMode === 'deploy'
                       ? isMultiDeploy
-                        ? `Deploy ${activeMachines.length} booth`
-                        : `Submit ${endpointLabels[taskType]}`
+                        ? `Triển khai ${activeMachines.length} booth`
+                        : `Gửi: ${endpointLabels[taskType]}`
                       : panelMode === 'print'
-                        ? 'Print Image'
-                        : `Run PowerShell ${powerShellRunAs === 'admin' ? 'Admin' : 'User'}`}
+                        ? 'In ảnh'
+                        : `Chạy PowerShell (${powerShellRunAs === 'admin' ? 'Admin' : 'User'})`}
                 </button>
               </div>
 
               {multiDeployResults.length > 0 && (
                 <div className="border border-outline-variant rounded-xl overflow-hidden">
-                  <div className="bg-surface-2 border-b border-outline-variant px-4 py-3">
-                    <p className="font-bold text-on-surface">Kết quả multi deploy</p>
+                  <div className="bg-surface-2/60 border-b border-outline-variant px-4 py-3">
+                    <p className="font-semibold text-on-surface">Kết quả triển khai</p>
                     <p className="text-[11px] text-on-surface-variant">
                       Thành công {multiDeployResults.filter(result => result.ok).length}/{multiDeployResults.length} booth
                     </p>
@@ -2067,20 +2087,20 @@ export default function RemoteBoothTab() {
                   <div className="max-h-72 overflow-auto">
                     <table className="w-full min-w-[620px] text-left text-[11px] border-collapse">
                       <thead>
-                        <tr className="bg-surface-2 text-on-surface-variant uppercase tracking-wider sticky top-0 z-10">
-                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">MachineCode</th>
-                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">Tên Booth</th>
-                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">Status</th>
-                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">TaskId / Error</th>
+                        <tr className="bg-surface-2 text-on-surface-variant font-medium sticky top-0 z-10">
+                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">Mã máy</th>
+                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">Tên booth</th>
+                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">Trạng thái</th>
+                          <th className="py-2.5 px-3 border-b border-r border-outline-variant">Task ID / lỗi</th>
                         </tr>
                       </thead>
                       <tbody>
                         {multiDeployResults.map(result => (
                           <tr key={result.machineCode} className={result.ok ? 'bg-success-container/40' : 'bg-error-container/40'}>
-                            <td className="py-2 px-3 border-b border-r border-outline-variant font-mono font-bold text-primary">{result.machineCode}</td>
-                            <td className="py-2 px-3 border-b border-r border-outline-variant font-semibold text-on-surface-variant">{result.boothName || 'N/A'}</td>
+                            <td className="py-2 px-3 border-b border-r border-outline-variant font-mono font-medium text-primary">{result.machineCode}</td>
+                            <td className="py-2 px-3 border-b border-r border-outline-variant text-on-surface-variant">{result.boothName || '—'}</td>
                             <td className="py-2 px-3 border-b border-r border-outline-variant">
-                              <span className={`inline-flex px-2 py-0.5 rounded-full font-bold ${result.ok ? 'bg-success-container text-on-success-container' : 'bg-error-container text-on-error-container'}`}>
+                              <span className={`inline-flex px-2 py-0.5 rounded-full font-medium ${result.ok ? 'bg-success-container text-on-success-container' : 'bg-error-container text-on-error-container'}`}>
                                 {result.ok ? (result.response?.completed?.status || result.response?.status || 'SENT') : 'FAILED'}
                               </span>
                             </td>
@@ -2097,11 +2117,11 @@ export default function RemoteBoothTab() {
 
               {deployResult && (
                 <div className="border border-outline-variant rounded-xl overflow-hidden">
-                  <div className="bg-surface-2 border-b border-outline-variant px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="bg-surface-2/60 border-b border-outline-variant px-4 py-3 flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-bold text-on-surface">Kết quả task</p>
+                      <p className="font-semibold text-on-surface">Kết quả tác vụ</p>
                       <p className="text-[11px] text-on-surface-variant font-mono">
-                        {currentTaskId || 'Backend không trả taskId'}
+                        {currentTaskId || 'Không có task ID'}
                         {deployResult.taskType ? ` · ${deployResult.taskType}` : ''}
                       </p>
                     </div>
@@ -2110,33 +2130,33 @@ export default function RemoteBoothTab() {
                         type="button"
                         onClick={() => taskStatusMutation.mutate(currentTaskId)}
                         disabled={taskStatusMutation.isPending}
-                        className="px-3 py-1.5 border border-outline-variant rounded-lg hover:bg-surface text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="h-8 px-3 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface hover:bg-surface-2 inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
                         {taskStatusMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <SearchCheck className="w-3.5 h-3.5" />}
-                        Check status
+                        Kiểm tra
                       </button>
                     )}
                   </div>
                   <dl className="p-4 space-y-3 text-xs">
                     <div>
-                      <dt className="font-bold text-on-surface-variant uppercase tracking-wider">Status</dt>
+                      <dt className="font-medium text-on-surface-variant">Trạng thái</dt>
                       <dd className="mt-1 font-semibold text-on-surface">{resultStatus ? String(resultStatus) : 'N/A'}</dd>
                     </div>
                     {deployResult.message && (
                       <div>
-                        <dt className="font-bold text-on-surface-variant uppercase tracking-wider">Message</dt>
+                        <dt className="font-medium text-on-surface-variant">Thông báo</dt>
                         <dd className="mt-1 font-semibold text-on-surface">{deployResult.message}</dd>
                       </div>
                     )}
                     {deployResult.completed?.exitCode !== undefined && (
                       <div>
-                        <dt className="font-bold text-on-surface-variant uppercase tracking-wider">ExitCode</dt>
+                        <dt className="font-medium text-on-surface-variant">Exit code</dt>
                         <dd className="mt-1 font-mono font-semibold text-on-surface">{deployResult.completed.exitCode}</dd>
                       </div>
                     )}
                     {deployResult.completed?.stdOut && (
                       <div>
-                        <dt className="font-bold text-on-surface-variant uppercase tracking-wider">StdOut</dt>
+                        <dt className="font-medium text-on-surface-variant">StdOut</dt>
                         <dd className="mt-1">
                           <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words bg-surface-2 border border-outline-variant rounded-lg p-3 text-[11px] text-on-surface">
                             {deployResult.completed.stdOut}
@@ -2146,7 +2166,7 @@ export default function RemoteBoothTab() {
                     )}
                     {deployResult.completed?.stdErr && (
                       <div>
-                        <dt className="font-bold text-on-surface-variant uppercase tracking-wider">StdErr</dt>
+                        <dt className="font-medium text-on-surface-variant">StdErr</dt>
                         <dd className="mt-1">
                           <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words bg-error-container border border-error/20 rounded-lg p-3 text-[11px] text-on-error-container">
                             {deployResult.completed.stdErr}
@@ -2155,11 +2175,11 @@ export default function RemoteBoothTab() {
                       </div>
                     )}
                     <div>
-                      <dt className="font-bold text-on-surface-variant uppercase tracking-wider">MachineCode</dt>
+                      <dt className="font-medium text-on-surface-variant">Mã máy</dt>
                       <dd className="mt-1 font-mono font-semibold text-on-surface">{deployResult.machineCode || deployResult.state?.machineCode || activeMachines[0]?.machineCode}</dd>
                     </div>
                     <div>
-                      <dt className="font-bold text-on-surface-variant uppercase tracking-wider">Raw result</dt>
+                      <dt className="font-medium text-on-surface-variant">Dữ liệu gốc</dt>
                       <dd className="mt-1">
                         <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words bg-surface-2 border border-outline-variant rounded-lg p-3 text-[11px] text-on-surface">
                           {JSON.stringify(resultPayload, null, 2)}

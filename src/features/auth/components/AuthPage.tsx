@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, ShieldCheck, UserRound } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Eye, EyeOff, Headset, KeyRound, MessageSquare, UserRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useBoothGuestStore } from '../../../stores/useBoothGuestStore';
@@ -16,6 +16,21 @@ function normalizeAnswer(value: string) {
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
+
+/** `withToggle`: input sits inside a wrapper that already has the top margin and a trailing icon button. */
+const inputClass = (hasError = false, withToggle = false) =>
+  `${withToggle ? 'pr-11' : 'mt-1.5'} w-full h-11 px-3.5 bg-surface border rounded-lg text-sm text-on-surface placeholder:text-on-surface-variant/60 outline-none transition disabled:bg-surface-2 ${
+    hasError ? 'border-error focus:ring-4 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-4 focus:ring-primary/10'
+  }`;
+
+const secondaryButtonClass =
+  'w-full h-11 rounded-lg border border-outline-variant bg-surface text-sm font-medium text-on-surface hover:bg-surface-2 inline-flex items-center justify-center gap-2 cursor-pointer transition-colors';
+
+const HIGHLIGHTS = [
+  { icon: AlertTriangle, title: 'Theo dõi lỗi tập trung', text: 'Nắm tình trạng booth và cửa hàng theo thời gian thực.' },
+  { icon: CalendarClock, title: 'Lịch trực rõ ràng', text: 'Xếp ca, duyệt tăng ca và theo dõi công việc trong một nơi.' },
+  { icon: MessageSquare, title: 'Phối hợp nhanh', text: 'Trò chuyện, thông báo và tài liệu dùng chung cho cả đội.' },
+];
 
 function isGuestRole(role: unknown) {
   return role === 4 || role === 'Guest' || role === 'guest';
@@ -151,23 +166,59 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background flex items-center justify-center p-4 animate-fadeIn overflow-hidden">
-      <div className="absolute inset-0 bg-grid-pattern opacity-60 pointer-events-none" />
-      <div className="absolute inset-0 noise-overlay pointer-events-none" />
-      <div className="relative w-full max-w-md bg-surface border border-outline-variant rounded-2xl shadow-elevated p-6 sm:p-8 space-y-6">
-        <div className="text-center space-y-1">
-          <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-white shadow-brand">
-            <ShieldCheck className="h-6 w-6" />
+    <div className="min-h-screen bg-background grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] animate-fadeIn">
+      <aside
+        className="relative hidden lg:flex flex-col justify-between overflow-hidden p-12 text-on-primary"
+        style={{ background: 'linear-gradient(145deg, var(--color-primary) 0%, var(--color-primary-active) 100%)' }}
+      >
+        <div className="absolute inset-0 noise-overlay pointer-events-none" />
+        <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-on-primary/10 blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-on-primary/10 blur-3xl pointer-events-none" />
+
+        <div className="relative flex items-center gap-3">
+          <span className="h-10 w-10 rounded-xl bg-on-primary/15 inline-flex items-center justify-center">
+            <Headset className="h-5 w-5" />
           </span>
-          <h1 className="text-xl font-bold text-on-surface">IT Admin System</h1>
+          <span className="text-lg font-semibold">IT Support</span>
+        </div>
+
+        <div className="relative max-w-md">
+          <h2 className="text-3xl font-semibold leading-tight">Mọi việc vận hành, gọn trong một màn hình.</h2>
+          <ul className="mt-8 space-y-5">
+            {HIGHLIGHTS.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="flex gap-3">
+                <span className="h-9 w-9 shrink-0 rounded-lg bg-on-primary/15 inline-flex items-center justify-center">
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span>
+                  <span className="block font-medium">{title}</span>
+                  <span className="block text-sm opacity-80">{text}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-sm opacity-70">Hệ thống quản trị nội bộ</p>
+      </aside>
+
+      <main className="flex items-center justify-center p-5 sm:p-10">
+      <div className="w-full max-w-sm space-y-7">
+        <div className="space-y-2">
+          <span className="lg:hidden mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-on-primary shadow-brand">
+            <Headset className="h-5 w-5" />
+          </span>
+          <h1 className="text-2xl font-semibold text-on-surface">
+            {isQuestionMode ? 'Xác thực bằng câu hỏi' : 'Chào mừng trở lại 👋'}
+          </h1>
           <p className="text-sm text-on-surface-variant">
-            {isQuestionMode ? 'Xác thực bằng câu hỏi hoặc quay lại đăng nhập' : 'Đăng nhập để quản trị hệ thống nội bộ'}
+            {isQuestionMode ? 'Trả lời câu hỏi bảo mật để tiếp tục.' : 'Đăng nhập để tiếp tục làm việc.'}
           </p>
         </div>
 
         {!isQuestionMode ? (
           <form onSubmit={handlePasswordLogin} className="space-y-4 text-left">
-            <label className="block text-sm font-semibold text-on-surface">
+            <label className="block text-sm font-medium text-on-surface">
               Email
               <input
                 type="email"
@@ -180,13 +231,11 @@ export default function AuthPage() {
                   setAuthError('');
                 }}
                 aria-invalid={Boolean(authError)}
-                className={`mt-1.5 w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition ${
-                  authError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
-                }`}
+                className={inputClass(Boolean(authError))}
               />
             </label>
 
-            <label className="block text-sm font-semibold text-on-surface">
+            <label className="block text-sm font-medium text-on-surface">
               Mật khẩu
               <span className="relative mt-1.5 block">
                 <input
@@ -199,9 +248,7 @@ export default function AuthPage() {
                     setAuthError('');
                   }}
                   aria-invalid={Boolean(authError)}
-                  className={`w-full px-3 py-2.5 pr-11 border rounded-lg text-sm outline-none transition ${
-                    authError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
-                  }`}
+                  className={inputClass(Boolean(authError), true)}
                 />
                 <button
                   type="button"
@@ -220,14 +267,14 @@ export default function AuthPage() {
               </p>
             )}
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full h-12">
-              {isLoading ? 'Đang xử lý...' : 'Đăng nhập'}
+            <button type="submit" disabled={isLoading} className="btn-primary w-full h-11">
+              {isLoading ? 'Đang đăng nhập…' : 'Đăng nhập'}
             </button>
 
             <button
               type="button"
               onClick={switchToQuestion}
-              className="w-full h-12 rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface hover:bg-surface-2 inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              className={secondaryButtonClass}
             >
               <KeyRound className="h-4 w-4" />
               Xác thực bằng câu hỏi
@@ -235,7 +282,7 @@ export default function AuthPage() {
           </form>
         ) : questionStage === 'answer' ? (
           <form onSubmit={handleQuestionSubmit} className="space-y-4 text-left">
-            <label className="block text-sm font-semibold text-on-surface">
+            <label className="block text-sm font-medium text-on-surface">
               {SECURITY_QUESTION}
               <input
                 type="text"
@@ -249,9 +296,7 @@ export default function AuthPage() {
                   setQuestionError('');
                 }}
                 aria-invalid={Boolean(questionError)}
-                className={`mt-1.5 w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition disabled:bg-surface-2 ${
-                  questionError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
-                }`}
+                className={inputClass(Boolean(questionError))}
               />
             </label>
 
@@ -265,14 +310,14 @@ export default function AuthPage() {
               </p>
             )}
 
-            <button type="submit" disabled={isLocked} className="btn-primary w-full h-12">
+            <button type="submit" disabled={isLocked} className="btn-primary w-full h-11">
               Tiếp tục
             </button>
 
             <button
               type="button"
               onClick={switchToPassword}
-              className="w-full h-12 rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface hover:bg-surface-2 inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              className={secondaryButtonClass}
             >
               Quay lại đăng nhập
             </button>
@@ -280,7 +325,7 @@ export default function AuthPage() {
         ) : (
           <div className="space-y-4">
             <form onSubmit={handleQuestionAccountSubmit} className="space-y-4 text-left">
-              <label className="block text-sm font-semibold text-on-surface">
+              <label className="block text-sm font-medium text-on-surface">
                 Tên hiển thị
                 <input
                   type="text"
@@ -288,11 +333,11 @@ export default function AuthPage() {
                   placeholder="Chỉ cần nhập khi email chưa có tài khoản"
                   value={fullName}
                   onChange={e => setFullName(e.target.value)}
-                  className="mt-1.5 w-full px-3 py-2.5 border border-outline-variant rounded-lg text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10"
+                  className={inputClass()}
                 />
               </label>
 
-              <label className="block text-sm font-semibold text-on-surface">
+              <label className="block text-sm font-medium text-on-surface">
                 Email
                 <input
                   type="email"
@@ -304,13 +349,11 @@ export default function AuthPage() {
                     setAuthError('');
                   }}
                   aria-invalid={Boolean(authError)}
-                  className={`mt-1.5 w-full px-3 py-2.5 border rounded-lg text-sm outline-none transition ${
-                    authError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
-                  }`}
+                  className={inputClass(Boolean(authError))}
                 />
               </label>
 
-              <label className="block text-sm font-semibold text-on-surface">
+              <label className="block text-sm font-medium text-on-surface">
                 Mật khẩu
                 <span className="relative mt-1.5 block">
                   <input
@@ -323,9 +366,7 @@ export default function AuthPage() {
                       setAuthError('');
                     }}
                     aria-invalid={Boolean(authError)}
-                    className={`w-full px-3 py-2.5 pr-11 border rounded-lg text-sm outline-none transition ${
-                      authError ? 'border-error focus:ring-2 focus:ring-error/10' : 'border-outline-variant focus:border-primary focus:ring-2 focus:ring-primary/10'
-                    }`}
+                    className={inputClass(Boolean(authError), true)}
                   />
                   <button
                     type="button"
@@ -344,15 +385,15 @@ export default function AuthPage() {
                 </p>
               )}
 
-              <button type="submit" disabled={isLoading} className="btn-primary w-full h-12">
-                {isLoading ? 'Đang xử lý...' : 'Đăng nhập hoặc tạo tài khoản'}
+              <button type="submit" disabled={isLoading} className="btn-primary w-full h-11">
+                {isLoading ? 'Đang đăng nhập…' : 'Đăng nhập hoặc tạo tài khoản'}
               </button>
             </form>
 
             <button
               type="button"
               onClick={handleGuestContinue}
-              className="w-full h-12 rounded-lg border border-outline-variant bg-surface text-sm font-bold text-on-surface hover:bg-surface-2 inline-flex items-center justify-center gap-2 cursor-pointer transition-colors"
+              className={secondaryButtonClass}
             >
               <UserRound className="h-4 w-4" />
               Tiếp tục với vai trò khách
@@ -361,7 +402,7 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={switchToPassword}
-              className="w-full text-xs font-bold text-on-surface-variant hover:text-primary inline-flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full text-sm font-medium text-on-surface-variant hover:text-primary inline-flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <KeyRound className="h-3.5 w-3.5" />
               Quay lại đăng nhập
@@ -369,6 +410,7 @@ export default function AuthPage() {
           </div>
         )}
       </div>
+      </main>
     </div>
   );
 }

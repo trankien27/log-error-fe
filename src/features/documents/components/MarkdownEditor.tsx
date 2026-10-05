@@ -67,7 +67,7 @@ function ToolbarButton({ children, title, active = false, disabled = false, onCl
       aria-pressed={active}
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-black transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${
+      className={`inline-flex h-8 min-w-8 items-center justify-center rounded-md px-2 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-35 ${
         active
           ? 'bg-primary-subtle text-primary'
           : 'text-on-surface-variant hover:bg-surface-2 hover:text-on-surface'
@@ -225,7 +225,7 @@ export default function MarkdownEditor({ value, onChange, onImageInserted }: Mar
 
   return (
     <div className="document-rich-editor overflow-hidden rounded-xl border border-outline-variant bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b border-outline-variant bg-surface px-2 py-1.5">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b border-outline-variant bg-surface-2/60 px-2 py-1.5 backdrop-blur">
         <ToolbarButton title="Đoạn văn" active={editor.isActive('paragraph')} onClick={() => editor.chain().focus().setParagraph().run()}>
           <Pilcrow className="h-4 w-4" />
         </ToolbarButton>
@@ -298,7 +298,7 @@ export default function MarkdownEditor({ value, onChange, onImageInserted }: Mar
               className="mx-1 h-2 w-28 cursor-pointer accent-primary"
               aria-label="Kích thước ảnh"
             />
-            <span className="min-w-12 text-center text-[10px] font-extrabold text-on-surface-variant">
+            <span className="min-w-12 text-center text-[11px] font-medium text-on-surface-variant">
               {selectedImageWidthPercent}%
             </span>
           </>
@@ -307,9 +307,9 @@ export default function MarkdownEditor({ value, onChange, onImageInserted }: Mar
           <>
             <ToolbarButton title="Thêm hàng bên dưới" onClick={() => editor.chain().focus().addRowAfter().run()}>+H</ToolbarButton>
             <ToolbarButton title="Thêm cột bên phải" onClick={() => editor.chain().focus().addColumnAfter().run()}>+C</ToolbarButton>
-            <ToolbarButton title="Xoá hàng" onClick={() => editor.chain().focus().deleteRow().run()}>−H</ToolbarButton>
-            <ToolbarButton title="Xoá cột" onClick={() => editor.chain().focus().deleteColumn().run()}>−C</ToolbarButton>
-            <ToolbarButton title="Xoá bảng" onClick={() => editor.chain().focus().deleteTable().run()}><Trash2 className="h-4 w-4" /></ToolbarButton>
+            <ToolbarButton title="Xóa hàng" onClick={() => editor.chain().focus().deleteRow().run()}>−H</ToolbarButton>
+            <ToolbarButton title="Xóa cột" onClick={() => editor.chain().focus().deleteColumn().run()}>−C</ToolbarButton>
+            <ToolbarButton title="Xóa bảng" onClick={() => editor.chain().focus().deleteTable().run()}><Trash2 className="h-4 w-4" /></ToolbarButton>
           </>
         )}
 
@@ -322,15 +322,15 @@ export default function MarkdownEditor({ value, onChange, onImageInserted }: Mar
       <div className="relative">
         {editor.isEmpty && (
           <p className="pointer-events-none absolute left-6 top-5 z-[1] text-sm text-on-surface-variant/55">
-            Bắt đầu viết tài liệu...
+            Bắt đầu viết tài liệu…
           </p>
         )}
         <EditorContent editor={editor} />
       </div>
 
-      <div className="flex items-center justify-between border-t border-outline-variant bg-surface-2 px-4 py-2 text-[10px] font-semibold text-on-surface-variant">
-        <span>Soạn thảo trực quan — dán, kéo-thả và đổi kích thước ảnh từ các góc (tối đa 1MB)</span>
-        <span>Hệ thống tự chuyển đổi và lưu dưới dạng Markdown</span>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-outline-variant bg-surface-2/60 px-4 py-2 text-[11px] text-on-surface-variant">
+        <span>Dán hoặc kéo thả ảnh (tối đa 1 MB), kéo góc ảnh để đổi kích thước.</span>
+        <span>Tự động lưu dưới dạng Markdown</span>
       </div>
     </div>
   );

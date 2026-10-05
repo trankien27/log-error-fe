@@ -29,7 +29,7 @@ export default function AutoArrangeScopeStep({
 }: Props) {
   return (
     <div className="space-y-4">
-      <Typography.Title level={5} className="!mb-0">1. Chọn tuần, cửa hàng/phòng ban và danh sách nhân viên</Typography.Title>
+      <Typography.Title level={5} className="!mb-0">1. Chọn tuần và nhân viên</Typography.Title>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Form.Item label="Tuần làm việc" className="!mb-0">
           <DatePicker

@@ -29,7 +29,7 @@ export default function QuickArrangeGeneralForm({ formState, users, onFieldChang
           />
         </Form.Item>
 
-        <Form.Item label="Kiểu đề xuất" className="!mb-0">
+        <Form.Item label="Xếp theo" className="!mb-0">
           <Select
             value={formState.periodType}
             onChange={value => onFieldChange('periodType', value)}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Plus, Clock, Paperclip, Edit2, Paperclip as PaperclipIcon, Columns3, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, ArrowRight, Check, ZoomIn, ZoomOut } from 'lucide-react';
+import { Plus, Clock, Paperclip, Edit2, Paperclip as PaperclipIcon, Columns3, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, ArrowRight, Check, ZoomIn, ZoomOut, ClipboardList, Inbox, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageHeader, EmptyState, Skeleton, confirmAction } from '../../../components/ui';
 import { useTasksStore } from '../../../stores/useTasksStore';
 import { useUsersStore } from '../../../stores/useUsersStore';
 import { useKanbanDragDrop } from '../hooks/useKanbanDragDrop';
@@ -160,7 +161,7 @@ export default function TasksTab() {
       return;
     }
     if (!taskAssigneeId) {
-      toast.error('Vui lòng chọn người đảm nhận.');
+      toast.error('Vui lòng chọn người phụ trách.');
       return;
     }
 
@@ -191,12 +192,12 @@ export default function TasksTab() {
           await addAttachments(savedTask.id, pendingTaskFiles);
         } catch (err: any) {
           attachmentUploadFailed = true;
-          toast.error(err.message || 'Tác vụ đã lưu nhưng không thể tải tệp lên R2.');
+          toast.error(err.message || 'Đã lưu công việc nhưng chưa tải được tệp lên.');
         }
       }
 
       if (!attachmentUploadFailed) {
-        toast.success(currentEditingTask ? 'Cập nhật tác vụ thành công.' : 'Tạo tác vụ thành công.');
+        toast.success(currentEditingTask ? 'Đã lưu thay đổi.' : 'Đã tạo công việc.');
       }
       setIsTaskModalOpen(false);
       setCurrentEditingTask(null);
@@ -210,7 +211,7 @@ export default function TasksTab() {
       setTaskAttachments([]);
       setPendingTaskFiles([]);
     } catch (err: any) {
-      toast.error(err.message || 'Không thể lưu tác vụ.');
+      toast.error(err.message || 'Không thể lưu công việc. Vui lòng thử lại.');
     }
   };
 
@@ -245,7 +246,7 @@ export default function TasksTab() {
       }
     } else {
       if (pendingTaskFiles.length + files.length > MAX_ATTACHMENT_FILES_PER_UPLOAD) {
-        toast.error(`Mỗi lần lưu task chỉ được tải tối đa ${MAX_ATTACHMENT_FILES_PER_UPLOAD} tệp.`);
+        toast.error(`Mỗi lần lưu chỉ được tải tối đa ${MAX_ATTACHMENT_FILES_PER_UPLOAD} tệp.`);
         return;
       }
 
@@ -257,13 +258,14 @@ export default function TasksTab() {
       }
 
       setPendingTaskFiles(prev => [...prev, ...files]);
-      toast.success(`Đã chọn ${files.length} tệp. Tệp sẽ được tải lên R2 khi lưu task.`);
+      toast.success(`Đã chọn ${files.length} tệp. Tệp sẽ được tải lên khi lưu.`);
     }
   };
 
   const handleDeleteAttachmentClick = async (attachmentId: string) => {
     const taskId = selectedTaskDetails?.id || currentEditingTask?.id;
     if (!taskId) return;
+    if (!(await confirmAction({ title: 'Xóa tệp đính kèm này?', content: 'Tệp sẽ bị xóa khỏi kho lưu trữ.' }))) return;
 
     try {
       await deleteAttachment(taskId, attachmentId);
@@ -286,7 +288,7 @@ export default function TasksTab() {
   const handleUpdateTaskStatus = async (id: string, status: 'pending' | 'progress' | 'done') => {
     try {
       await updateTaskStatus(id, status);
-      toast.success('Đã cập nhật trạng thái tác vụ.');
+      toast.success('Đã cập nhật trạng thái.');
     } catch (err: any) {
       toast.error(err.message || 'Không thể cập nhật trạng thái.');
     }
@@ -361,14 +363,14 @@ export default function TasksTab() {
         delete next[task.id];
         return next;
       });
-      toast.success('Đã cập nhật deadline tác vụ.');
+      toast.success('Đã cập nhật hạn xử lý.');
     } catch (err: any) {
       setCalendarDeadlineOverrides(prev => {
         const next = { ...prev };
         delete next[task.id];
         return next;
       });
-      toast.error(err.message || 'Không thể cập nhật deadline tác vụ.');
+      toast.error(err.message || 'Không thể cập nhật hạn xử lý.');
     }
   };
 
@@ -562,365 +564,244 @@ export default function TasksTab() {
     });
   }, [activeTaskView, calendarSlotHeight, preferredCalendarHour, tasks.length, calendarWeekStart]);
 
-  return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Panel Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">
-            {activeTaskView === 'kanban' ? 'Bảng Kanban điều phối nhiệm vụ IT' : 'Lịch công việc IT'}
-          </h2>
-          <p className="text-xs text-on-surface-variant mt-1">
-            {activeTaskView === 'kanban'
-              ? 'Phân bổ công việc bằng cách kéo thả hoặc thao tác nhanh.'
-              : activeTaskView === 'calendar'
-                ? 'Theo dõi và sắp xếp thời hạn công việc theo tuần.'
-                : 'Theo dõi tổng quan thời hạn công việc theo tháng.'}
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="inline-flex rounded-lg border border-outline-variant bg-surface p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTaskView('kanban')}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
-                activeTaskView === 'kanban' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
-              }`}
-            >
-              <Columns3 className="w-4 h-4" />
-              Kanban
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTaskView('calendar')}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
-                activeTaskView === 'calendar' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
-              }`}
-            >
-              <CalendarDays className="w-4 h-4" />
-              Tuần
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTaskView('month')}
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-bold transition-colors ${
-                activeTaskView === 'month' ? 'bg-primary text-on-primary shadow-sm' : 'text-on-surface-variant hover:bg-surface-2'
-              }`}
-            >
-              <CalendarRange className="w-4 h-4" />
-              Tháng
-            </button>
-          </div>
+  const kanbanColumns: Array<{
+    status: Task['status'];
+    label: string;
+    dotClass: string;
+    countClass: string;
+    dropClass: string;
+  }> = [
+    { status: 'pending', label: 'Chờ xử lý', dotClass: 'bg-on-surface-variant', countClass: 'bg-surface text-on-surface-variant', dropClass: 'bg-primary-subtle ring-2 ring-inset ring-primary/40' },
+    { status: 'progress', label: 'Đang làm', dotClass: 'bg-primary', countClass: 'bg-primary-subtle text-primary', dropClass: 'bg-primary-subtle ring-2 ring-inset ring-primary/40' },
+    { status: 'done', label: 'Hoàn thành', dotClass: 'bg-success', countClass: 'bg-success-container text-on-success-container', dropClass: 'bg-success-container/60 ring-2 ring-inset ring-success/40' },
+  ];
+
+  const getPriorityBadge = (priority?: number) => {
+    if (priority === 2) return { label: 'Ưu tiên cao', className: 'badge-error' };
+    if (priority === 0) return { label: 'Ưu tiên thấp', className: 'badge-info' };
+    return { label: 'Trung bình', className: 'badge-warning' };
+  };
+
+  const taskViewOptions: Array<{ value: typeof activeTaskView; label: string; icon: typeof Columns3 }> = [
+    { value: 'kanban', label: 'Kanban', icon: Columns3 },
+    { value: 'calendar', label: 'Tuần', icon: CalendarDays },
+    { value: 'month', label: 'Tháng', icon: CalendarRange },
+  ];
+
+  const renderKanbanCard = (task: Task) => {
+    const priorityBadge = getPriorityBadge(task.priority);
+    const isDone = task.status === 'done';
+    const isOverdue = !isDone && task.isOverdue;
+    const attachmentCount = task.attachments?.length || 0;
+
+    return (
+      <div
+        key={task.id}
+        draggable
+        onDragStart={(e) => handleDragStart(e, task.id)}
+        onClick={() => openTaskDetails(task)}
+        className={`group rounded-xl border bg-surface p-3.5 shadow-sm space-y-2.5 transition-all cursor-pointer select-none hover:-translate-y-0.5 hover:shadow-elevated ${
+          isOverdue ? 'border-error/40' : 'border-outline-variant hover:border-primary/30'
+        } ${draggedTaskId === task.id ? 'opacity-40' : ''}`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <h5 className={`text-sm font-medium leading-snug ${isDone ? 'text-on-surface-variant line-through' : 'text-on-surface'}`}>
+            {task.title}
+          </h5>
           <button
-            onClick={() => handleOpenTaskModal()}
-            className="btn-primary"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenTaskModal(task);
+            }}
+            className="shrink-0 p-1 -m-0.5 rounded-md text-on-surface-variant hover:text-on-surface hover:bg-surface-2 transition-colors"
+            title="Sửa công việc"
+            aria-label="Sửa công việc"
           >
-            <Plus className="w-4 h-4" /> Khởi tạo Tác vụ
+            <Edit2 className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-on-surface-variant">
+          <span className={`${priorityBadge.className} text-[11px]`}>{priorityBadge.label}</span>
+          <span className={`inline-flex items-center gap-1 ${isOverdue ? 'text-error font-medium' : ''}`}>
+            <Clock className="w-3.5 h-3.5" />
+            {task.dueText}
+          </span>
+          {attachmentCount > 0 && (
+            <span className="inline-flex items-center gap-1" title={`${attachmentCount} tệp đính kèm`}>
+              <Paperclip className="w-3.5 h-3.5" />
+              {attachmentCount}
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-outline-variant">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-6 h-6 shrink-0 rounded-full bg-primary-subtle text-primary flex items-center justify-center text-[11px] font-semibold">
+              {getTaskAssigneeInitial(task)}
+            </span>
+            <span className="text-xs text-on-surface-variant truncate">{getTaskAssigneeName(task)}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+            {task.status === 'pending' && (
+              <button
+                type="button"
+                onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
+                disabled={isLoading}
+                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-medium text-primary bg-primary-subtle hover:bg-primary/15 transition-colors disabled:opacity-50"
+              >
+                Bắt đầu <ArrowRight className="w-3 h-3" />
+              </button>
+            )}
+            {task.status === 'progress' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                  disabled={isLoading}
+                  className="h-7 px-2 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-2 hover:text-on-surface transition-colors disabled:opacity-50"
+                >
+                  Hoãn
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateTaskStatus(task.id, 'done')}
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-medium bg-success-container text-on-success-container hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  Xong <Check className="w-3 h-3" />
+                </button>
+              </>
+            )}
+            {task.status === 'done' && (
+              <button
+                type="button"
+                onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
+                disabled={isLoading}
+                className="h-7 px-2.5 rounded-lg text-xs font-medium text-on-surface-variant border border-outline-variant hover:bg-surface-2 hover:text-on-surface transition-colors disabled:opacity-50"
+              >
+                Mở lại
+              </button>
+            )}
+          </div>
+        </div>
       </div>
+    );
+  };
 
-      {/* Kanban columns grid wrapper */}
+  return (
+    <div className="space-y-5 animate-fadeIn">
+      <PageHeader
+        title="Công việc"
+        icon={ClipboardList}
+        description={
+          activeTaskView === 'kanban'
+            ? 'Kéo thả thẻ để cập nhật tiến độ công việc.'
+            : activeTaskView === 'calendar'
+              ? 'Sắp xếp hạn xử lý công việc theo tuần.'
+              : 'Xem nhanh hạn xử lý công việc trong tháng.'
+        }
+        actions={
+          <>
+            <div className="inline-flex rounded-lg bg-surface-2 p-1" role="tablist" aria-label="Chế độ xem">
+              {taskViewOptions.map(option => {
+                const Icon = option.icon;
+                const isActive = activeTaskView === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setActiveTaskView(option.value)}
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-sm font-medium transition-colors ${
+                      isActive ? 'bg-surface text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" onClick={() => handleOpenTaskModal()} className="btn-primary">
+              <Plus className="w-4 h-4" /> Tạo công việc
+            </button>
+          </>
+        }
+      />
+
       {activeTaskView === 'kanban' ? (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch text-left">
-        
-        {/* Column 1: CHỜ XỬ LÝ (pending) */}
-        <div className="bg-surface rounded-xl border border-outline-variant flex flex-col">
-          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-2 rounded-t-xl select-none">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-on-surface-variant"></span>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface-variant font-sans">Chờ xử lý</h4>
-              <span className="bg-surface-2 text-on-surface-variant text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
-                {tasks.filter(t => t.status === 'pending').length}
-              </span>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch text-left">
+        {kanbanColumns.map(column => {
+          const columnTasks = tasks.filter(t => t.status === column.status);
+          return (
+            <div key={column.status} className="flex flex-col rounded-2xl bg-surface-2/60 border border-outline-variant/60">
+              <div className="flex items-center gap-2 px-4 pt-3.5 pb-2 select-none">
+                <span className={`w-2.5 h-2.5 rounded-full ${column.dotClass}`} />
+                <h4 className="text-sm font-semibold text-on-surface">{column.label}</h4>
+                <span className={`ml-auto min-w-6 h-6 px-2 inline-flex items-center justify-center rounded-full text-xs font-medium ${column.countClass}`}>
+                  {columnTasks.length}
+                </span>
+              </div>
+
+              <div
+                onDragOver={(e) => handleDragOver(e, column.status)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, column.status)}
+                className={`m-2 mt-1 p-1.5 space-y-2.5 rounded-xl min-h-[350px] max-h-[350px] overflow-y-auto transition-colors duration-200 ${
+                  dragOverColumn === column.status ? column.dropClass : ''
+                }`}
+              >
+                {isLoading && tasks.length === 0 ? (
+                  <div className="space-y-2.5">
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                  </div>
+                ) : columnTasks.length === 0 ? (
+                  <EmptyState compact icon={Inbox} title="Chưa có công việc" description="Kéo thẻ vào đây để chuyển trạng thái." />
+                ) : (
+                  columnTasks.map(renderKanbanCard)
+                )}
+              </div>
             </div>
-          </div>
-
-          <div
-            onDragOver={(e) => handleDragOver(e, 'pending')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'pending')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
-              dragOverColumn === 'pending' ? 'bg-primary/10 border-2 border-dashed border-primary shadow-inner' : 'bg-surface-2'
-            }`}
-          >
-            {tasks.filter(t => t.status === 'pending').length === 0 ? (
-              <p className="text-[11px] text-on-surface-variant text-center py-10">Cột trống</p>
-            ) : (
-              tasks.filter(t => t.status === 'pending').map(task => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onClick={() => {
-                    setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.description || '');
-                  }}
-                  className={`bg-surface p-4 rounded-lg border border-outline-variant hover:shadow-md hover:border-primary/40 shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
-                    draggedTaskId === task.id ? 'opacity-30 border-primary' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                     <h5 className="text-xs font-bold text-on-surface leading-snug">{task.title}</h5>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenTaskModal(task);
-                      }}
-                      className="p-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-2 transition-colors"
-                      title="Sửa tác vụ"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                 
-
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-1 text-error font-medium">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-bold">{task.dueText}</span>
-                    </div>
-                    {task.attachments && task.attachments.length > 0 && (
-                      <div className="flex items-center gap-1 bg-surface-2 px-1.5 py-0.5 rounded text-on-surface-variant font-semibold text-[9px]" title={`${task.attachments.length} tệp đính kèm`}>
-                        <Paperclip className="w-3 h-3 text-primary shrink-0" />
-                        <span>{task.attachments.length}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-secondary-container flex items-center justify-center font-bold text-[9px] text-primary">
-                        {getTaskAssigneeInitial(task)}
-                      </div>
-                      <span className="text-[10px] text-on-surface-variant font-medium truncate">{getTaskAssigneeName(task)}</span>
-                    </div>
-                    
-                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
-                        disabled={isLoading}
-                        className="text-[10px] border border-primary/30 text-primary hover:bg-primary/10 px-2 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
-                      >
-                        Bắt đầu <ArrowRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Column 2: ĐANG THỰC HIỆN (progress) */}
-        <div className="bg-surface rounded-xl border border-outline-variant flex flex-col">
-          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-2 rounded-t-xl select-none font-sans">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-primary">Đang thực hiện</h4>
-              <span className="bg-secondary-container text-primary text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
-                {tasks.filter(t => t.status === 'progress').length}
-              </span>
-            </div>
-          </div>
-
-          <div
-            onDragOver={(e) => handleDragOver(e, 'progress')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'progress')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
-              dragOverColumn === 'progress' ? 'bg-primary/10 border-2 border-dashed border-primary shadow-inner' : 'bg-surface-2'
-            }`}
-          >
-            {tasks.filter(t => t.status === 'progress').length === 0 ? (
-              <p className="text-[11px] text-on-surface-variant text-center py-10">Cột trống</p>
-            ) : (
-              tasks.filter(t => t.status === 'progress').map(task => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onClick={() => {
-                    setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.description || '');
-                  }}
-                  className={`bg-surface p-4 rounded-lg border shadow-sm space-y-3 transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
-                    task.isOverdue ? 'border-error/40 bg-error-container/40' : 'border-outline-variant'
-                  } ${draggedTaskId === task.id ? 'opacity-30 border-primary' : ''}`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="bg-secondary-container text-primary text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
-                      {task.id}
-                    </span>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenTaskModal(task);
-                        }}
-                        className="p-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-2 transition-colors cursor-pointer"
-                        title="Sửa tác vụ"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <h5 className="text-xs font-bold text-on-surface leading-snug">{task.title}</h5>
-
-                  <div className="flex items-center justify-between mt-2">
-                    <div className={`flex items-center gap-1 text-xs ${task.isOverdue ? "text-error font-bold" : "text-on-surface-variant font-medium"}`}>
-                      <Clock className="w-3.5 h-3.5" />
-                      <span className="text-[10px]">{task.dueText}</span>
-                    </div>
-                    {task.attachments && task.attachments.length > 0 && (
-                      <div className="flex items-center gap-1 bg-surface-2 px-1.5 py-0.5 rounded text-on-surface-variant font-semibold text-[9px]" title={`${task.attachments.length} tệp đính kèm`}>
-                        <Paperclip className="w-3 h-3 text-primary shrink-0" />
-                        <span>{task.attachments.length}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="w-5 h-5 rounded-full bg-error-container flex items-center justify-center font-bold text-[9px] text-on-error-container">
-                        {getTaskAssigneeInitial(task)}
-                      </div>
-                      <span className="text-[10px] text-on-surface-variant font-medium truncate">{getTaskAssigneeName(task)}</span>
-                    </div>
-                    
-                    <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
-                        disabled={isLoading}
-                        className="text-[10px] text-on-surface-variant hover:text-on-surface font-medium cursor-pointer"
-                      >
-                        Hoãn
-                      </button>
-                      <button
-                        onClick={() => handleUpdateTaskStatus(task.id, 'done')}
-                        disabled={isLoading}
-                        className="text-[10px] bg-success text-on-primary font-bold hover:bg-on-success-container px-2 py-1 rounded whitespace-nowrap shadow-sm active:scale-95 transition-transform cursor-pointer inline-flex items-center gap-1"
-                      >
-                        Đã xong <Check className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Column 3: HOÀN THÀNH (done) */}
-        <div className="bg-surface rounded-xl border border-outline-variant flex flex-col opacity-90">
-          <div className="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-2 rounded-t-xl select-none font-sans">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-success"></span>
-              <h4 className="font-bold text-xs uppercase tracking-wider text-success">Hoàn thành</h4>
-              <span className="bg-success-container text-on-success-container text-[10px] font-mono px-1.5 py-0.5 rounded-full font-bold">
-                {tasks.filter(t => t.status === 'done').length}
-              </span>
-            </div>
-          </div>
-
-          <div
-            onDragOver={(e) => handleDragOver(e, 'done')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'done')}
-            className={`p-4 space-y-3 rounded-b-xl min-h-[350px] max-h-[350px] overflow-y-auto pr-2 transition-all duration-200 ${
-              dragOverColumn === 'done' ? 'bg-success-container border-2 border-dashed border-success shadow-inner' : 'bg-surface-2'
-            }`}
-          >
-            {tasks.filter(t => t.status === 'done').length === 0 ? (
-              <p className="text-[11px] text-on-surface-variant text-center py-10">Cột trống</p>
-            ) : (
-              tasks.filter(t => t.status === 'done').map(task => (
-                <div
-                  key={task.id}
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onClick={() => {
-                    setSelectedTaskDetails(task);
-                    setTaskNotesInput(task.description || '');
-                  }}
-                  className={`bg-surface p-4 rounded-lg border border-outline-variant hover:shadow-md shadow-sm space-y-3 min-h-[90px] transition-all cursor-pointer hover:-translate-y-0.5 select-none ${
-                    draggedTaskId === task.id ? 'opacity-30 border-success' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <span className="bg-surface-2 text-on-surface-variant line-through text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
-                      {task.id}
-                    </span>
-                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                      <button 
-                        onClick={() => handleOpenTaskModal(task)}
-                        className="p-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-2 transition-colors cursor-pointer"
-                        title="Sửa tác vụ"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <h5 className="text-xs text-on-surface-variant leading-snug line-through font-medium">{task.title}</h5>
-
-                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-[9px] text-on-surface-variant font-sans">{task.dueText}</span>
-                      {task.attachments && task.attachments.length > 0 && (
-                        <span className="flex items-center gap-0.5 bg-surface-2 border border-outline-variant px-1 py-0.5 rounded text-on-surface-variant font-semibold text-[8px]" title={`${task.attachments.length} tệp đính kèm`}>
-                          <Paperclip className="w-2.5 h-2.5 text-on-surface-variant shrink-0" />
-                          <span>{task.attachments.length}</span>
-                        </span>
-                      )}
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleUpdateTaskStatus(task.id, 'progress')}
-                        disabled={isLoading}
-                        className="text-[10px] border border-outline-variant text-on-surface-variant hover:bg-surface-2 hover:text-on-surface-variant px-1.5 py-0.5 rounded font-bold whitespace-nowrap active:scale-95 transition-transform cursor-pointer"
-                      >
-                        Mở lại
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+          );
+        })}
       </div>
       ) : activeTaskView === 'calendar' ? (
-        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden text-left">
+        <div className="card-surface overflow-hidden text-left">
           <div className="p-4 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-on-surface">
+              <h3 className="text-[15px] font-semibold text-on-surface">
                 {calendarDays[0]?.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                 {' - '}
                 {calendarDays[6]?.date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
               </h3>
-              <p className="text-xs text-on-surface-variant mt-1">Cột ngang là ngày, cột dọc là giờ. Click vào ô giờ để tạo task, click vào task để sửa hoặc đổi trạng thái.</p>
+              <p className="text-xs text-on-surface-variant mt-1">Bấm vào ô trống để tạo công việc, kéo thẻ để đổi giờ.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => moveCalendarWeek(-1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
-                aria-label="Tuần trước"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 hover:text-on-surface transition-colors"
+                aria-label="Tuần trước" title="Tuần trước"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={resetCalendarWeek}
-                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-2"
+                className="h-9 px-3 rounded-lg border border-outline-variant text-sm font-medium text-on-surface hover:bg-surface-2 transition-colors"
               >
                 Hôm nay
               </button>
               <button
                 type="button"
                 onClick={() => moveCalendarWeek(1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
-                aria-label="Tuần sau"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 hover:text-on-surface transition-colors"
+                aria-label="Tuần sau" title="Tuần sau"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -929,7 +810,7 @@ export default function TasksTab() {
                   type="button"
                   onClick={() => setCalendarZoom(prev => Math.max(0.7, Number((prev - 0.1).toFixed(1))))}
                   className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-surface-2 text-on-surface-variant"
-                  aria-label="Thu nhỏ calendar"
+                  aria-label="Thu nhỏ lịch" title="Thu nhỏ lịch"
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
@@ -941,17 +822,17 @@ export default function TasksTab() {
                   value={calendarZoom}
                   onChange={event => setCalendarZoom(Number(event.target.value))}
                   className="w-24 accent-primary"
-                  aria-label="Calendar zoom"
+                  aria-label="Mức thu phóng lịch"
                 />
                 <button
                   type="button"
                   onClick={() => setCalendarZoom(prev => Math.min(1.6, Number((prev + 0.1).toFixed(1))))}
                   className="h-7 w-7 inline-flex items-center justify-center rounded-md hover:bg-surface-2 text-on-surface-variant"
-                  aria-label="Phóng to calendar"
+                  aria-label="Phóng to lịch" title="Phóng to lịch"
                 >
                   <ZoomIn className="w-4 h-4" />
                 </button>
-                <span className="w-10 text-right text-[11px] font-bold text-on-surface-variant">{Math.round(calendarZoom * 100)}%</span>
+                <span className="w-10 text-right text-[11px] font-semibold text-on-surface-variant">{Math.round(calendarZoom * 100)}%</span>
               </div>
             </div>
           </div>
@@ -962,15 +843,15 @@ export default function TasksTab() {
                 className="grid bg-surface-2 border-b border-outline-variant sticky top-0 z-20 shadow-sm"
                 style={{ gridTemplateColumns: `72px repeat(7, minmax(${calendarDayColumnWidth}px, 1fr))` }}
               >
-                <div className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-on-surface-variant border-r border-outline-variant bg-surface-2">
+                <div className="px-3 py-2 text-center text-xs font-medium text-on-surface-variant border-r border-outline-variant bg-surface-2">
                   Giờ
                 </div>
                 {calendarDays.map(day => (
                   <div key={day.key} className="px-3 py-2 text-center border-r border-outline-variant bg-surface-2">
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
+                    <p className="text-[11px] font-medium text-on-surface-variant">
                       {day.date.toLocaleDateString('vi-VN', { weekday: 'short' })}
                     </p>
-                    <p className={`mt-1 inline-flex min-w-8 h-8 items-center justify-center rounded-full text-xs font-bold ${
+                    <p className={`mt-1 inline-flex min-w-8 h-8 items-center justify-center rounded-full text-xs font-semibold ${
                       day.isToday ? 'bg-primary text-on-primary' : 'text-on-surface'
                     }`}>
                       {day.date.getDate()}
@@ -985,7 +866,7 @@ export default function TasksTab() {
                     className="grid border-b border-outline-variant"
                     style={{ gridTemplateColumns: `72px repeat(7, minmax(${calendarDayColumnWidth}px, 1fr))` }}
                   >
-                    <div className="px-3 py-2 text-center text-xs font-bold text-on-surface-variant bg-surface-2 border-r border-outline-variant">
+                    <div className="px-3 py-2 text-center text-xs font-medium text-on-surface-variant bg-surface-2/60 border-r border-outline-variant">
                       {String(hour).padStart(2, '0')}:00
                     </div>
                     {calendarDays.map(day => {
@@ -1030,10 +911,10 @@ export default function TasksTab() {
                                 className={`w-full text-left rounded-lg border ${calendarTaskPaddingClass} shadow-sm hover:shadow transition-all cursor-grab active:cursor-grabbing ${
                                   calendarDraggedTaskId === task.id ? 'opacity-40 scale-[0.98]' : ''
                                 } ${statusClassByTask(task.status)}`}
-                                title="Sửa tác vụ"
+                                title="Sửa công việc"
                               >
-                                <span className={`block ${calendarTaskTitleClass} font-bold truncate`}>{task.title}</span>
-                                <span className="mt-0.5 flex items-center justify-between gap-2 text-[10px] opacity-80">
+                                <span className={`block ${calendarTaskTitleClass} font-medium truncate`}>{task.title}</span>
+                                <span className="mt-0.5 flex items-center justify-between gap-2 text-[11px] opacity-80">
                                   <span className="truncate">{getTaskAssigneeName(task)}</span>
                                   <span className="shrink-0">{getTaskStatusLabel(task.status)}</span>
                                 </span>
@@ -1049,9 +930,9 @@ export default function TasksTab() {
                                     tasks: slotTasks,
                                   });
                                 }}
-                                className="inline-flex max-w-full rounded-md border border-dashed border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold leading-4 text-primary hover:bg-primary/20 transition-colors"
+                                className="inline-flex max-w-full rounded-md border border-dashed border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold leading-4 text-primary hover:bg-primary/20 transition-colors"
                               >
-                                +{hiddenSlotTasksCount} task khác
+                                +{hiddenSlotTasksCount} việc khác
                               </button>
                             )}
                           </div>
@@ -1065,35 +946,35 @@ export default function TasksTab() {
           </div>
         </div>
       ) : (
-        <div className="bg-surface rounded-xl border border-outline-variant overflow-hidden text-left">
+        <div className="card-surface overflow-hidden text-left">
           <div className="p-4 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-on-surface capitalize">
+              <h3 className="text-[15px] font-semibold text-on-surface capitalize">
                 {calendarMonth.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
               </h3>
-              <p className="text-xs text-on-surface-variant mt-1">Click vào ngày để tạo task. Kéo task sang ngày khác để đổi deadline và giữ nguyên giờ.</p>
+              <p className="text-xs text-on-surface-variant mt-1">Bấm vào ngày để tạo công việc, kéo thẻ sang ngày khác để đổi hạn.</p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => moveCalendarMonth(-1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
-                aria-label="Tháng trước"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 hover:text-on-surface transition-colors"
+                aria-label="Tháng trước" title="Tháng trước"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={resetCalendarMonth}
-                className="h-9 px-3 rounded-lg border border-outline-variant text-xs font-bold hover:bg-surface-2"
+                className="h-9 px-3 rounded-lg border border-outline-variant text-sm font-medium text-on-surface hover:bg-surface-2 transition-colors"
               >
                 Hôm nay
               </button>
               <button
                 type="button"
                 onClick={() => moveCalendarMonth(1)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant hover:bg-surface-2"
-                aria-label="Tháng sau"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 hover:text-on-surface transition-colors"
+                aria-label="Tháng sau" title="Tháng sau"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -1104,7 +985,7 @@ export default function TasksTab() {
             <div className="min-w-[840px]">
               <div className="grid grid-cols-7 bg-surface-2 border-b border-outline-variant">
                 {['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'].map(dayLabel => (
-                  <div key={dayLabel} className="px-3 py-2 text-center text-[11px] font-bold uppercase tracking-wide text-on-surface-variant border-r last:border-r-0 border-outline-variant">
+                  <div key={dayLabel} className="px-3 py-2 text-center text-[11px] font-medium text-on-surface-variant border-r last:border-r-0 border-outline-variant">
                     {dayLabel}
                   </div>
                 ))}
@@ -1135,13 +1016,13 @@ export default function TasksTab() {
                       } ${calendarDragOverSlot === day.key ? 'bg-primary/10 ring-2 ring-inset ring-primary/40' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-bold ${
+                        <span className={`inline-flex w-7 h-7 items-center justify-center rounded-full text-xs font-semibold ${
                           day.isToday ? 'bg-primary text-on-primary' : day.isCurrentMonth ? 'text-on-surface' : 'text-on-surface-variant'
                         }`}>
                           {day.date.getDate()}
                         </span>
                         {dayTasks.length > 0 && (
-                          <span className="text-[10px] font-bold text-on-surface-variant">{dayTasks.length} task</span>
+                          <span className="text-[11px] font-medium text-on-surface-variant">{dayTasks.length} việc</span>
                         )}
                       </div>
                       <div className="space-y-1">
@@ -1161,8 +1042,8 @@ export default function TasksTab() {
                             } ${statusClassByTask(task.status)}`}
                             title={`${formatDueText(task.dueDate || task.dueText)} - ${getTaskAssigneeName(task)}`}
                           >
-                            <span className="block text-[11px] font-bold truncate">{task.title}</span>
-                            <span className="mt-0.5 flex items-center justify-between gap-1 text-[9px] opacity-80">
+                            <span className="block text-xs font-medium truncate">{task.title}</span>
+                            <span className="mt-0.5 flex items-center justify-between gap-1 text-[11px] opacity-80">
                               <span className="truncate">{getTaskAssigneeName(task)}</span>
                               <span className="shrink-0">
                                 {getTaskTimeText(task)}
@@ -1180,9 +1061,9 @@ export default function TasksTab() {
                                 tasks: dayTasks,
                               });
                             }}
-                            className="inline-flex rounded-md border border-dashed border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary hover:bg-primary/20"
+                            className="inline-flex rounded-md border border-dashed border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/20"
                           >
-                            +{hiddenTasksCount} task khác
+                            +{hiddenTasksCount} việc khác
                           </button>
                         )}
                       </div>
@@ -1198,38 +1079,38 @@ export default function TasksTab() {
       {/* Task Edit/Create Form Modal */}
       {isTaskModalOpen && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
-              <h3 className="text-lg font-bold text-on-surface">
-                {currentEditingTask ? `Chỉnh sửa Tác vụ IT [${currentEditingTask.id}]` : 'Tạo Tác vụ công việc IT mới'}
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center gap-3 mb-4">
+              <h3 className="text-lg font-semibold text-on-surface">
+                {currentEditingTask ? 'Sửa công việc' : 'Tạo công việc mới'}
               </h3>
-              <button onClick={() => setIsTaskModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setIsTaskModalOpen(false)} className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-2 transition-colors" aria-label="Đóng" title="Đóng"><X className="w-4 h-4" /></button>
             </div>
             <form onSubmit={handleSaveTaskSubmit} className="space-y-4 text-sm">
               <div>
-                <label className="block font-medium mb-1">Tiêu đề / Tên công việc *</label>
+                <label className="block text-sm font-medium text-on-surface mb-1.5">Tiêu đề *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ví dụ: Fix lỗi đồng bộ hóa POS CH Q1"
+                  placeholder="Ví dụ: Sửa lỗi đồng bộ POS cửa hàng Q1"
                   value={taskTitle}
                   onChange={e => setTaskTitle(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary"
+                  className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-primary"
                 />
               </div>
               <div>
-                <label className="block font-medium mb-1">Mô tả</label>
+                <label className="block text-sm font-medium text-on-surface mb-1.5">Mô tả</label>
                 <textarea
                   rows={3}
-                  placeholder="Nhập mô tả chi tiết cho nhiệm vụ"
+                  placeholder="Mô tả ngắn gọn công việc cần làm"
                   value={taskDescription}
                   onChange={e => setTaskDescription(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-primary resize-none"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Người đảm nhận *</label>
+                  <label className="block text-sm font-medium text-on-surface mb-1.5">Người phụ trách *</label>
                   <select
                     required
                     value={taskAssigneeId}
@@ -1239,10 +1120,10 @@ export default function TasksTab() {
                       setTaskAssigneeId(selectedUser?.id || '');
                       setTaskAssignee(selectedUser?.name || '');
                     }}
-                    className="w-full px-3 py-2 border rounded-lg bg-surface focus:outline-primary disabled:bg-surface-2 disabled:text-on-surface-variant disabled:cursor-not-allowed"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-primary disabled:bg-surface-2 disabled:text-on-surface-variant disabled:cursor-not-allowed"
                   >
                     <option value="" disabled>
-                      {assigneeUsers.length === 0 ? 'Không có user role 2' : 'Chọn người đảm nhận'}
+                      {assigneeUsers.length === 0 ? 'Chưa có nhân viên IT' : 'Chọn người phụ trách'}
                     </option>
                     {assigneeUsers.map(user => (
                       <option key={user.id} value={user.id}>
@@ -1252,33 +1133,33 @@ export default function TasksTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Hạn xử lý</label>
+                  <label className="block text-sm font-medium text-on-surface mb-1.5">Hạn xử lý</label>
                   <input
                     type="datetime-local"
                     value={taskDue}
                     onChange={e => setTaskDue(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-primary"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-primary"
                   />
                 </div>
               </div>
               <div>
-                <label className="block font-medium mb-1">Trạng thái hiện tại</label>
+                <label className="block text-sm font-medium text-on-surface mb-1.5">Trạng thái</label>
                 <select
                   value={taskStatusField}
                   onChange={e => setTaskStatusField(e.target.value as any)}
-                  className="w-full px-3 py-2 border rounded-lg bg-surface"
+                  className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-primary"
                 >
-                  <option value="pending">Chờ xử lý (Pending)</option>
-                  <option value="progress">Đang thực hiện (In Progress)</option>
-                  <option value="done">Hoàn thành (Done)</option>
+                  <option value="pending">Chờ xử lý</option>
+                  <option value="progress">Đang làm</option>
+                  <option value="done">Hoàn thành</option>
                 </select>
               </div>
 
               {/* Attachments Section */}
               <div className="border border-outline-variant rounded-xl p-3 bg-surface-2 text-left">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-on-surface-variant text-xs">Đính kèm tài liệu hỗ trợ ({taskAttachments.length + pendingTaskFiles.length})</span>
-                  <label className="text-[10px] text-primary hover:underline font-bold cursor-pointer select-none bg-surface border border-outline-variant px-2 py-1 rounded shadow-sm hover:bg-surface-2 flex items-center gap-1">
+                  <span className="text-sm font-medium text-on-surface">Tệp đính kèm ({taskAttachments.length + pendingTaskFiles.length})</span>
+                  <label className="h-8 px-3 text-xs font-medium text-primary cursor-pointer select-none bg-surface border border-outline-variant rounded-lg hover:bg-surface-2 inline-flex items-center gap-1 transition-colors">
                     <Plus className="w-3 h-3" />
                     <span>Thêm tệp</span>
                     <input
@@ -1291,7 +1172,7 @@ export default function TasksTab() {
                   </label>
                 </div>
                 {taskAttachments.length === 0 && pendingTaskFiles.length === 0 ? (
-                  <p className="text-[10px] text-on-surface-variant italic text-center py-2">Chưa đính kèm tài liệu nào.</p>
+                  <p className="text-xs text-on-surface-variant text-center py-2">Chưa có tệp nào.</p>
                 ) : (
                   <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
                     {taskAttachments.map(att => (
@@ -1306,12 +1187,12 @@ export default function TasksTab() {
                           >
                             {att.name}
                           </button>
-                          <span className="text-[9px] text-on-surface-variant">({att.size})</span>
+                          <span className="text-[11px] text-on-surface-variant">({att.size})</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleDeleteAttachmentClick(att.id)}
-                          className="text-[10px] text-error hover:text-error font-bold px-1.5 py-0.5 rounded hover:bg-error-container cursor-pointer"
+                          className="text-xs text-error font-medium px-2 py-1 rounded-md hover:bg-error-container transition-colors"
                         >
                           Xóa
                         </button>
@@ -1322,12 +1203,12 @@ export default function TasksTab() {
                         <div className="flex items-center gap-1.5 truncate max-w-[80%]">
                           <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
                           <span className="truncate font-medium text-on-surface-variant">{file.name}</span>
-                          <span className="text-[9px] text-on-surface-variant">({formatAttachmentSize(file.size)} · chờ tải)</span>
+                          <span className="text-[11px] text-on-surface-variant">({formatAttachmentSize(file.size)} · chờ tải)</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => setPendingTaskFiles(prev => prev.filter((_, pendingIndex) => pendingIndex !== index))}
-                          className="text-[10px] text-error hover:text-error font-bold px-1.5 py-0.5 rounded hover:bg-error-container cursor-pointer"
+                          className="text-xs text-error font-medium px-2 py-1 rounded-md hover:bg-error-container transition-colors"
                         >
                           Bỏ
                         </button>
@@ -1337,7 +1218,7 @@ export default function TasksTab() {
                 )}
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
                 <button
                   type="button"
                   onClick={() => setIsTaskModalOpen(false)}
@@ -1350,7 +1231,7 @@ export default function TasksTab() {
                   disabled={isLoading}
                   className="btn-primary"
                 >
-                  {isLoading ? 'Đang lưu...' : 'Lưu tác vụ'}
+                  {isLoading ? 'Đang lưu…' : 'Lưu công việc'}
                 </button>
               </div>
             </form>
@@ -1360,21 +1241,23 @@ export default function TasksTab() {
 
       {calendarSlotDetails && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-hidden border border-outline-variant text-left">
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-xl max-h-[calc(100dvh-2rem)] overflow-hidden border border-outline-variant text-left">
             <div className="flex items-center justify-between gap-3 p-4 border-b border-outline-variant">
               <div>
-                <h3 className="text-base font-bold text-on-surface">Danh sách tác vụ</h3>
+                <h3 className="text-lg font-semibold text-on-surface">Danh sách công việc</h3>
                 <p className="text-xs text-on-surface-variant mt-1">{calendarSlotDetails.title}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setCalendarSlotDetails(null)}
-                className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer px-2 py-1 rounded hover:bg-surface-2"
+                className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-2 transition-colors"
+                aria-label="Đóng"
+                title="Đóng"
               >
-                &#x2715;
+                <X className="w-4 h-4" />
               </button>
             </div>
-            <div className="p-4 space-y-2 max-h-[70dvh] overflow-y-auto bg-surface-2">
+            <div className="p-4 space-y-2 max-h-[70dvh] overflow-y-auto bg-surface-2/60">
               {calendarSlotDetails.tasks.map(task => (
                 <button
                   key={task.id}
@@ -1383,14 +1266,14 @@ export default function TasksTab() {
                     setCalendarSlotDetails(null);
                     handleOpenTaskModal(task);
                   }}
-                  className={`w-full text-left rounded-lg border px-3 py-2.5 shadow-sm hover:shadow transition-shadow bg-surface ${statusClassByTask(task.status)}`}
+                  className={`w-full text-left rounded-xl border px-3 py-2.5 shadow-sm hover:shadow-elevated transition-shadow bg-surface ${statusClassByTask(task.status)}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-bold truncate">{task.title}</p>
+                      <p className="text-sm font-medium truncate">{task.title}</p>
                       <p className="text-xs opacity-80 mt-1 truncate">{getTaskAssigneeName(task)}</p>
                     </div>
-                    <span className="shrink-0 text-[11px] font-bold">{getTaskStatusLabel(task.status)}</span>
+                    <span className="shrink-0 text-xs font-medium">{getTaskStatusLabel(task.status)}</span>
                   </div>
                   {task.description && (
                     <p className="text-xs opacity-80 mt-2 line-clamp-2">{task.description}</p>
@@ -1405,42 +1288,44 @@ export default function TasksTab() {
       {/* Task Details Panel Modal */}
       {selectedTaskDetails && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto p-5 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center gap-3 mb-4">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-warning-container text-warning">
-                  <Plus className="w-4 h-4" />
+                <span className="p-1.5 rounded-lg bg-primary-subtle text-primary">
+                  <ClipboardList className="w-4 h-4" />
                 </span>
-                <span className="text-xs font-mono font-bold text-on-surface-variant bg-surface-2 px-2 py-0.5 rounded">
+                <span className="text-xs font-mono font-medium text-on-surface-variant bg-surface-2 px-2 py-0.5 rounded-md">
                   {selectedTaskDetails.id}
                 </span>
-                <span className="text-xs text-on-surface-variant font-bold">Chi tiết tác vụ IT</span>
+                <span className="text-sm text-on-surface-variant font-medium">Chi tiết công việc</span>
               </div>
               <button
                 onClick={() => setSelectedTaskDetails(null)}
-                className="text-on-surface-variant hover:text-on-surface font-bold px-2 py-1 rounded hover:bg-surface-2 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-2 transition-colors"
                 type="button"
+                aria-label="Đóng"
+                title="Đóng"
               >
-                &#x2715;
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-4 text-sm text-on-surface">
               <div>
-                <h3 className="text-base font-extrabold text-on-surface leading-snug">
+                <h3 className="text-lg font-semibold text-on-surface leading-snug">
                   {selectedTaskDetails.title}
                 </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-surface-2 border border-outline-variant p-3 rounded-xl">
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wide block mb-1">Trạng thái</span>
+                  <span className="text-xs font-medium text-on-surface-variant block mb-1.5">Trạng thái</span>
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
                       selectedTaskDetails.status === 'pending'
-                        ? 'bg-surface-2 text-on-surface'
+                        ? 'bg-surface text-on-surface border border-outline-variant'
                         : selectedTaskDetails.status === 'progress'
-                        ? 'bg-secondary-container text-primary'
+                        ? 'bg-primary-subtle text-primary'
                         : 'bg-success-container text-on-success-container'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${
@@ -1456,8 +1341,8 @@ export default function TasksTab() {
                 </div>
 
                 <div className="bg-surface-2 border border-outline-variant p-3 rounded-xl">
-                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wide block mb-1">Hạn xử lý</span>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-error">
+                  <span className="text-xs font-medium text-on-surface-variant block mb-1.5">Hạn xử lý</span>
+                  <div className={`flex items-center gap-1.5 text-sm font-medium ${selectedTaskDetails.isOverdue && selectedTaskDetails.status !== 'done' ? 'text-error' : 'text-on-surface'}`}>
                     <Clock className="w-4 h-4 shrink-0" />
                     <span>{selectedTaskDetails.dueText}</span>
                   </div>
@@ -1466,32 +1351,33 @@ export default function TasksTab() {
 
               {/* Assignee details */}
               <div className="flex items-center gap-3 bg-surface-2 border border-outline-variant p-3.5 rounded-xl">
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm">
+                <div className="w-9 h-9 rounded-full bg-primary-subtle text-primary font-semibold flex items-center justify-center text-sm">
                   {getTaskAssigneeInitial(selectedTaskDetails)}
                 </div>
-                <div className="text-xs">
-                  <p className="font-extrabold text-on-surface leading-snug">Phụ trách kỹ thuật</p>
-                  <p className="text-on-surface-variant font-medium mt-0.5">{getTaskAssigneeName(selectedTaskDetails)}</p>
+                <div className="text-sm">
+                  <p className="text-xs text-on-surface-variant">Người phụ trách</p>
+                  <p className="font-medium text-on-surface mt-0.5">{getTaskAssigneeName(selectedTaskDetails)}</p>
                 </div>
               </div>
 
               {/* Notes Area */}
               <div className="space-y-1.5 text-left">
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wide">Nhật ký xử lý & Ghi chú</span>
+                <span className="text-sm font-medium text-on-surface">Ghi chú</span>
                 <textarea
                   rows={3}
                   value={taskNotesInput}
                   onChange={e => setTaskNotesInput(e.target.value)}
-                  placeholder="Ghi chú chi tiết linh kiện máy thay thế, tiến trình..."
-                  className="w-full text-xs p-3 border rounded-xl focus:outline-none focus:border-primary bg-surface-2/50 hover:bg-surface-2 focus:bg-surface transition-all resize-none"
+                  placeholder="Ghi lại tiến độ, linh kiện đã thay…"
+                  className="w-full text-sm p-3 border border-outline-variant rounded-lg focus:outline-none focus:border-primary bg-surface text-on-surface transition-colors resize-none"
                 />
                 <div className="flex justify-end">
                   <button
+                    type="button"
                     onClick={handleSaveNotes}
                     disabled={isLoading}
-                    className="btn-primary text-[11px]"
+                    className="btn-primary"
                   >
-                    {isLoading ? 'Đang lưu...' : 'Lưu ghi chú'}
+                    {isLoading ? 'Đang lưu…' : 'Lưu ghi chú'}
                   </button>
                 </div>
               </div>
@@ -1499,9 +1385,9 @@ export default function TasksTab() {
               {/* Attachments Section in detail */}
               <div className="space-y-1.5 text-left">
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wide">Tài liệu đính kèm</span>
-                  <label className="text-[10px] text-primary hover:underline font-bold cursor-pointer select-none flex items-center gap-0.5">
-                    <Plus className="w-3 h-3" /> Gửi tệp mới
+                  <span className="text-sm font-medium text-on-surface">Tệp đính kèm</span>
+                  <label className="h-8 px-3 text-xs font-medium text-primary cursor-pointer select-none rounded-lg hover:bg-primary-subtle inline-flex items-center gap-1 transition-colors">
+                    <Plus className="w-3.5 h-3.5" /> Thêm tệp
                     <input
                       type="file"
                       multiple
@@ -1512,9 +1398,9 @@ export default function TasksTab() {
                   </label>
                 </div>
 
-                <div className="border border-outline-variant rounded-xl p-3 bg-surface-2/30 space-y-2">
+                <div className="border border-outline-variant rounded-xl p-3 bg-surface-2/40 space-y-2">
                   {!selectedTaskDetails.attachments || selectedTaskDetails.attachments.length === 0 ? (
-                    <p className="text-[11px] text-on-surface-variant italic text-center py-2">Không có tệp đính kèm nào.</p>
+                    <p className="text-xs text-on-surface-variant text-center py-2">Chưa có tệp nào.</p>
                   ) : (
                     <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1">
                       {selectedTaskDetails.attachments.map(att => (
@@ -1524,17 +1410,18 @@ export default function TasksTab() {
                             <button
                               type="button"
                               onClick={() => handleOpenAttachment(selectedTaskDetails.id, att)}
-                              className="truncate font-semibold text-primary hover:underline text-left cursor-pointer"
+                              className="truncate font-medium text-primary hover:underline text-left cursor-pointer"
                             >
                               {att.name}
                             </button>
-                            <span className="text-[10px] text-on-surface-variant">({att.size})</span>
+                            <span className="text-[11px] text-on-surface-variant">({att.size})</span>
                           </div>
                           <button
+                            type="button"
                             onClick={() => handleDeleteAttachmentClick(att.id)}
-                            className="text-[10px] text-error hover:text-error font-bold px-2 py-1 rounded hover:bg-error-container cursor-pointer"
+                            className="text-xs text-error font-medium px-2 py-1 rounded-md hover:bg-error-container transition-colors"
                           >
-                            Xóa tệp
+                            Xóa
                           </button>
                         </div>
                       ))}
@@ -1545,10 +1432,11 @@ export default function TasksTab() {
 
               <div className="flex sm:justify-end gap-2.5 pt-4 border-t border-outline-variant">
                 <button
+                  type="button"
                   onClick={() => setSelectedTaskDetails(null)}
-                  className="btn-secondary w-full sm:w-auto px-5 py-2 text-xs"
+                  className="btn-secondary w-full sm:w-auto"
                 >
-                  Hoàn tất xem
+                  Đóng
                 </button>
               </div>
             </div>

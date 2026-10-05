@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -7,6 +7,7 @@ import { logsService } from '../../../services/api/logsService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { ErrorGroup, ErrorLog, ErrorLogAttachment, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
+import { EmptyState, FilterBar, ListSkeleton, PageHeader, TableSkeletonRows, confirmAction } from '../../../components/ui';
 
 const errorGroupLabels: Record<ErrorGroup, string> = {
   1: 'Phần cứng',
@@ -590,21 +591,20 @@ export default function ErrorLogsTab() {
     });
   };
 
-  const handleDelete = (log: ErrorLog) => {
-    toast.warning(`Xóa log lỗi ${log.errorCode || log.id}?`, {
-      action: {
-        label: 'Xóa',
-        onClick: async () => {
-          try {
-            await deleteLog(log.id);
-            setSelectedLogIds(prev => prev.filter(id => id !== log.id));
-            toast.success('Đã xóa log lỗi.');
-          } catch (err: any) {
-            toast.error(err.message || 'Không thể xóa log lỗi.');
-          }
-        },
-      },
+  const handleDelete = async (log: ErrorLog) => {
+    const confirmed = await confirmAction({
+      title: `Xóa log lỗi ${log.errorCode || log.id}?`,
+      content: 'Thao tác không thể hoàn tác.',
     });
+    if (!confirmed) return;
+
+    try {
+      await deleteLog(log.id);
+      setSelectedLogIds(prev => prev.filter(id => id !== log.id));
+      toast.success('Đã xóa log lỗi.');
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa log lỗi.');
+    }
   };
 
   const handleApplyReceivedDateFilter = () => {
@@ -634,9 +634,9 @@ export default function ErrorLogsTab() {
     try {
       await syncGoogleSheet();
       await fetchLogs(getActiveQuery());
-      toast.success('Đã sync dữ liệu từ Google Sheet.');
+      toast.success('Đã đồng bộ dữ liệu từ Google Sheet.');
     } catch (err: any) {
-      toast.error(err.message || 'Không thể sync dữ liệu từ Google Sheet.');
+      toast.error(err.message || 'Không thể đồng bộ Google Sheet. Vui lòng thử lại.');
     }
   };
 
@@ -661,15 +661,15 @@ export default function ErrorLogsTab() {
 
   const handleCopyReportText = async () => {
     if (!reportText) {
-      toast.error('Chưa có nội dung báo cáo để copy.');
+      toast.error('Chưa có nội dung để sao chép.');
       return;
     }
 
     try {
       await navigator.clipboard.writeText(reportText);
-      toast.success('Đã copy báo cáo vào clipboard.');
+      toast.success('Đã sao chép báo cáo.');
     } catch {
-      toast.error('Không thể copy vào clipboard.');
+      toast.error('Không thể sao chép. Vui lòng thử lại.');
     }
   };
 
@@ -701,115 +701,306 @@ export default function ErrorLogsTab() {
     }
   };
 
+  const filterSelectClass =
+    'h-9 rounded-lg border border-outline-variant bg-surface px-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer';
+  const hasActiveFilters = Boolean(
+    searchQuery
+    || logStoreFilter
+    || logBoothFilter
+    || logStatusFilter
+    || logFromDateFilter
+    || logToDateFilter
+    || logErrorGroupFilter
+    || logProcessingFlowFilter
+    || logSeverityFilter,
+  );
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setLogStoreFilter('');
+    setLogStoreFilterId(undefined);
+    setLogBoothFilter('');
+    setLogStatusFilter('');
+    setLogErrorGroupFilter('');
+    setLogProcessingFlowFilter('');
+    setLogSeverityFilter('');
+    handleClearReceivedDateFilter();
+  };
+  const iconButtonClass =
+    'inline-flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer';
+
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-        <div className="flex w-full flex-col gap-3 xl:max-w-xl">
-          <h1 className="text-xl font-bold text-on-surface font-sans">Danh sách log lỗi hệ thống</h1>
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-            <input
-              type="text"
-              id="log-search-input"
-              placeholder="Tìm mã lỗi, mô tả..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="h-10 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-            />
-          </div>
-        </div>
-        <div className="flex flex-wrap justify-end gap-2 xl:ml-auto">
-          <button
-            type="button"
-            onClick={() => setIsUploadModalOpen(true)}
-            className="btn-secondary h-10 px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <ImagePlus className="h-4 w-4 shrink-0" />
-            <span>Tải ảnh</span>
-          </button>
-          {isAdmin && (
+    <div className="animate-fadeIn text-left">
+      <PageHeader
+        title="Log lỗi"
+        description="Theo dõi và xử lý các lỗi được ghi nhận tại booth."
+        icon={AlertTriangle}
+        actions={(
+          <>
             <button
               type="button"
-              onClick={handleSyncGoogleSheet}
-              disabled={isSyncingGoogleSheet || isLoading}
-              className="bg-surface text-success border border-success/30 hover:bg-success-container px-4 py-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+              onClick={() => setIsUploadModalOpen(true)}
+              className="btn-secondary"
             >
-              <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} /> {isSyncingGoogleSheet ? 'Đang sync...' : 'Sync Google Sheet'}
+              <ImagePlus className="h-4 w-4 shrink-0" />
+              <span>Tải ảnh</span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={isExporting}
-            className="btn-secondary h-10 px-3.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <Download className="h-4 w-4 shrink-0" />
-            <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleGenerateReportText}
-            disabled={isReportLoading || selectedLogIds.length === 0}
-            title={selectedLogIds.length === 0 ? 'Chọn ít nhất một log lỗi để xuất báo cáo.' : 'Xuất báo cáo văn bản từ các log đã chọn.'}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-outline-variant bg-surface px-3.5 text-xs font-semibold text-on-surface-variant transition-all hover:bg-surface-2 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <FileText className="h-4 w-4 shrink-0" />
-            <span>{isReportLoading ? 'Đang xuất...' : `Xuất báo cáo (${selectedLogIds.length})`}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleOpenModal()}
-            className="btn-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <Plus className="w-4 h-4" /> Log lỗi
-          </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleSyncGoogleSheet}
+                disabled={isSyncingGoogleSheet || isLoading}
+                className="btn-secondary"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} />
+                {isSyncingGoogleSheet ? 'Đang đồng bộ...' : 'Đồng bộ Google Sheet'}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={isExporting}
+              className="btn-secondary"
+            >
+              <Download className="h-4 w-4 shrink-0" />
+              <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateReportText}
+              disabled={isReportLoading || selectedLogIds.length === 0}
+              title={selectedLogIds.length === 0 ? 'Chọn ít nhất một log lỗi để xuất báo cáo.' : 'Xuất báo cáo văn bản từ các log đã chọn.'}
+              className="btn-secondary"
+            >
+              <FileText className="h-4 w-4 shrink-0" />
+              <span>{isReportLoading ? 'Đang xuất...' : `Báo cáo (${selectedLogIds.length})`}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenModal()}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" /> Thêm log lỗi
+            </button>
+          </>
+        )}
+      />
+
+      <FilterBar onReset={hasActiveFilters ? handleResetFilters : undefined}>
+        <div className="relative w-full sm:w-64">
+          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
+          <input
+            type="text"
+            id="log-search-input"
+            aria-label="Tìm log lỗi"
+            placeholder="Tìm mã lỗi, mô tả..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="h-9 w-full rounded-lg border border-outline-variant bg-surface pl-9 pr-3 text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+          />
         </div>
-      </div>
+
+        <div ref={receivedDateFilterRef} className="relative w-full sm:w-56">
+          <button
+            type="button"
+            ref={receivedDateFilterButtonRef}
+            onClick={() => {
+              setPendingFromDateFilter(logFromDateFilter);
+              setPendingToDateFilter(logToDateFilter);
+              updateReceivedDateFilterPosition();
+              setIsReceivedDateFilterOpen(current => !current);
+            }}
+            className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-sm transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+              logFromDateFilter || logToDateFilter
+                ? 'border-primary/50 bg-primary-subtle text-primary font-medium'
+                : 'border-outline-variant bg-surface text-on-surface-variant'
+            }`}
+            aria-label="Lọc theo ngày tiếp nhận"
+            aria-expanded={isReceivedDateFilterOpen}
+            aria-controls="received-date-filter-panel"
+          >
+            <span className="truncate">{logFromDateFilter || logToDateFilter ? receivedDateFilterLabel : 'Ngày tiếp nhận'}</span>
+            <Calendar className="h-4 w-4 shrink-0" />
+          </button>
+
+          {isReceivedDateFilterOpen && (
+            <div
+              id="received-date-filter-panel"
+              style={{
+                left: receivedDateFilterPosition.left,
+                top: receivedDateFilterPosition.top,
+              }}
+              className="fixed z-50 w-72 space-y-3 rounded-xl border border-outline-variant bg-surface p-3 shadow-elevated"
+            >
+              <div className="grid grid-cols-2 gap-2 text-xs font-medium text-on-surface-variant">
+                <span>Từ ngày</span>
+                <span>Đến ngày</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 -mt-1">
+                <input
+                  type="date"
+                  id="log-from-date-filter"
+                  value={pendingFromDateFilter}
+                  max={pendingToDateFilter || undefined}
+                  onChange={e => setPendingFromDateFilter(e.target.value)}
+                  aria-label="Lọc từ ngày tiếp nhận"
+                  className="h-9 w-full rounded-lg border border-outline-variant bg-surface-2 px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                <input
+                  type="date"
+                  id="log-to-date-filter"
+                  value={pendingToDateFilter}
+                  min={pendingFromDateFilter || undefined}
+                  onChange={e => setPendingToDateFilter(e.target.value)}
+                  aria-label="Lọc đến ngày tiếp nhận"
+                  className="h-9 w-full rounded-lg border border-outline-variant bg-surface-2 px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearReceivedDateFilter}
+                  className="h-8 rounded-lg border border-outline-variant bg-surface text-sm font-medium text-on-surface-variant hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+                >
+                  Xóa
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyReceivedDateFilter}
+                  className="h-8 rounded-lg bg-primary text-sm font-medium text-on-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="w-full sm:w-48">
+          <LazySearchDropdown
+            ariaLabel="Lọc log theo cửa hàng"
+            value={logStoreFilter}
+            placeholder="Mọi cửa hàng"
+            emptyText="Không tìm thấy cửa hàng."
+            loadOptions={loadStores}
+            pageSize={20}
+            onSelect={item => {
+              setLogStoreFilter(item.name);
+              setLogStoreFilterId(item.id);
+              setLogBoothFilter('');
+            }}
+            onClear={() => {
+              setLogStoreFilter('');
+              setLogStoreFilterId(undefined);
+              setLogBoothFilter('');
+            }}
+          />
+        </div>
+        <div className="w-full sm:w-44">
+          <LazySearchDropdown
+            ariaLabel="Lọc log theo booth"
+            value={logBoothFilter}
+            placeholder="Mọi booth"
+            emptyText="Không tìm thấy Booth."
+            loadOptions={loadFilteredBooths}
+            onSelect={item => setLogBoothFilter(item.name)}
+            onClear={() => setLogBoothFilter('')}
+          />
+        </div>
+
+        <select
+          id="log-error-group-filter"
+          value={logErrorGroupFilter}
+          onChange={e => setLogErrorGroupFilter(e.target.value ? Number(e.target.value) as ErrorGroup : '')}
+          aria-label="Lọc theo nhóm lỗi"
+          className={filterSelectClass}
+        >
+          <option value="">Mọi nhóm lỗi</option>
+          {errorGroupOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <select
+          id="log-status-filter"
+          value={logStatusFilter}
+          onChange={e => setLogStatusFilter(e.target.value ? Number(e.target.value) as ErrorLogStatus : '')}
+          aria-label="Lọc theo trạng thái"
+          className={filterSelectClass}
+        >
+          <option value="">Mọi trạng thái</option>
+          {statusOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <select
+          id="log-processing-flow-filter"
+          value={logProcessingFlowFilter}
+          onChange={e => setLogProcessingFlowFilter(e.target.value ? Number(e.target.value) as ProcessingFlow : '')}
+          aria-label="Lọc theo luồng xử lý"
+          className={filterSelectClass}
+        >
+          <option value="">Mọi luồng xử lý</option>
+          {processingFlowOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <select
+          id="log-severity-filter"
+          value={logSeverityFilter}
+          onChange={e => setLogSeverityFilter(e.target.value ? Number(e.target.value) as Severity : '')}
+          aria-label="Lọc theo mức độ"
+          className={filterSelectClass}
+        >
+          <option value="">Mọi mức độ</option>
+          {severityOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </FilterBar>
 
       {isUploadModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-on-surface/50 p-4 backdrop-blur-sm">
+      <div className="modal-overlay">
       <form
         onSubmit={handleUploadTransactionImages}
-        className="w-full max-w-2xl rounded-2xl border border-outline-variant bg-surface p-5 shadow-2xl text-left"
+        className="w-full max-w-2xl rounded-2xl border border-outline-variant bg-surface p-5 shadow-elevated text-left"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h3 className="font-bold text-on-surface">Tải ảnh lỗi giao dịch</h3>
-            <p className="mt-1 text-xs text-on-surface-variant">Ảnh sẽ được gắn trực tiếp với mã giao dịch tương ứng.</p>
+            <h3 className="text-lg font-semibold text-on-surface">Tải ảnh lỗi giao dịch</h3>
+            <p className="mt-1 text-sm text-on-surface-variant">Ảnh sẽ được gắn với mã giao dịch tương ứng.</p>
           </div>
-          <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30" aria-label="Đóng">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer" aria-label="Đóng" title="Đóng">
+            <X className="h-5 w-5" />
           </button>
         </div>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <label className="block text-sm font-semibold lg:flex-1">
-            Mã giao dịch cần upload ảnh
+          <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
+            Mã giao dịch
             <input
               value={uploadTransactionId}
               onChange={event => setUploadTransactionId(event.target.value)}
               placeholder="bf2b4b62-2785-466a-871c-8f41f68ceedb"
-              className="mt-1 h-10 w-full rounded-lg border border-outline-variant px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="mt-1.5 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </label>
 
-          <label className="block text-sm font-semibold lg:flex-1">
-            Ảnh lỗi giao dịch
+          <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
+            Ảnh lỗi
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple
               onChange={event => setUploadImages(Array.from(event.target.files || []))}
-              className="mt-1 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-primary/5 p-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              className="mt-1.5 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-primary-subtle/50 p-1.5 text-sm text-on-surface file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
             />
           </label>
 
           <button
             type="submit"
             disabled={isUploadingImages}
-            className="btn-primary h-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="btn-primary"
           >
             {isUploadingImages ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-            {isUploadingImages ? 'Đang upload...' : 'Upload ảnh'}
+            {isUploadingImages ? 'Đang tải lên...' : 'Tải lên'}
           </button>
         </div>
 
@@ -818,7 +1009,7 @@ export default function ErrorLogsTab() {
             {uploadImages.map(file => (
               <span
                 key={`${file.name}_${file.size}_${file.lastModified}`}
-                className="rounded border border-outline-variant bg-surface-2 px-2 py-1 text-xs font-semibold text-on-surface-variant"
+                className="rounded-md border border-outline-variant bg-surface-2 px-2 py-1 text-xs font-medium text-on-surface-variant"
               >
                 {file.name}
               </span>
@@ -829,12 +1020,99 @@ export default function ErrorLogsTab() {
       </div>
       )}
 
-      <div className="bg-surface border border-outline-variant rounded-xl shadow-sm">
-        <div className="overflow-x-auto overflow-y-visible">
-          <table className="w-full min-w-[1500px] text-left text-xs border-collapse">
+      <section className="card-surface overflow-hidden">
+        {/* Mobile card list */}
+        <div className="md:hidden">
+          {filteredLogs.length > 0 && !isLoading && (
+            <div className="flex items-center gap-2 border-b border-outline-variant bg-surface-2/60 px-4 py-2.5">
+              <input
+                type="checkbox"
+                id="log-select-all-mobile"
+                checked={isAllCurrentPageSelected}
+                onChange={handleToggleCurrentPageSelection}
+                className="w-4 h-4 accent-primary cursor-pointer"
+              />
+              <label htmlFor="log-select-all-mobile" className="text-xs font-medium text-on-surface-variant cursor-pointer">
+                Chọn tất cả trên trang
+              </label>
+            </div>
+          )}
+          {isLoading ? (
+            <ListSkeleton rows={5} className="p-4" />
+          ) : filteredLogs.length === 0 ? (
+            <EmptyState
+              compact
+              icon={AlertTriangle}
+              title="Không có log lỗi nào"
+              description={hasActiveFilters ? 'Thử đổi hoặc xóa bộ lọc.' : 'Log lỗi mới sẽ xuất hiện ở đây.'}
+            />
+          ) : (
+            <ul className="divide-y divide-outline-variant">
+              {filteredLogs.map(log => (
+                <li key={log.id} className="flex gap-3 px-4 py-3.5">
+                  <input
+                    type="checkbox"
+                    checked={selectedLogIdSet.has(log.id)}
+                    onChange={() => handleToggleLogSelection(log.id)}
+                    className="mt-1 w-4 h-4 shrink-0 accent-primary cursor-pointer"
+                    aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLogDetails(log)}
+                    className="min-w-0 flex-1 text-left cursor-pointer"
+                    aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-mono text-sm font-medium text-primary">{log.errorCode || 'N/A'}</span>
+                      <span className={`${getStatusClass(log.status)} shrink-0`}>{statusLabels[log.status]}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm text-on-surface">{log.description || 'Không có mô tả'}</p>
+                    <p className="mt-1 truncate text-xs text-on-surface-variant">
+                      {log.store}{log.booth ? ` · ${log.booth}` : ''}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-on-surface-variant">
+                      <span>{formatDate(log.receivedDate)}</span>
+                      <span>{log.assignedToName || log.assignedToId || 'Chưa phân công'}</span>
+                      {(log.attachments?.length ?? 0) > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <Paperclip className="h-3 w-3" />
+                          {log.attachments.length}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  <div className="flex shrink-0 flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenModal(log)}
+                      className={`${iconButtonClass} hover:bg-primary-subtle hover:text-primary`}
+                      title="Chỉnh sửa"
+                      aria-label={`Chỉnh sửa log lỗi ${log.errorCode || log.id}`}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(log)}
+                      className={`${iconButtonClass} hover:bg-error-container hover:text-error`}
+                      title="Xóa"
+                      aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full min-w-[1400px] text-left text-sm border-collapse">
             <thead>
-              <tr className="bg-surface-2 border-b border-outline-variant text-[11px] uppercase tracking-wider text-on-surface-variant select-none font-sans">
-                <th className="py-3 px-4 font-bold w-12">
+              <tr className="bg-surface-2/60 border-b border-outline-variant text-xs text-on-surface-variant select-none">
+                <th className="py-3 px-4 font-medium w-12">
                   <input
                     type="checkbox"
                     checked={isAllCurrentPageSelected}
@@ -844,206 +1122,37 @@ export default function ErrorLogsTab() {
                     aria-label="Chọn tất cả log lỗi trên trang hiện tại"
                   />
                 </th>
-                <th className="py-3 px-4 font-bold min-w-[220px]">Ngày tiếp nhận</th>
-                <th className="py-3 px-4 font-bold min-w-[150px]">Mã lỗi</th>
-                <th className="py-3 px-4 font-bold min-w-[220px]">Cửa hàng</th>
-                <th className="py-3 px-4 font-bold min-w-[180px]">Booth</th>
-                <th className="py-3 px-4 font-bold min-w-[240px]">Mô tả lỗi</th>
-                <th className="py-3 px-4 font-bold min-w-[140px]">Nhóm lỗi</th>
-                <th className="py-3 px-4 font-bold min-w-[150px]">Trạng thái</th>
-                <th className="py-3 px-4 font-bold min-w-[160px]">Luồng xử lý</th>
-                <th className="py-3 px-4 font-bold min-w-[130px]">Mức độ</th>
-                <th className="py-3 px-4 font-bold text-center w-20">Tệp</th>
-                <th className="py-3 px-4 font-bold text-right w-32">Tùy biến</th>
-              </tr>
-              <tr className="bg-surface border-b border-outline-variant">
-                <th className="py-3 px-4" />
-                <th className="py-3 px-4 align-top">
-                  <div ref={receivedDateFilterRef} className="relative">
-                    <button
-                      type="button"
-                      ref={receivedDateFilterButtonRef}
-                      onClick={() => {
-                        setPendingFromDateFilter(logFromDateFilter);
-                        setPendingToDateFilter(logToDateFilter);
-                        updateReceivedDateFilterPosition();
-                        setIsReceivedDateFilterOpen(current => !current);
-                      }}
-                      className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-xs font-semibold transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30 ${
-                        logFromDateFilter || logToDateFilter
-                          ? 'border-primary/50 bg-secondary-container text-on-secondary-container'
-                          : 'border-outline-variant bg-surface text-on-surface'
-                      }`}
-                      aria-expanded={isReceivedDateFilterOpen}
-                      aria-controls="received-date-filter-panel"
-                    >
-                      <span className="truncate">{receivedDateFilterLabel}</span>
-                      <Calendar className="h-4 w-4 shrink-0 text-on-surface-variant" />
-                    </button>
-
-                    {isReceivedDateFilterOpen && (
-                      <div
-                        id="received-date-filter-panel"
-                        style={{
-                          left: receivedDateFilterPosition.left,
-                          top: receivedDateFilterPosition.top,
-                        }}
-                        className="fixed z-50 w-72 space-y-2 rounded-lg border border-outline-variant bg-surface p-3 shadow-elevated"
-                      >
-                        <div className="grid grid-cols-2 gap-2 text-[11px] font-bold uppercase tracking-wide text-on-surface-variant">
-                          <span>Từ ngày</span>
-                          <span>Đến ngày</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="date"
-                          id="log-from-date-filter"
-                          value={pendingFromDateFilter}
-                          max={pendingToDateFilter || undefined}
-                          onChange={e => setPendingFromDateFilter(e.target.value)}
-                          aria-label="Lọc từ ngày tiếp nhận"
-                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface-2 px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                        />
-                        <input
-                          type="date"
-                          id="log-to-date-filter"
-                          value={pendingToDateFilter}
-                          min={pendingFromDateFilter || undefined}
-                          onChange={e => setPendingToDateFilter(e.target.value)}
-                          aria-label="Lọc đến ngày tiếp nhận"
-                          className="h-9 w-full rounded-lg border border-outline-variant bg-surface-2 px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                        />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={handleClearReceivedDateFilter}
-                            className="h-8 rounded-lg border border-outline-variant bg-surface text-xs font-bold text-on-surface-variant hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          >
-                            Xóa
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleApplyReceivedDateFilter}
-                            className="h-8 rounded-lg bg-primary text-xs font-bold text-on-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          >
-                            Xác nhận
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </th>
-                <th className="py-3 px-4" />
-                <th className="py-3 px-4">
-                  <LazySearchDropdown
-                    ariaLabel="Lọc log theo cửa hàng"
-                    value={logStoreFilter}
-                    placeholder="Tất cả"
-                    emptyText="Không tìm thấy cửa hàng."
-                    loadOptions={loadStores}
-                    pageSize={20}
-                    onSelect={item => {
-                      setLogStoreFilter(item.name);
-                      setLogStoreFilterId(item.id);
-                      setLogBoothFilter('');
-                    }}
-                    onClear={() => {
-                      setLogStoreFilter('');
-                      setLogStoreFilterId(undefined);
-                      setLogBoothFilter('');
-                    }}
-                  />
-                </th>
-                <th className="py-3 px-4">
-                  <LazySearchDropdown
-                    ariaLabel="Lọc log theo booth"
-                    value={logBoothFilter}
-                    placeholder="Tất cả"
-                    emptyText="Không tìm thấy Booth."
-                    loadOptions={loadFilteredBooths}
-                    onSelect={item => setLogBoothFilter(item.name)}
-                    onClear={() => setLogBoothFilter('')}
-                  />
-                </th>
-                <th className="py-3 px-4" />
-                <th className="py-3 px-4">
-                  <select
-                    id="log-error-group-filter"
-                    value={logErrorGroupFilter}
-                    onChange={e => setLogErrorGroupFilter(e.target.value ? Number(e.target.value) as ErrorGroup : '')}
-                    aria-label="Lọc theo nhóm lỗi"
-                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-                  >
-                    <option value="">Tất cả</option>
-                    {errorGroupOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </th>
-                <th className="py-3 px-4">
-                  <select
-                    id="log-status-filter"
-                    value={logStatusFilter}
-                    onChange={e => setLogStatusFilter(e.target.value ? Number(e.target.value) as ErrorLogStatus : '')}
-                    aria-label="Lọc theo trạng thái"
-                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-                  >
-                    <option value="">Tất cả</option>
-                    {statusOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </th>
-                <th className="py-3 px-4">
-                  <select
-                    id="log-processing-flow-filter"
-                    value={logProcessingFlowFilter}
-                    onChange={e => setLogProcessingFlowFilter(e.target.value ? Number(e.target.value) as ProcessingFlow : '')}
-                    aria-label="Lọc theo luồng xử lý"
-                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-                  >
-                    <option value="">Tất cả</option>
-                    {processingFlowOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </th>
-                <th className="py-3 px-4">
-                  <select
-                    id="log-severity-filter"
-                    value={logSeverityFilter}
-                    onChange={e => setLogSeverityFilter(e.target.value ? Number(e.target.value) as Severity : '')}
-                    aria-label="Lọc theo mức độ"
-                    className="h-9 w-full rounded-lg border border-outline-variant bg-surface px-2 text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
-                  >
-                    <option value="">Tất cả</option>
-                    {severityOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </th>
-                <th className="py-3 px-4" />
-                <th className="py-3 px-4" />
+                <th className="py-3 px-4 font-medium min-w-[140px]">Ngày tiếp nhận</th>
+                <th className="py-3 px-4 font-medium min-w-[130px]">Mã lỗi</th>
+                <th className="py-3 px-4 font-medium min-w-[180px]">Cửa hàng</th>
+                <th className="py-3 px-4 font-medium min-w-[140px]">Booth</th>
+                <th className="py-3 px-4 font-medium min-w-[240px]">Mô tả lỗi</th>
+                <th className="py-3 px-4 font-medium min-w-[110px]">Nhóm lỗi</th>
+                <th className="py-3 px-4 font-medium min-w-[150px]">Trạng thái</th>
+                <th className="py-3 px-4 font-medium min-w-[140px]">Luồng xử lý</th>
+                <th className="py-3 px-4 font-medium min-w-[110px]">Mức độ</th>
+                <th className="py-3 px-4 font-medium text-center w-20">Tệp</th>
+                <th className="py-3 px-4 font-medium text-right w-32">Thao tác</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/40">
+            <tbody className="divide-y divide-outline-variant">
               {isLoading ? (
-                <tr>
-                  <td colSpan={12} className="py-10 text-center font-bold text-on-surface-variant">
-                    Đang tải dữ liệu log lỗi...
-                  </td>
-                </tr>
+                <TableSkeletonRows columns={12} />
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="py-10 text-center font-bold text-on-surface-variant">
-                    Hệ thống không ghi nhận log lỗi nào khớp với điều kiện lọc.
+                  <td colSpan={12}>
+                    <EmptyState
+                      compact
+                      icon={AlertTriangle}
+                      title="Không có log lỗi nào"
+                      description={hasActiveFilters ? 'Thử đổi hoặc xóa bộ lọc.' : 'Log lỗi mới sẽ xuất hiện ở đây.'}
+                    />
                   </td>
                 </tr>
               ) : (
                 filteredLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-surface-2 transition-colors">
-                    <td className="py-4 px-5">
+                  <tr key={log.id} className="hover:bg-surface-2/50 transition-colors">
+                    <td className="py-3 px-4">
                       <input
                         type="checkbox"
                         checked={selectedLogIdSet.has(log.id)}
@@ -1052,32 +1161,33 @@ export default function ErrorLogsTab() {
                         aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
                       />
                     </td>
-                    <td className="py-4 px-4 text-on-surface-variant font-semibold whitespace-nowrap">{formatDate(log.receivedDate)}</td>
-                    <td className="py-4 px-4 font-mono text-xs font-bold text-primary whitespace-nowrap">{log.errorCode || 'N/A'}</td>
-                    <td className="py-4 px-4 font-semibold text-on-surface">{log.store}</td>
-                    <td className="py-4 px-4 text-on-surface-variant">{log.booth || 'N/A'}</td>
-                    <td className="py-4 px-4 text-on-surface-variant max-w-xs">
+                    <td className="py-3 px-4 text-on-surface-variant whitespace-nowrap">{formatDate(log.receivedDate)}</td>
+                    <td className="py-3 px-4 font-mono text-[13px] font-medium text-primary whitespace-nowrap">{log.errorCode || 'N/A'}</td>
+                    <td className="py-3 px-4 font-medium text-on-surface">{log.store}</td>
+                    <td className="py-3 px-4 text-on-surface-variant">{log.booth || 'N/A'}</td>
+                    <td className="py-3 px-4 text-on-surface-variant max-w-xs">
                       <span className="line-clamp-2">{log.description || 'N/A'}</span>
                     </td>
-                    <td className="py-4 px-4 text-on-surface-variant">{errorGroupLabels[log.errorGroup]}</td>
-                    <td className="py-4 px-4">
+                    <td className="py-3 px-4 text-on-surface-variant">{errorGroupLabels[log.errorGroup]}</td>
+                    <td className="py-3 px-4">
                       <span className={getStatusClass(log.status)}>
                         {statusLabels[log.status]}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-on-surface-variant">{processingFlowLabels[log.processingFlow]}</td>
-                    <td className="py-4 px-4">
+                    <td className="py-3 px-4 text-on-surface-variant">{processingFlowLabels[log.processingFlow]}</td>
+                    <td className="py-3 px-4">
                       <span className={getSeverityClass(log.severity)}>
                         {severityLabels[log.severity]}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-center">
+                    <td className="py-3 px-4 text-center">
                       {(log.attachments?.length ?? 0) > 0 ? (
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className="inline-flex items-center gap-1 rounded-full bg-secondary-container px-2 py-1 font-bold text-on-secondary-container transition-[filter] hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
                           title="Xem tệp đính kèm"
+                          aria-label={`Xem ${log.attachments.length} tệp đính kèm`}
                         >
                           <Paperclip className="h-3.5 w-3.5" />
                           {log.attachments.length}
@@ -1086,34 +1196,34 @@ export default function ErrorLogsTab() {
                         <span className="text-on-surface-variant/60">—</span>
                       )}
                     </td>
-                    <td className="py-4 px-4 text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-1.5">
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => setSelectedLogDetails(log)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-outline-variant bg-secondary-container text-on-secondary-container shadow-sm transition-[border-color,filter] hover:border-primary/50 hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className={`${iconButtonClass} hover:bg-surface-2 hover:text-on-surface`}
                           title="Xem chi tiết"
                           aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleOpenModal(log)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary bg-primary text-on-primary shadow-sm transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          className={`${iconButtonClass} hover:bg-primary-subtle hover:text-primary`}
                           title="Chỉnh sửa"
                           aria-label={`Chỉnh sửa log lỗi ${log.errorCode || log.id}`}
                         >
-                          <Edit2 className="w-3.5 h-3.5" />
+                          <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           type="button"
                           onClick={() => handleDelete(log)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-error/30 bg-error-container text-on-error-container shadow-sm transition-colors hover:border-error/50 hover:bg-error hover:text-white focus:outline-none focus:ring-2 focus:ring-error/30"
-                          title="Xóa lỗi"
+                          className={`${iconButtonClass} hover:bg-error-container hover:text-error focus:ring-error/30`}
+                          title="Xóa"
                           aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -1124,32 +1234,33 @@ export default function ErrorLogsTab() {
           </table>
         </div>
 
-        <div className="bg-surface-2 border-t border-outline-variant px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-sans">
-          <span className="text-xs text-on-surface-variant">
-            Hiển thị {filteredLogs.length} của {totalItems} bản ghi lỗi · Đã chọn {selectedLogIds.length}
+        <div className="bg-surface-2/60 border-t border-outline-variant px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <span className="text-sm text-on-surface-variant">
+            Hiển thị {filteredLogs.length} / {totalItems} log · Đã chọn {selectedLogIds.length}
           </span>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <label className="text-on-surface-variant font-semibold" htmlFor="log-page-size">Số dòng</label>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <label className="text-xs font-medium text-on-surface-variant" htmlFor="log-page-size">Số dòng</label>
             <select
               id="log-page-size"
               value={logPageSize}
               onChange={e => setLogPageSize(Number(e.target.value))}
               disabled={isLoading}
-              className="px-2 py-1.5 bg-surface border border-outline-variant rounded-lg text-on-surface-variant font-semibold focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="h-8 px-2 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {[10, 20, 50, 100].map(size => (
                 <option key={size} value={size}>{size}</option>
               ))}
             </select>
-            <span className="text-[11px] text-on-surface-variant font-medium min-w-[72px] text-center">
+            <span className="text-xs text-on-surface-variant font-medium min-w-[72px] text-center">
               Trang {totalPages === 0 ? 0 : logPageIndex}/{totalPages}
             </span>
             <button
               type="button"
               onClick={() => setLogPageIndex(Math.max(logPageIndex - 1, 1))}
               disabled={isLoading || logPageIndex <= 1}
-              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-primary-subtle hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
               aria-label="Trang trước"
+              title="Trang trước"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -1157,32 +1268,33 @@ export default function ErrorLogsTab() {
               type="button"
               onClick={() => setLogPageIndex(logPageIndex + 1)}
               disabled={isLoading || totalPages === 0 || logPageIndex >= totalPages}
-              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-outline-variant bg-surface text-on-surface-variant hover:bg-primary-subtle hover:text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-primary/30"
               aria-label="Trang sau"
+              title="Trang sau"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
       {isReportModalOpen && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
-              <h3 className="text-lg font-bold text-on-surface">Xuất báo cáo văn bản</h3>
-              <button type="button" onClick={() => setIsReportModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
+            <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
+              <h3 className="text-lg font-semibold text-on-surface">Xuất báo cáo văn bản</h3>
+              <button type="button" onClick={() => setIsReportModalOpen(false)} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer" aria-label="Đóng" title="Đóng"><X className="h-5 w-5" /></button>
             </div>
 
             <div className="space-y-4 text-sm text-left">
               <div>
-                <label className="block font-medium mb-1">Nội dung báo cáo</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nội dung báo cáo</label>
                 <textarea
                   value={reportText}
                   onChange={e => setReportText(e.target.value)}
                   rows={8}
                   placeholder="Nội dung báo cáo sẽ hiển thị sau khi xuất."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary font-mono text-xs resize-y"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary font-mono text-xs resize-y"
                 />
               </div>
 
@@ -1191,9 +1303,9 @@ export default function ErrorLogsTab() {
                   type="button"
                   onClick={handleCopyReportText}
                   disabled={!reportText}
-                  className="px-4 py-2 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-secondary"
                 >
-                  <ClipboardCopy className="w-4 h-4" /> Copy
+                  <ClipboardCopy className="w-4 h-4" /> Sao chép
                 </button>
                 <button
                   type="button"
@@ -1210,27 +1322,27 @@ export default function ErrorLogsTab() {
 
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
-              <h3 className="text-lg font-bold text-on-surface">
-                {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Thêm lỗi mới'}
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
+            <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
+              <h3 className="text-lg font-semibold text-on-surface">
+                {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Thêm log lỗi'}
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer" aria-label="Đóng" title="Đóng"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={handleSave} onKeyDown={handleSaveShortcut} className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm text-left">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Ngày tiếp nhận *</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Ngày tiếp nhận *</label>
                   <input
                     type="datetime-local"
                     required
                     value={receivedDate}
                     onChange={e => setReceivedDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-primary"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Cửa hàng *</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Cửa hàng *</label>
                   <LazySearchDropdown
                     value={store}
                     placeholder="Chọn cửa hàng..."
@@ -1250,7 +1362,7 @@ export default function ErrorLogsTab() {
                   />
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Booth</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Booth</label>
                   <LazySearchDropdown
                     value={booth}
                     placeholder="Chọn Booth..."
@@ -1264,11 +1376,11 @@ export default function ErrorLogsTab() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium mb-1">Nhóm lỗi</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nhóm lỗi</label>
                   <select
                     value={errorGroup}
                     onChange={e => setErrorGroup(Number(e.target.value) as ErrorGroup)}
-                    className="w-full px-3 py-2 border rounded-lg bg-surface"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
                   >
                     {errorGroupOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -1276,11 +1388,11 @@ export default function ErrorLogsTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Luồng xử lý</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Luồng xử lý</label>
                   <select
                     value={processingFlow}
                     onChange={e => setProcessingFlow(Number(e.target.value) as ProcessingFlow)}
-                    className="w-full px-3 py-2 border rounded-lg bg-surface"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
                   >
                     {processingFlowOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -1288,11 +1400,11 @@ export default function ErrorLogsTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Trạng thái</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Trạng thái</label>
                   <select
                     value={status}
                     onChange={e => setStatus(Number(e.target.value) as ErrorLogStatus)}
-                    className="w-full px-3 py-2 border rounded-lg bg-surface"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
                   >
                     {statusOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -1300,11 +1412,11 @@ export default function ErrorLogsTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium mb-1">Mức độ</label>
+                  <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Mức độ</label>
                   <select
                     value={severity}
                     onChange={e => setSeverity(Number(e.target.value) as Severity)}
-                    className="w-full px-3 py-2 border rounded-lg bg-surface"
+                    className="w-full h-10 px-3 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer"
                   >
                     {severityOptions.map(option => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -1315,20 +1427,20 @@ export default function ErrorLogsTab() {
 
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <label className="block font-medium">Mô tả lỗi *</label>
+                  <label className="block text-sm font-medium text-on-surface-variant">Mô tả lỗi *</label>
                   <button
                     type="button"
                     onClick={toggleDescriptionDictation}
-                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-bold transition ${
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${
                       isListeningDescription
-                        ? 'border-error bg-error/10 text-error'
+                        ? 'border-error bg-error-container text-on-error-container'
                         : 'border-outline-variant text-on-surface-variant hover:bg-surface-2'
                     }`}
                     title={isListeningDescription ? 'Dừng nhập giọng nói' : 'Nhập mô tả bằng giọng nói'}
                     aria-pressed={isListeningDescription}
                   >
                     {isListeningDescription ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    {isListeningDescription ? 'Đang nghe' : 'Voice'}
+                    {isListeningDescription ? 'Đang nghe' : 'Giọng nói'}
                   </button>
                 </div>
                 <textarea
@@ -1337,40 +1449,40 @@ export default function ErrorLogsTab() {
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Nhập mô tả lỗi chi tiết..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
               </div>
 
               <div>
-                <label className="block font-medium mb-1">Nguyên nhân sơ bộ</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nguyên nhân sơ bộ</label>
                 <textarea
                   rows={3}
                   value={preliminaryCause}
                   onChange={e => setPreliminaryCause(e.target.value)}
                   placeholder="Nhập nguyên nhân sơ bộ nếu có..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
               </div>
 
               <div>
-                <label className="block font-medium mb-1">Cách xử lý</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Cách xử lý</label>
                 <textarea
                   rows={3}
                   value={solution}
                   onChange={e => setSolution(e.target.value)}
                   placeholder="Nhập cách xử lý nếu có..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
               </div>
 
               <div>
-                <label className="block font-medium mb-1">Ghi chú</label>
+                <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Ghi chú</label>
                 <textarea
                   rows={3}
                   value={note}
                   onChange={e => setNote(e.target.value)}
                   placeholder="Nhập ghi chú thêm..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-primary resize-none"
+                  className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
               </div>
 
@@ -1380,13 +1492,13 @@ export default function ErrorLogsTab() {
                   Tệp đính kèm
                 </label>
                 <p className="mt-1 text-xs text-on-surface-variant">
-                  Tối đa 10 tệp, 20 MB mỗi tệp và 48 MB cho một lần upload. Backend không lưu file lâu dài.
+                  Tối đa 10 tệp, mỗi tệp 20 MB, tổng 48 MB mỗi lần tải lên.
                 </p>
                 <input
                   type="file"
                   multiple
                   onChange={handleAttachmentFilesChange}
-                  className="mt-3 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-surface p-2 text-sm file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="mt-3 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-surface p-2 text-sm file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
 
                 {attachmentFiles.length > 0 && (
@@ -1403,7 +1515,7 @@ export default function ErrorLogsTab() {
 
                 {(currentEditingLog?.attachments?.length ?? 0) > 0 && (
                   <div className="mt-4 border-t border-outline-variant pt-3">
-                    <p className="mb-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant">Tệp đã lưu</p>
+                    <p className="mb-2 text-xs font-medium text-on-surface-variant">Tệp đã lưu</p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {currentEditingLog!.attachments.map(attachment => {
                         const canPreview = canPreviewCloudflareImage(attachment);
@@ -1450,7 +1562,7 @@ export default function ErrorLogsTab() {
                 )}
               </div>
 
-              <div className="lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <div className="lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
@@ -1473,44 +1585,44 @@ export default function ErrorLogsTab() {
 
       {selectedLogDetails && (
         <div className="modal-overlay">
-          <div className="bg-surface rounded-xl shadow-xl w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center mb-4 pb-2 border-b border-outline-variant">
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
+            <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
               <div>
-                <h3 className="text-lg font-bold text-on-surface">Chi tiết log lỗi</h3>
+                <h3 className="text-lg font-semibold text-on-surface">Chi tiết log lỗi</h3>
                 <p className="text-xs text-on-surface-variant mt-1">{selectedLogDetails.errorCode || selectedLogDetails.id}</p>
               </div>
-              <button type="button" onClick={() => setSelectedLogDetails(null)} className="text-on-surface-variant hover:text-on-surface font-bold cursor-pointer">&#x2715;</button>
+              <button type="button" onClick={() => setSelectedLogDetails(null)} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer" aria-label="Đóng" title="Đóng"><X className="h-5 w-5" /></button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Ngày tiếp nhận</span>
-                <p className="font-semibold text-on-surface">{formatDate(selectedLogDetails.receivedDate)}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Ngày tiếp nhận</span>
+                <p className="font-medium text-on-surface">{formatDate(selectedLogDetails.receivedDate)}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cửa hàng</span>
-                <p className="font-semibold text-on-surface">{selectedLogDetails.store}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Cửa hàng</span>
+                <p className="font-medium text-on-surface">{selectedLogDetails.store}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Booth</span>
-                <p className="font-semibold text-on-surface">{selectedLogDetails.booth || 'N/A'}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Booth</span>
+                <p className="font-medium text-on-surface">{selectedLogDetails.booth || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Nhóm lỗi</span>
-                <p className="font-semibold text-on-surface">{errorGroupLabels[selectedLogDetails.errorGroup]}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Nhóm lỗi</span>
+                <p className="font-medium text-on-surface">{errorGroupLabels[selectedLogDetails.errorGroup]}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">IT phụ trách</span>
-                <p className="font-semibold text-on-surface">{selectedLogDetails.assignedToName || selectedLogDetails.assignedToId || 'N/A'}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">IT phụ trách</span>
+                <p className="font-medium text-on-surface">{selectedLogDetails.assignedToName || selectedLogDetails.assignedToId || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Trạng thái</span>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Trạng thái</span>
                 <span className={getStatusClass(selectedLogDetails.status)}>
                   {statusLabels[selectedLogDetails.status]}
                 </span>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Mức độ</span>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Mức độ</span>
                 <span className={getSeverityClass(selectedLogDetails.severity)}>
                   {severityLabels[selectedLogDetails.severity]}
                 </span>
@@ -1519,24 +1631,24 @@ export default function ErrorLogsTab() {
 
             <div className="space-y-4 mt-5 text-sm">
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Mô tả lỗi</span>
-                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.description || 'N/A'}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Mô tả lỗi</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface whitespace-pre-wrap">{selectedLogDetails.description || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Nguyên nhân sơ bộ</span>
-                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.preliminaryCause || 'N/A'}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Nguyên nhân sơ bộ</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface whitespace-pre-wrap">{selectedLogDetails.preliminaryCause || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Cách xử lý</span>
-                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.solution || 'N/A'}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Cách xử lý</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface whitespace-pre-wrap">{selectedLogDetails.solution || 'N/A'}</p>
               </div>
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">Ghi chú</span>
-                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface-variant whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
+                <span className="block text-xs font-medium text-on-surface-variant mb-1">Ghi chú</span>
+                <p className="bg-surface-2 border border-outline-variant rounded-lg p-3 text-on-surface whitespace-pre-wrap">{selectedLogDetails.note || 'N/A'}</p>
               </div>
               {selectedLogCloudflareImages.length > 0 && (
                 <div>
-                  <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Ảnh Cloudflare</span>
+                  <span className="block text-xs font-medium text-on-surface-variant mb-2">Ảnh Cloudflare</span>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {selectedLogCloudflareImages.map(attachment => (
                       <a
@@ -1565,7 +1677,7 @@ export default function ErrorLogsTab() {
                 </div>
               )}
               <div>
-                <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">Tệp đính kèm</span>
+                <span className="block text-xs font-medium text-on-surface-variant mb-2">Tệp đính kèm</span>
                 {(selectedLogDetails.attachments?.length ?? 0) === 0 ? (
                   <p className="rounded-lg border border-dashed border-outline-variant bg-surface-2 p-3 text-on-surface-variant">Chưa có tệp đính kèm.</p>
                 ) : (
@@ -1581,8 +1693,8 @@ export default function ErrorLogsTab() {
                           target="_blank"
                           rel="noreferrer"
                           className={canPreview
-                            ? 'block min-w-0 overflow-hidden rounded-lg border border-outline-variant bg-surface-2 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary'
-                            : 'flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary'}
+                            ? 'block min-w-0 overflow-hidden rounded-lg border border-outline-variant bg-surface-2 transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary'
+                            : 'flex min-w-0 items-center gap-3 rounded-lg border border-outline-variant bg-surface-2 p-3 transition-colors hover:border-primary/40 hover:bg-primary-subtle hover:text-primary'}
                           title="Mở và tải trực tiếp"
                         >
                           {canPreview ? (
@@ -1596,7 +1708,7 @@ export default function ErrorLogsTab() {
                                 />
                               </div>
                               <span className="flex min-w-0 items-center gap-3 p-3">
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                                   <Download className="h-4 w-4" />
                                 </span>
                                 <span className="min-w-0 flex-1">
@@ -1607,7 +1719,7 @@ export default function ErrorLogsTab() {
                             </>
                           ) : (
                             <>
-                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
                                 <Download className="h-4 w-4" />
                               </span>
                               <span className="min-w-0 flex-1">
@@ -1624,11 +1736,11 @@ export default function ErrorLogsTab() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-5 mt-5 border-t">
+            <div className="flex justify-end gap-2 pt-5 mt-5 border-t border-outline-variant">
               <button
                 type="button"
                 onClick={() => setSelectedLogDetails(null)}
-                className="btn-secondary px-5 py-2 text-xs"
+                className="btn-secondary"
               >
                 Đóng
               </button>

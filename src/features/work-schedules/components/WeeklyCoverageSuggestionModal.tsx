@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, DatePicker, Drawer, Modal, Select, Tag, TimePicker, notification } from 'antd';
+import { Alert, Button, DatePicker, Drawer, Select, Tag, TimePicker } from 'antd';
+import { toast } from 'sonner';
+import { confirmAction } from '../../../components/ui';
 import dayjs, { Dayjs } from 'dayjs';
 import { User } from '../../../types';
 import {
@@ -128,8 +130,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
       const items = normalizePreviewItems(response);
       setPreviewResponse(response);
       setPreviewItems(items);
-      notification.success({
-        message: 'Đã tạo đề xuất lịch tuần',
+      toast.success('Đã tạo gợi ý lịch tuần.', {
         description: `Đã xếp ${response.assignedSlotCount}/${response.requiredSlotCount} ca cần trực.`,
       });
     },
@@ -141,10 +142,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
     onSuccess: async response => {
       await queryClient.invalidateQueries({ queryKey: ['work-schedules', 'week'] });
       await onSuccess();
-      notification.success({
-        message: 'Đã lưu đề xuất lịch tuần',
-        description: `Đã lưu ${response.createdCount || response.items.length} lịch làm việc.`,
-      });
+      toast.success(`Đã lưu ${response.createdCount || response.items.length} lịch làm việc.`);
       closeAndReset();
     },
     onError: error => setApiError(mapAutoArrangeError(error)),
@@ -155,19 +153,19 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
     onClose();
   };
 
-  const requestClose = () => {
+  const requestClose = async () => {
     if (!hasDirtyData) {
       closeAndReset();
       return;
     }
 
-    Modal.confirm({
-      title: 'Bạn có thay đổi chưa lưu',
-      content: 'Đóng màn hình sẽ xóa đề xuất lịch tuần hiện tại. Bạn có chắc muốn đóng?',
+    const confirmed = await confirmAction({
+      title: 'Đóng khi chưa lưu?',
+      content: 'Gợi ý lịch tuần hiện tại sẽ bị bỏ.',
       okText: 'Đóng',
       cancelText: 'Ở lại',
-      onOk: closeAndReset,
     });
+    if (confirmed) closeAndReset();
   };
 
   const runPreview = () => {
@@ -218,7 +216,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
 
   return (
     <Drawer
-      title="Đề xuất lịch tuần"
+      title="Gợi ý lịch tuần"
       open={open}
       onClose={requestClose}
       width="min(1280px, 96vw)"
@@ -227,8 +225,8 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <Button onClick={requestClose}>Hủy</Button>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button type="primary" onClick={runPreview} loading={previewMutation.isPending}>
-              Tạo đề xuất
+            <Button onClick={runPreview} loading={previewMutation.isPending}>
+              Tạo gợi ý
             </Button>
             <Button
               type="primary"
@@ -236,7 +234,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
               loading={confirmMutation.isPending}
               onClick={confirm}
             >
-              Xác nhận lưu
+              Lưu lịch
             </Button>
           </div>
         </div>
@@ -247,13 +245,13 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
           <Alert
             type="error"
             showIcon
-            message="Không thể xử lý đề xuất lịch tuần"
+            message="Không thể tạo gợi ý lịch tuần"
             description={<pre className="whitespace-pre-wrap font-sans">{apiError}</pre>}
           />
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <label className="block text-sm font-semibold">
+          <label className="block text-sm font-medium text-on-surface">
             Tuần
             <DatePicker
               className="mt-2 w-full"
@@ -269,7 +267,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
             <span className="mt-1 block text-xs text-on-surface-variant">{formatWeekRange(weekStartDate)}</span>
           </label>
 
-          <label className="block text-sm font-semibold">
+          <label className="block text-sm font-medium text-on-surface">
             Giờ bắt đầu
             <TimePicker
               className="mt-2 w-full"
@@ -284,7 +282,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
             />
           </label>
 
-          <label className="block text-sm font-semibold">
+          <label className="block text-sm font-medium text-on-surface">
             Giờ kết thúc
             <TimePicker
               className="mt-2 w-full"
@@ -299,11 +297,12 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
             />
           </label>
 
-          <label className="block text-sm font-semibold">
-            Nhân viên trực
+          <label className="block text-sm font-medium text-on-surface">
+            Nhân viên
             <Select
               className="mt-2 w-full"
               mode="multiple"
+              placeholder="Chọn nhân viên"
               maxTagCount="responsive"
               value={selectedUserIds}
               options={users.map(user => ({ value: user.id, label: user.name }))}
@@ -322,7 +321,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
         {previewResponse && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold">Ca được chọn:</span>
+              <span className="text-sm font-medium text-on-surface">Ca được chọn:</span>
               {selectedShifts.length === 0 ? (
                 <Tag>Không có ca phù hợp</Tag>
               ) : selectedShifts.map(shift => (
@@ -336,7 +335,7 @@ export default function WeeklyCoverageSuggestionModal({ open, users, onClose, on
               <Alert
                 type="warning"
                 showIcon
-                message="Không có ca nào phủ một phần khung giờ"
+                message="Có khung giờ không có ca nào phủ"
                 description={previewResponse.gaps.map(gap => (
                   <div key={`${gap.from}-${gap.to}`}>Không có ca nào phủ khung {toShortTime(gap.from)}-{toShortTime(gap.to)}</div>
                 ))}

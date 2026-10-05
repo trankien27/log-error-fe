@@ -1,20 +1,24 @@
-import {StrictMode, useEffect} from 'react';
+import React, {StrictMode, useEffect} from 'react';
 import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router-dom';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {ConfigProvider} from 'antd';
+import {App as AntdApp, ConfigProvider, theme as antdTheme} from 'antd';
 import {Toaster} from 'sonner';
 import App from './App.tsx';
 import {useThemeStore} from './stores/useThemeStore';
-import {getContrastColor, mixHexColors} from './features/theme/theme.utils';
+import {useColorModeStore} from './stores/useColorModeStore';
+import {getContrastColor, getEffectiveTheme, mixHexColors} from './features/theme/theme.utils';
+import AntdStaticBridge from './components/ui/AntdStaticBridge';
 import 'antd/dist/reset.css';
 import './index.css';
 
 const queryClient = new QueryClient();
 
 function ApplicationRoot() {
-  const theme = useThemeStore(state => state.theme);
+  const sourceTheme = useThemeStore(state => state.theme);
   const loadTheme = useThemeStore(state => state.loadTheme);
+  const colorMode = useColorModeStore(state => state.resolved);
+  const theme = React.useMemo(() => getEffectiveTheme(sourceTheme), [sourceTheme, colorMode]);
 
   useEffect(() => {
     void loadTheme();
@@ -26,6 +30,7 @@ function ApplicationRoot() {
   return (
     <ConfigProvider
       theme={{
+        algorithm: colorMode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
           colorPrimary: theme.primaryColor,
           colorPrimaryHover: theme.primaryHoverColor,
@@ -49,7 +54,9 @@ function ApplicationRoot() {
           colorWarningBg: theme.warningContainerColor,
           fontFamily: theme.fontSans,
           fontFamilyCode: theme.fontMono,
-          borderRadius: 8,
+          borderRadius: 10,
+          controlHeight: 38,
+          fontSize: 14,
         },
         components: {
           Button: {
@@ -68,20 +75,23 @@ function ApplicationRoot() {
             defaultActiveBg: mixHexColors(theme.secondaryButtonColor, secondaryButtonText === '#FFFFFF' ? '#FFFFFF' : '#000000', 0.18),
             defaultActiveColor: secondaryButtonText,
             defaultActiveBorderColor: mixHexColors(theme.secondaryButtonColor, secondaryButtonText === '#FFFFFF' ? '#FFFFFF' : '#000000', 0.5),
-            controlHeight: 44,
-            controlHeightLG: 48,
-            fontWeight: 600,
-            paddingInline: 20,
+            controlHeight: 38,
+            controlHeightLG: 44,
+            fontWeight: 500,
+            paddingInline: 16,
           },
         },
       }}
     >
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <App />
-          <Toaster richColors position="top-right" duration={2000} />
-        </BrowserRouter>
-      </QueryClientProvider>
+      <AntdApp component={false}>
+        <AntdStaticBridge />
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <App />
+            <Toaster richColors position="top-right" duration={2500} theme={colorMode} closeButton />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </AntdApp>
     </ConfigProvider>
   );
 }

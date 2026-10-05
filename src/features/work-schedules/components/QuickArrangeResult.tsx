@@ -13,13 +13,13 @@ export default function QuickArrangeResult({ result }: Props) {
         type={result.warnings.length > 0 ? 'warning' : 'success'}
         showIcon
         message={`Đã tạo ${result.createdShiftCount}/${result.requestedShiftCount} khung giờ.`}
-        description={`Tổng giờ sau khi xếp: ${result.finalHours}/${result.requestedHours} giờ theo ca đã chọn.`}
+        description={`Tổng giờ sau khi xếp: ${result.finalHours}/${result.requestedHours} giờ.`}
       />
       {result.warnings.length > 0 && (
         <Alert
           type="warning"
           showIcon
-          message="Cảnh báo từ hệ thống"
+          message="Cảnh báo"
           description={
             <ul className="pl-4 list-disc">
               {result.warnings.map(warning => <li key={warning}>{warning}</li>)}
@@ -28,7 +28,7 @@ export default function QuickArrangeResult({ result }: Props) {
         />
       )}
       <div>
-        <Typography.Text strong>Danh sách lịch đã tạo</Typography.Text>
+        <Typography.Text strong>Lịch đã tạo</Typography.Text>
         <List
           size="small"
           dataSource={result.items}

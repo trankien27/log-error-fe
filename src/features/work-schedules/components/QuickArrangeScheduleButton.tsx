@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ThunderboltOutlined } from '@ant-design/icons';
+import { Zap } from 'lucide-react';
 import { Button } from 'antd';
 import { User } from '../../../types';
 import QuickArrangeScheduleModal from './QuickArrangeScheduleModal';
@@ -17,12 +17,12 @@ export default function QuickArrangeScheduleButton({ users, disabled = false, on
     <>
       <Button
         type="primary"
-        icon={<ThunderboltOutlined />}
+        icon={<Zap className="h-4 w-4" />}
         disabled={disabled}
         onClick={() => setOpen(true)}
-        aria-label="Đề xuất nhanh"
+        aria-label="Xếp lịch nhanh"
       >
-        Đề xuất nhanh
+        Xếp lịch nhanh
       </Button>
       <QuickArrangeScheduleModal
         open={open}

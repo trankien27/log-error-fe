@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Alert, Button, Card, Progress, Tag } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
-import { Database, Download, Upload } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert } from 'antd';
+import { Database, Download, Loader2, RefreshCw, Upload, type LucideIcon } from 'lucide-react';
+import { PageHeader, SectionCard, Skeleton } from '../../../components/ui';
 import { r2UsageService } from '../../../services/api/r2UsageService';
 import { R2Usage, R2UsageStatus } from '../r2Usage.types';
 
@@ -13,34 +13,32 @@ import { R2Usage, R2UsageStatus } from '../r2Usage.types';
 
 type StatusStyle = {
   label: string;
-  tagColor: string;
-  /**
-   * AntD v6 doi cach xu ly mau hex tuy chinh cua Tag: hex -> nen sang (tint),
-   * khong con la nen dac nhu v5. Muon "do + nen dac" cho Block thi phai dung
-   * preset color + variant="solid".
-   */
-  tagVariant: 'filled' | 'solid';
-  strokeColor: string;
-  progressStatus: 'normal' | 'exception';
+  /** Lop badge theo token (tu dong dung mau dark mode). */
+  badgeClass: string;
+  /** Mau thanh tien do: CSS variable cua theme. */
+  barColor: string;
 };
 
 const STATUS_STYLES: Record<R2UsageStatus, StatusStyle> = {
-  Normal: { label: 'Bình thường', tagColor: 'green', tagVariant: 'filled', strokeColor: '#52c41a', progressStatus: 'normal' },
-  Info: { label: 'Theo dõi', tagColor: 'blue', tagVariant: 'filled', strokeColor: '#1677ff', progressStatus: 'normal' },
-  Warning: { label: 'Cảnh báo', tagColor: 'orange', tagVariant: 'filled', strokeColor: '#fa8c16', progressStatus: 'normal' },
-  Critical: { label: 'Nguy hiểm', tagColor: 'red', tagVariant: 'filled', strokeColor: '#f5222d', progressStatus: 'exception' },
-  Block: { label: 'Đã chặn', tagColor: 'red', tagVariant: 'solid', strokeColor: '#cf1322', progressStatus: 'exception' },
+  Normal: { label: 'Bình thường', badgeClass: 'badge-success', barColor: 'var(--color-success)' },
+  Info: { label: 'Theo dõi', badgeClass: 'badge-info', barColor: 'var(--color-primary)' },
+  Warning: { label: 'Cảnh báo', badgeClass: 'badge-warning', barColor: 'var(--color-warning)' },
+  Critical: { label: 'Nguy hiểm', badgeClass: 'badge-error', barColor: 'var(--color-error)' },
+  // Block: nen dac de noi bat hon Critical.
+  Block: {
+    label: 'Đã chặn',
+    badgeClass: 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-error text-on-primary',
+    barColor: 'var(--color-error)',
+  },
 };
 
 const FALLBACK_STATUS_STYLE: StatusStyle = {
   label: 'Không xác định',
-  tagColor: 'default',
-  tagVariant: 'filled',
-  strokeColor: '#8c8c8c',
-  progressStatus: 'normal',
+  badgeClass: 'badge-info',
+  barColor: 'var(--color-on-surface-variant)',
 };
 
-const DISABLED_STROKE_COLOR = '#bfbfbf';
+const DISABLED_BAR_COLOR = 'var(--color-outline-variant)';
 
 function getStatusStyle(status: R2UsageStatus): StatusStyle {
   return STATUS_STYLES[status] ?? FALLBACK_STATUS_STYLE;
@@ -82,7 +80,7 @@ function formatDateTime(value: string): string {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString('vi-VN');
 }
 
-/** Progress cua AntD nhan so nguyen, kep ve 0..100 de tranh thanh tran vien. */
+/** Kep phan tram ve 0..100 de thanh tien do khong tran vien. */
 function toProgressPercent(percent: number): number {
   if (!Number.isFinite(percent) || percent <= 0) return 0;
   return Math.min(100, Math.round(percent * 10) / 10);
@@ -90,7 +88,7 @@ function toProgressPercent(percent: number): number {
 
 type UsageCardProps = {
   title: string;
-  icon: ReactNode;
+  icon: LucideIcon;
   hint: string;
   usedText: string;
   limitText: string;
@@ -101,41 +99,48 @@ type UsageCardProps = {
 
 function UsageCard({ title, icon, hint, usedText, limitText, percent, status, enabled }: UsageCardProps) {
   const style = getStatusStyle(status);
+  const progress = toProgressPercent(percent);
 
   return (
-    <Card
-      variant="outlined"
+    <SectionCard
+      title={title}
+      icon={icon}
       className={enabled ? '' : 'opacity-60'}
-      title={(
-        <div className="flex items-center gap-2">
-          <span className="text-on-surface-variant">{icon}</span>
-          <span className="font-bold">{title}</span>
-        </div>
-      )}
-      extra={(
-        <Tag
-          color={enabled ? style.tagColor : 'default'}
-          variant={enabled ? style.tagVariant : 'filled'}
+      actions={(
+        <span
+          className={enabled ? style.badgeClass : 'badge-info'}
           title={`Trạng thái backend: ${status}`}
         >
           {enabled ? style.label : 'Không hoạt động'}
-        </Tag>
+        </span>
       )}
     >
-      <p className="mb-3 text-xs text-on-surface-variant">{hint}</p>
+      <p className="mb-4 text-sm text-on-surface-variant">{hint}</p>
 
-      <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="text-lg font-bold text-on-surface">{usedText}</span>
-        <span className="text-xs font-semibold text-on-surface-variant">/ {limitText}</span>
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <span className="text-2xl font-semibold text-on-surface tabular-nums">{usedText}</span>
+        <span className="text-sm text-on-surface-variant tabular-nums">/ {limitText}</span>
       </div>
 
-      <Progress
-        percent={toProgressPercent(percent)}
-        status={enabled ? style.progressStatus : 'normal'}
-        strokeColor={enabled ? style.strokeColor : DISABLED_STROKE_COLOR}
-        format={() => formatPercent(percent)}
-      />
-    </Card>
+      <div className="flex items-center gap-3">
+        <div
+          className="h-2 flex-1 overflow-hidden rounded-full bg-surface-2"
+          role="progressbar"
+          aria-label={title}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-500"
+            style={{ width: `${progress}%`, backgroundColor: enabled ? style.barColor : DISABLED_BAR_COLOR }}
+          />
+        </div>
+        <span className="w-14 shrink-0 text-right text-xs font-medium text-on-surface-variant tabular-nums">
+          {formatPercent(percent)}
+        </span>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -165,25 +170,25 @@ export default function R2UsageTab() {
   const isEnabled = usage?.enabled === true;
 
   return (
-    <div className="space-y-6 text-left text-on-surface animate-fadeIn">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-on-surface font-sans">Hạn mức Cloudflare R2</h2>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            Theo dõi dung lượng lưu trữ và số thao tác Class A / Class B đã dùng so với hạn mức miễn phí.
-            Số liệu do hệ thống tự đếm nên có thể cao hơn một chút so với thống kê của Cloudflare.
-          </p>
-        </div>
-        <Button icon={<ReloadOutlined />} loading={isLoading} onClick={() => void loadUsage()}>
-          Làm mới
-        </Button>
-      </div>
+    <div className="space-y-5 text-left text-on-surface animate-fadeIn">
+      <PageHeader
+        title="Dung lượng lưu trữ"
+        description="Theo dõi dung lượng và số thao tác Cloudflare R2 so với hạn mức miễn phí."
+        icon={Database}
+        className="!mb-0"
+        actions={(
+          <button type="button" className="btn-secondary" disabled={isLoading} onClick={() => void loadUsage()}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Làm mới
+          </button>
+        )}
+      />
 
       {error && (
         <Alert
           type="error"
           showIcon
-          title="Không tải được dữ liệu hạn mức"
+          title="Không thể tải dữ liệu hạn mức"
           description={error}
         />
       )}
@@ -192,31 +197,31 @@ export default function R2UsageTab() {
         <Alert
           type="info"
           showIcon
-          title="Cloudflare R2 chưa được cấu hình — hệ thống đang dùng phương án dự phòng"
+          title="Chưa cấu hình Cloudflare R2 — đang dùng phương án dự phòng"
           description={
             'Tệp đính kèm và ảnh tài liệu vẫn được lưu bình thường qua Telegram / base64 trong cơ sở dữ liệu. '
-            + 'Các chỉ số bên dưới sẽ bắt đầu chạy ngay khi thông tin kết nối R2 được điền vào cấu hình.'
+            + 'Các chỉ số bên dưới sẽ chạy ngay khi bạn điền thông tin kết nối R2.'
           }
         />
       )}
 
       {usage && (
-        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-lg border border-outline-variant bg-surface-2 px-4 py-3 text-xs text-on-surface-variant">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 rounded-xl border border-outline-variant bg-surface-2/60 px-4 py-3 text-sm text-on-surface-variant">
           <span>
             Kỳ thống kê thao tác:{' '}
-            <strong className="text-on-surface">
+            <strong className="font-medium text-on-surface">
               Tháng {usage.month}/{usage.year}
             </strong>{' '}
-            (Class A / Class B reset mỗi tháng, dung lượng lưu trữ thì không)
+            <span className="text-xs">(Class A / B làm mới mỗi tháng, dung lượng thì không)</span>
           </span>
           <span>
-            Số đối tượng đang lưu: <strong className="text-on-surface">{formatCount(usage.objectCount)}</strong>
+            Số tệp đang lưu: <strong className="font-medium text-on-surface">{formatCount(usage.objectCount)}</strong>
           </span>
           <span>
-            Thao tác miễn phí: <strong className="text-on-surface">{formatCount(usage.freeRequests)}</strong>
+            Thao tác miễn phí: <strong className="font-medium text-on-surface">{formatCount(usage.freeRequests)}</strong>
           </span>
           <span>
-            Cập nhật lúc: <strong className="text-on-surface">{formatDateTime(usage.updatedAt)}</strong>
+            Cập nhật lúc: <strong className="font-medium text-on-surface">{formatDateTime(usage.updatedAt)}</strong>
           </span>
         </div>
       )}
@@ -225,7 +230,7 @@ export default function R2UsageTab() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           <UsageCard
             title="Dung lượng lưu trữ"
-            icon={<Database className="h-4 w-4" />}
+            icon={Database}
             hint="Tổng dung lượng đang chiếm trên bucket. Không reset theo tháng."
             usedText={formatBytes(usage.storage.usedBytes)}
             limitText={formatBytes(usage.storage.limitBytes)}
@@ -235,7 +240,7 @@ export default function R2UsageTab() {
           />
           <UsageCard
             title="Thao tác Class A"
-            icon={<Upload className="h-4 w-4" />}
+            icon={Upload}
             hint="Thao tác ghi (tải lên, sao chép, liệt kê). Tính theo tháng."
             usedText={formatCount(usage.classA.used)}
             limitText={formatCount(usage.classA.limit)}
@@ -245,7 +250,7 @@ export default function R2UsageTab() {
           />
           <UsageCard
             title="Thao tác Class B"
-            icon={<Download className="h-4 w-4" />}
+            icon={Download}
             hint="Thao tác đọc (tải xuống, xem thông tin tệp). Tính theo tháng."
             usedText={formatCount(usage.classB.used)}
             limitText={formatCount(usage.classB.limit)}
@@ -256,9 +261,17 @@ export default function R2UsageTab() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Card variant="outlined" loading={isLoading} />
-          <Card variant="outlined" loading={isLoading} />
-          <Card variant="outlined" loading={isLoading} />
+          {[0, 1, 2].map(index => (
+            <div key={index} className="card-surface space-y-4 p-5" aria-busy={isLoading}>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-8 w-8 rounded-lg" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+              <Skeleton className="h-3.5 w-full" />
+              <Skeleton className="h-7 w-1/3" />
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))}
         </div>
       )}
     </div>

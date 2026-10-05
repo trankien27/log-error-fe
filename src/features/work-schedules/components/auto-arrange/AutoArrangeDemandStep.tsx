@@ -77,7 +77,7 @@ export default function AutoArrangeDemandStep({ weekDates, shifts, demands, onDe
     return (
       <div className="space-y-3">
         <Typography.Title level={5} className="!mb-0">3. Nhu cầu ca</Typography.Title>
-        <Alert type="warning" showIcon message="Chưa có ca hoạt động để nhập nhu cầu." />
+        <Alert type="warning" showIcon message="Chưa có ca nào đang hoạt động." />
       </div>
     );
   }
