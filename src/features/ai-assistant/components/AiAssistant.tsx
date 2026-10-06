@@ -20,7 +20,8 @@ type ChatMessage = {
 const SUGGESTIONS = [
   'Log lỗi hôm nay booth LUMI01: camera không lên, tắt bật lại là được',
   'Tuần này có lỗi phần cứng nào chưa xử lý xong?',
-  'Hôm qua có lỗi nào ở Vincom không?',
+  'Tuần này ai trực ca sáng?',
+  'Chia lịch tuần sau cho Việt Anh và Quốc, Quốc nghỉ thứ 4',
 ];
 
 const newId = () => Math.random().toString(36).slice(2);
@@ -140,7 +141,7 @@ export default function AiAssistant() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-on-surface leading-tight">Trợ lý AI</p>
-                <p className="text-xs text-on-surface-variant leading-tight">Ghi và tra cứu log lỗi</p>
+                <p className="text-xs text-on-surface-variant leading-tight">Log lỗi · Xếp lịch làm việc</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -216,7 +217,7 @@ export default function AiAssistant() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Mô tả lỗi hoặc hỏi tra cứu…"
+                placeholder="Mô tả lỗi, hỏi lịch, hoặc nhờ xếp lịch…"
                 maxLength={2000}
                 className="flex-1 resize-none max-h-32 min-h-10 px-3 py-2 bg-surface border border-outline-variant rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
               />
@@ -245,10 +246,27 @@ function ActionCard({ action, state, result, onConfirm, onCancel }: ActionCardPr
 
   return (
     <div className={`rounded-xl border p-3 text-sm bg-surface ${state === 'saved' ? 'border-success' : 'border-primary/40'} ${state === 'cancelled' ? 'opacity-60' : ''}`}>
-      <p className="font-semibold text-on-surface mb-1.5">📝 {action.title}</p>
+      <p className="font-semibold text-on-surface mb-1.5">{action.type === 'confirm_schedule' ? '📅' : '📝'} {action.title}</p>
       <ul className="space-y-0.5 text-on-surface">
         {lines.map(line => <li key={line}>{line}</li>)}
       </ul>
+
+      {action.sections.length > 0 && (
+        <div className="mt-2 max-h-72 overflow-y-auto space-y-2 pr-1">
+          {action.sections.map(section => (
+            <div key={section.title}>
+              <p className="text-xs font-semibold text-on-surface-variant">{section.title}</p>
+              {section.items.length === 0 ? (
+                <p className="text-xs text-on-surface-variant/70">Nghỉ / chưa xếp ca</p>
+              ) : (
+                <ul className="text-xs text-on-surface space-y-0.5">
+                  {section.items.map((item, index) => <li key={`${section.title}-${index}`}>• {item}</li>)}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {action.assumptions.length > 0 && state === 'pending' && (
         <div className="mt-2 text-xs text-on-surface-variant space-y-0.5">

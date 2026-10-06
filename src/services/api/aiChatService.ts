@@ -1,11 +1,17 @@
 import { apiClient } from './apiClient';
 
+export type AiChatSection = {
+  title: string;
+  items: string[];
+};
+
 export type AiChatPendingAction = {
   id: string;
-  type: 'create_error_log';
+  type: 'create_error_log' | 'confirm_schedule';
   title: string;
   summary: string;
   assumptions: string[];
+  sections: AiChatSection[];
 };
 
 export type AiChatReply = {
