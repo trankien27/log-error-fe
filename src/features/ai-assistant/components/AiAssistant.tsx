@@ -22,7 +22,14 @@ const SUGGESTIONS = [
   'Tuần này có lỗi phần cứng nào chưa xử lý xong?',
   'Tuần này ai trực ca sáng?',
   'Chia lịch tuần sau cho Việt Anh và Quốc, Quốc nghỉ thứ 4',
+  'Thứ 5 cho Việt Anh làm thay ca sáng của Quốc',
 ];
+
+const ACTION_ICONS: Record<string, string> = {
+  create_error_log: '📝',
+  confirm_schedule: '📅',
+  shift_change: '🔁',
+};
 
 const newId = () => Math.random().toString(36).slice(2);
 
@@ -141,7 +148,7 @@ export default function AiAssistant() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-on-surface leading-tight">Trợ lý AI</p>
-                <p className="text-xs text-on-surface-variant leading-tight">Log lỗi · Xếp lịch làm việc</p>
+                <p className="text-xs text-on-surface-variant leading-tight">Log lỗi · Xếp lịch · Đổi ca</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -246,7 +253,7 @@ function ActionCard({ action, state, result, onConfirm, onCancel }: ActionCardPr
 
   return (
     <div className={`rounded-xl border p-3 text-sm bg-surface ${state === 'saved' ? 'border-success' : 'border-primary/40'} ${state === 'cancelled' ? 'opacity-60' : ''}`}>
-      <p className="font-semibold text-on-surface mb-1.5">{action.type === 'confirm_schedule' ? '📅' : '📝'} {action.title}</p>
+      <p className="font-semibold text-on-surface mb-1.5">{ACTION_ICONS[action.type] ?? '📝'} {action.title}</p>
       <ul className="space-y-0.5 text-on-surface">
         {lines.map(line => <li key={line}>{line}</li>)}
       </ul>

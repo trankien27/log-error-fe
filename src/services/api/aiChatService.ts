@@ -7,7 +7,7 @@ export type AiChatSection = {
 
 export type AiChatPendingAction = {
   id: string;
-  type: 'create_error_log' | 'confirm_schedule';
+  type: 'create_error_log' | 'confirm_schedule' | 'shift_change';
   title: string;
   summary: string;
   assumptions: string[];
