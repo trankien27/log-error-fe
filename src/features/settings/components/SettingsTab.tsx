@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { accountService } from '../../../services/api/accountService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { PageHeader, SectionCard } from '../../../components/ui';
+import AiConnectionSection from './AiConnectionSection';
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
 
@@ -28,6 +29,7 @@ export default function SettingsTab() {
     resetSecurityForm,
     updateCurrentUser,
   } = useAuthStore();
+  const canConnectAi = useAuthStore(state => state.hasAnyRole([1, 2, 3, 'Admin', 'ITSupport', 'ITSupportManager']));
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -235,6 +237,8 @@ export default function SettingsTab() {
             </button>
           </div>
         </SectionCard>
+
+        {canConnectAi && <AiConnectionSection />}
       </div>
     </div>
   );

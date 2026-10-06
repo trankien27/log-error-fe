@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
 import TopHeader from './TopHeader';
 import CommandPalette from './CommandPalette';
+import AiAssistant from '../../features/ai-assistant/components/AiAssistant';
 import { useLayoutStore } from '../../stores/useLayoutStore';
 import { confirmAction } from '../ui';
 import { formatNotificationTime, useNotificationStore } from '../../stores/useNotificationStore';
@@ -145,6 +146,7 @@ export default function MainLayout() {
       </div>
 
       <CommandPalette />
+      <AiAssistant />
 
       {/* Global Overlay Modals */}
 
