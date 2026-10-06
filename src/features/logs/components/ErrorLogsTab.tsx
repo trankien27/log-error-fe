@@ -1109,12 +1109,12 @@ export default function ErrorLogsTab() {
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[960px] table-fixed text-left text-sm border-collapse">
+          <table className="w-full min-w-[840px] table-fixed text-left text-sm border-collapse">
             <colgroup>
               <col className="w-11" />
               <col className="w-[132px]" />
-              <col className="w-[18%]" />
               <col />
+              <col className="w-[150px]" />
               <col className="w-[150px]" />
               <col className="w-[104px]" />
               <col className="w-[140px]" />
@@ -1134,7 +1134,7 @@ export default function ErrorLogsTab() {
                 </th>
                 <th className="py-2.5 px-3 font-medium">Mã lỗi · Ngày</th>
                 <th className="py-2.5 px-3 font-medium">Cửa hàng · Booth</th>
-                <th className="py-2.5 px-3 font-medium">Mô tả lỗi</th>
+                <th className="py-2.5 px-3 font-medium">Phân loại</th>
                 <th className="py-2.5 px-3 font-medium">Trạng thái</th>
                 <th className="py-2.5 px-3 font-medium">Mức độ</th>
                 <th className="py-2.5 px-3 font-medium">Phụ trách</th>
@@ -1162,6 +1162,7 @@ export default function ErrorLogsTab() {
                   return (
                     <tr
                       key={log.id}
+                      title={log.description || undefined}
                       onClick={event => {
                         if ((event.target as HTMLElement).closest('button, input, a, label')) return;
                         setSelectedLogDetails(log);
@@ -1188,21 +1189,16 @@ export default function ErrorLogsTab() {
                         <p className="mt-0.5 text-xs text-on-surface-variant truncate" title={log.booth || undefined}>{log.booth || '—'}</p>
                       </td>
                       <td className="py-3 px-3">
-                        <p className="line-clamp-2 text-on-surface" title={log.description || undefined}>{log.description || 'Không có mô tả'}</p>
-                        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-on-surface-variant">
-                          <span>{errorGroupLabels[log.errorGroup]}</span>
-                          <span aria-hidden="true">·</span>
-                          <span>{processingFlowLabels[log.processingFlow]}</span>
+                        <p className="flex items-center gap-1.5 text-on-surface">
+                          <span className="truncate">{errorGroupLabels[log.errorGroup]}</span>
                           {(log.attachments?.length ?? 0) > 0 && (
-                            <>
-                              <span aria-hidden="true">·</span>
-                              <span className="inline-flex items-center gap-0.5 text-primary" title={`${log.attachments.length} tệp đính kèm`}>
-                                <Paperclip className="h-3 w-3" />
-                                {log.attachments.length}
-                              </span>
-                            </>
+                            <span className="inline-flex shrink-0 items-center gap-0.5 text-xs text-primary" title={`${log.attachments.length} tệp đính kèm`}>
+                              <Paperclip className="h-3 w-3" />
+                              {log.attachments.length}
+                            </span>
                           )}
                         </p>
+                        <p className="mt-0.5 text-xs text-on-surface-variant truncate">{processingFlowLabels[log.processingFlow]}</p>
                       </td>
                       <td className="py-3 px-3">
                         <span className={getStatusClass(log.status)}>{statusLabels[log.status]}</span>
