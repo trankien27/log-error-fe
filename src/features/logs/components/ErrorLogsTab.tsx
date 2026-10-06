@@ -1109,10 +1109,20 @@ export default function ErrorLogsTab() {
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[1400px] text-left text-sm border-collapse">
+          <table className="w-full min-w-[960px] table-fixed text-left text-sm border-collapse">
+            <colgroup>
+              <col className="w-11" />
+              <col className="w-[132px]" />
+              <col className="w-[18%]" />
+              <col />
+              <col className="w-[150px]" />
+              <col className="w-[104px]" />
+              <col className="w-[140px]" />
+              <col className="w-[112px]" />
+            </colgroup>
             <thead>
               <tr className="bg-surface-2/60 border-b border-outline-variant text-xs text-on-surface-variant select-none">
-                <th className="py-3 px-4 font-medium w-12">
+                <th className="py-2.5 pl-4 pr-2 font-medium">
                   <input
                     type="checkbox"
                     checked={isAllCurrentPageSelected}
@@ -1122,25 +1132,21 @@ export default function ErrorLogsTab() {
                     aria-label="Chọn tất cả log lỗi trên trang hiện tại"
                   />
                 </th>
-                <th className="py-3 px-4 font-medium min-w-[140px]">Ngày tiếp nhận</th>
-                <th className="py-3 px-4 font-medium min-w-[130px]">Mã lỗi</th>
-                <th className="py-3 px-4 font-medium min-w-[180px]">Cửa hàng</th>
-                <th className="py-3 px-4 font-medium min-w-[140px]">Booth</th>
-                <th className="py-3 px-4 font-medium min-w-[240px]">Mô tả lỗi</th>
-                <th className="py-3 px-4 font-medium min-w-[110px]">Nhóm lỗi</th>
-                <th className="py-3 px-4 font-medium min-w-[150px]">Trạng thái</th>
-                <th className="py-3 px-4 font-medium min-w-[140px]">Luồng xử lý</th>
-                <th className="py-3 px-4 font-medium min-w-[110px]">Mức độ</th>
-                <th className="py-3 px-4 font-medium text-center w-20">Tệp</th>
-                <th className="py-3 px-4 font-medium text-right w-32">Thao tác</th>
+                <th className="py-2.5 px-3 font-medium">Mã lỗi · Ngày</th>
+                <th className="py-2.5 px-3 font-medium">Cửa hàng · Booth</th>
+                <th className="py-2.5 px-3 font-medium">Mô tả lỗi</th>
+                <th className="py-2.5 px-3 font-medium">Trạng thái</th>
+                <th className="py-2.5 px-3 font-medium">Mức độ</th>
+                <th className="py-2.5 px-3 font-medium">Phụ trách</th>
+                <th className="py-2.5 px-3 font-medium text-right sticky right-0 bg-surface-2">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {isLoading ? (
-                <TableSkeletonRows columns={12} />
+                <TableSkeletonRows columns={8} />
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={12}>
+                  <td colSpan={8}>
                     <EmptyState
                       compact
                       icon={AlertTriangle}
@@ -1150,85 +1156,99 @@ export default function ErrorLogsTab() {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-surface-2/50 transition-colors">
-                    <td className="py-3 px-4">
-                      <input
-                        type="checkbox"
-                        checked={selectedLogIdSet.has(log.id)}
-                        onChange={() => handleToggleLogSelection(log.id)}
-                        className="w-4 h-4 accent-primary cursor-pointer"
-                        aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
-                      />
-                    </td>
-                    <td className="py-3 px-4 text-on-surface-variant whitespace-nowrap">{formatDate(log.receivedDate)}</td>
-                    <td className="py-3 px-4 font-mono text-[13px] font-medium text-primary whitespace-nowrap">{log.errorCode || 'N/A'}</td>
-                    <td className="py-3 px-4 font-medium text-on-surface">{log.store}</td>
-                    <td className="py-3 px-4 text-on-surface-variant">{log.booth || 'N/A'}</td>
-                    <td className="py-3 px-4 text-on-surface-variant max-w-xs">
-                      <span className="line-clamp-2">{log.description || 'N/A'}</span>
-                    </td>
-                    <td className="py-3 px-4 text-on-surface-variant">{errorGroupLabels[log.errorGroup]}</td>
-                    <td className="py-3 px-4">
-                      <span className={getStatusClass(log.status)}>
-                        {statusLabels[log.status]}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-on-surface-variant">{processingFlowLabels[log.processingFlow]}</td>
-                    <td className="py-3 px-4">
-                      <span className={getSeverityClass(log.severity)}>
-                        {severityLabels[log.severity]}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      {(log.attachments?.length ?? 0) > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedLogDetails(log)}
-                          className="inline-flex items-center gap-1 rounded-full bg-primary-subtle px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
-                          title="Xem tệp đính kèm"
-                          aria-label={`Xem ${log.attachments.length} tệp đính kèm`}
-                        >
-                          <Paperclip className="h-3.5 w-3.5" />
-                          {log.attachments.length}
-                        </button>
-                      ) : (
-                        <span className="text-on-surface-variant/60">—</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedLogDetails(log)}
-                          className={`${iconButtonClass} hover:bg-surface-2 hover:text-on-surface`}
-                          title="Xem chi tiết"
-                          aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenModal(log)}
-                          className={`${iconButtonClass} hover:bg-primary-subtle hover:text-primary`}
-                          title="Chỉnh sửa"
-                          aria-label={`Chỉnh sửa log lỗi ${log.errorCode || log.id}`}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(log)}
-                          className={`${iconButtonClass} hover:bg-error-container hover:text-error focus:ring-error/30`}
-                          title="Xóa"
-                          aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredLogs.map(log => {
+                  const isSelected = selectedLogIdSet.has(log.id);
+                  const assignee = log.assignedToName || log.assignedToId;
+                  return (
+                    <tr
+                      key={log.id}
+                      onClick={event => {
+                        if ((event.target as HTMLElement).closest('button, input, a, label')) return;
+                        setSelectedLogDetails(log);
+                      }}
+                      className={`group align-top cursor-pointer transition-colors ${isSelected ? 'bg-primary-subtle/60' : 'hover:bg-surface-2/50'}`}
+                    >
+                      <td className="py-3 pl-4 pr-2">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleLogSelection(log.id)}
+                          className="w-4 h-4 accent-primary cursor-pointer"
+                          aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
+                        />
+                      </td>
+                      <td className="py-3 px-3">
+                        <p className="font-mono text-[13px] font-medium text-primary truncate" title={log.errorCode || undefined}>
+                          {log.errorCode || 'N/A'}
+                        </p>
+                        <p className="mt-0.5 text-xs text-on-surface-variant whitespace-nowrap">{formatDate(log.receivedDate)}</p>
+                      </td>
+                      <td className="py-3 px-3">
+                        <p className="font-medium text-on-surface truncate" title={log.store}>{log.store}</p>
+                        <p className="mt-0.5 text-xs text-on-surface-variant truncate" title={log.booth || undefined}>{log.booth || '—'}</p>
+                      </td>
+                      <td className="py-3 px-3">
+                        <p className="line-clamp-2 text-on-surface" title={log.description || undefined}>{log.description || 'Không có mô tả'}</p>
+                        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-on-surface-variant">
+                          <span>{errorGroupLabels[log.errorGroup]}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{processingFlowLabels[log.processingFlow]}</span>
+                          {(log.attachments?.length ?? 0) > 0 && (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span className="inline-flex items-center gap-0.5 text-primary" title={`${log.attachments.length} tệp đính kèm`}>
+                                <Paperclip className="h-3 w-3" />
+                                {log.attachments.length}
+                              </span>
+                            </>
+                          )}
+                        </p>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={getStatusClass(log.status)}>{statusLabels[log.status]}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={getSeverityClass(log.severity)}>{severityLabels[log.severity]}</span>
+                      </td>
+                      <td className="py-3 px-3">
+                        <p className={`truncate ${assignee ? 'text-on-surface' : 'text-on-surface-variant/70'}`} title={assignee || undefined}>
+                          {assignee || 'Chưa phân công'}
+                        </p>
+                      </td>
+                      <td className={`py-2 px-3 sticky right-0 transition-colors ${isSelected ? 'bg-primary-subtle' : 'bg-surface group-hover:bg-surface-2'}`}>
+                        <div className="flex justify-end gap-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLogDetails(log)}
+                            className={`${iconButtonClass} hover:bg-surface-2 hover:text-on-surface`}
+                            title="Xem chi tiết"
+                            aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenModal(log)}
+                            className={`${iconButtonClass} hover:bg-primary-subtle hover:text-primary`}
+                            title="Chỉnh sửa"
+                            aria-label={`Chỉnh sửa log lỗi ${log.errorCode || log.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(log)}
+                            className={`${iconButtonClass} hover:bg-error-container hover:text-error focus:ring-error/30`}
+                            title="Xóa"
+                            aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
