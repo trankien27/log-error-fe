@@ -1,5 +1,6 @@
+import { Dropdown } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, MoreHorizontal, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
@@ -86,6 +87,31 @@ function formatDate(date: string) {
     timeStyle: 'short',
   }).format(new Date(date));
 }
+
+/** "Hôm nay 08:32", "Hôm qua 08:32", otherwise "08:32 05/10". */
+function formatRelativeDate(date: string) {
+  if (!date) return 'N/A';
+  const value = new Date(date);
+  const time = new Intl.DateTimeFormat('vi-VN', { timeStyle: 'short' }).format(value);
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(new Date()) - startOfDay(value)) / 86_400_000);
+  if (days === 0) return `Hôm nay ${time}`;
+  if (days === 1) return `Hôm qua ${time}`;
+  const sameYear = value.getFullYear() === new Date().getFullYear();
+  return `${time} ${new Intl.DateTimeFormat('vi-VN', sameYear ? { day: '2-digit', month: '2-digit' } : { dateStyle: 'short' }).format(value)}`;
+}
+
+/** Vietnamese given name is the last word: "Nguyễn Huy Quân" → "Quân". */
+function shortName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return parts[parts.length - 1] || name;
+}
+
+const severityDotClass: Record<Severity, string> = {
+  1: 'bg-success',
+  2: 'bg-warning',
+  3: 'bg-error',
+};
 
 function formatDateFilterLabel(date: string) {
   if (!date) return '';
@@ -1109,16 +1135,14 @@ export default function ErrorLogsTab() {
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[840px] table-fixed text-left text-sm border-collapse">
+          <table className="w-full min-w-[780px] table-fixed text-left text-sm border-collapse">
             <colgroup>
               <col className="w-11" />
-              <col className="w-[132px]" />
               <col />
-              <col className="w-[150px]" />
-              <col className="w-[150px]" />
-              <col className="w-[104px]" />
               <col className="w-[140px]" />
-              <col className="w-[112px]" />
+              <col className="w-[150px]" />
+              <col className="w-[140px]" />
+              <col className="w-[88px]" />
             </colgroup>
             <thead>
               <tr className="bg-surface-2/60 border-b border-outline-variant text-xs text-on-surface-variant select-none">
@@ -1132,21 +1156,21 @@ export default function ErrorLogsTab() {
                     aria-label="Chọn tất cả log lỗi trên trang hiện tại"
                   />
                 </th>
-                <th className="py-2.5 px-3 font-medium">Mã lỗi · Ngày</th>
-                <th className="py-2.5 px-3 font-medium">Cửa hàng · Booth</th>
+                <th className="py-2.5 px-3 font-medium">Lỗi</th>
                 <th className="py-2.5 px-3 font-medium">Phân loại</th>
                 <th className="py-2.5 px-3 font-medium">Trạng thái</th>
-                <th className="py-2.5 px-3 font-medium">Mức độ</th>
                 <th className="py-2.5 px-3 font-medium">Phụ trách</th>
-                <th className="py-2.5 px-3 font-medium text-right sticky right-0 bg-surface-2">Thao tác</th>
+                <th className="py-2.5 px-3 font-medium text-right sticky right-0 bg-surface-2">
+                  <span className="sr-only">Thao tác</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
               {isLoading ? (
-                <TableSkeletonRows columns={8} />
+                <TableSkeletonRows columns={6} />
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={6}>
                     <EmptyState
                       compact
                       icon={AlertTriangle}
@@ -1159,17 +1183,19 @@ export default function ErrorLogsTab() {
                 filteredLogs.map(log => {
                   const isSelected = selectedLogIdSet.has(log.id);
                   const assignee = log.assignedToName || log.assignedToId;
+                  const location = [log.store, log.booth].filter(Boolean).join(' · ');
                   return (
                     <tr
                       key={log.id}
-                      title={log.description || undefined}
                       onClick={event => {
-                        if ((event.target as HTMLElement).closest('button, input, a, label')) return;
+                        const target = event.target as HTMLElement;
+                        // Ignore clicks on controls and on portal content (dropdown menus) bubbling through React.
+                        if (!event.currentTarget.contains(target) || target.closest('button, input, a, label')) return;
                         setSelectedLogDetails(log);
                       }}
-                      className={`group align-top cursor-pointer transition-colors ${isSelected ? 'bg-primary-subtle/60' : 'hover:bg-surface-2/50'}`}
+                      className={`group cursor-pointer transition-colors ${isSelected ? 'bg-primary-subtle/60' : 'hover:bg-surface-2/50'}`}
                     >
-                      <td className="py-3 pl-4 pr-2">
+                      <td className="py-2.5 pl-4 pr-2">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -1178,19 +1204,11 @@ export default function ErrorLogsTab() {
                           aria-label={`Chọn log lỗi ${log.errorCode || log.id}`}
                         />
                       </td>
-                      <td className="py-3 px-3">
-                        <p className="font-mono text-[13px] font-medium text-primary truncate" title={log.errorCode || undefined}>
-                          {log.errorCode || 'N/A'}
-                        </p>
-                        <p className="mt-0.5 text-xs text-on-surface-variant whitespace-nowrap">{formatDate(log.receivedDate)}</p>
-                      </td>
-                      <td className="py-3 px-3">
-                        <p className="font-medium text-on-surface truncate" title={log.store}>{log.store}</p>
-                        <p className="mt-0.5 text-xs text-on-surface-variant truncate" title={log.booth || undefined}>{log.booth || '—'}</p>
-                      </td>
-                      <td className="py-3 px-3">
-                        <p className="flex items-center gap-1.5 text-on-surface">
-                          <span className="truncate">{errorGroupLabels[log.errorGroup]}</span>
+                      <td className="py-2.5 px-3 min-w-0">
+                        <p className="flex items-center gap-1.5 min-w-0">
+                          <span className="truncate font-medium text-on-surface" title={log.description || undefined}>
+                            {log.description || 'Không có mô tả'}
+                          </span>
                           {(log.attachments?.length ?? 0) > 0 && (
                             <span className="inline-flex shrink-0 items-center gap-0.5 text-xs text-primary" title={`${log.attachments.length} tệp đính kèm`}>
                               <Paperclip className="h-3 w-3" />
@@ -1198,30 +1216,37 @@ export default function ErrorLogsTab() {
                             </span>
                           )}
                         </p>
-                        <p className="mt-0.5 text-xs text-on-surface-variant truncate">{processingFlowLabels[log.processingFlow]}</p>
+                        <p className="mt-0.5 flex items-center gap-1.5 min-w-0 text-xs text-on-surface-variant">
+                          <span className="shrink-0 font-mono text-primary">{log.errorCode || 'N/A'}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="truncate" title={location}>{location}</span>
+                          <span aria-hidden="true">·</span>
+                          <span className="shrink-0 whitespace-nowrap" title={formatDate(log.receivedDate)}>{formatRelativeDate(log.receivedDate)}</span>
+                        </p>
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-2.5 px-3">
+                        <span className="inline-flex items-center gap-2 text-on-surface" title={`Mức độ: ${severityLabels[log.severity]} · ${processingFlowLabels[log.processingFlow]}`}>
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${severityDotClass[log.severity]}`} aria-label={`Mức độ ${severityLabels[log.severity]}`} />
+                          {errorGroupLabels[log.errorGroup]}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3">
                         <span className={getStatusClass(log.status)}>{statusLabels[log.status]}</span>
                       </td>
-                      <td className="py-3 px-3">
-                        <span className={getSeverityClass(log.severity)}>{severityLabels[log.severity]}</span>
-                      </td>
-                      <td className="py-3 px-3">
-                        <p className={`truncate ${assignee ? 'text-on-surface' : 'text-on-surface-variant/70'}`} title={assignee || undefined}>
-                          {assignee || 'Chưa phân công'}
-                        </p>
+                      <td className="py-2.5 px-3">
+                        {assignee ? (
+                          <span className="flex items-center gap-2 min-w-0" title={assignee}>
+                            <span className="h-6 w-6 shrink-0 inline-flex items-center justify-center rounded-full bg-secondary-container text-[11px] font-semibold text-on-secondary-container">
+                              {shortName(assignee).charAt(0).toUpperCase()}
+                            </span>
+                            <span className="truncate text-on-surface">{shortName(assignee)}</span>
+                          </span>
+                        ) : (
+                          <span className="text-on-surface-variant/70">Chưa phân công</span>
+                        )}
                       </td>
                       <td className={`py-2 px-3 sticky right-0 transition-colors ${isSelected ? 'bg-primary-subtle' : 'bg-surface group-hover:bg-surface-2'}`}>
                         <div className="flex justify-end gap-0.5">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedLogDetails(log)}
-                            className={`${iconButtonClass} hover:bg-surface-2 hover:text-on-surface`}
-                            title="Xem chi tiết"
-                            aria-label={`Xem chi tiết log lỗi ${log.errorCode || log.id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
                           <button
                             type="button"
                             onClick={() => handleOpenModal(log)}
@@ -1231,15 +1256,31 @@ export default function ErrorLogsTab() {
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(log)}
-                            className={`${iconButtonClass} hover:bg-error-container hover:text-error focus:ring-error/30`}
-                            title="Xóa"
-                            aria-label={`Xóa log lỗi ${log.errorCode || log.id}`}
+                          <Dropdown
+                            trigger={['click']}
+                            placement="bottomRight"
+                            menu={{
+                              items: [
+                                { key: 'view', icon: <Eye className="w-4 h-4" />, label: 'Xem chi tiết' },
+                                { type: 'divider' },
+                                { key: 'delete', icon: <Trash2 className="w-4 h-4" />, label: 'Xóa', danger: true },
+                              ],
+                              onClick: ({ key, domEvent }) => {
+                                domEvent.stopPropagation();
+                                if (key === 'view') setSelectedLogDetails(log);
+                                if (key === 'delete') handleDelete(log);
+                              },
+                            }}
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <button
+                              type="button"
+                              className={`${iconButtonClass} hover:bg-surface-2 hover:text-on-surface`}
+                              title="Thêm"
+                              aria-label={`Thao tác khác cho log lỗi ${log.errorCode || log.id}`}
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </Dropdown>
                         </div>
                       </td>
                     </tr>

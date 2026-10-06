@@ -138,7 +138,7 @@ export default function MainLayout() {
         <TopHeader onOpenSidebar={() => setIsMobileSidebarOpen(true)} />
 
         {/* View Contents */}
-        <main className="flex-1 p-4 sm:p-5 lg:p-8 overflow-y-auto min-w-0">
+        <main className="flex-1 p-4 sm:p-5 lg:p-8 pb-24 sm:pb-24 lg:pb-24 overflow-y-auto min-w-0">
           <div key={location.pathname} className="page-enter">
             <Outlet />
           </div>
