@@ -445,42 +445,23 @@ button[class*="bg-emerald-600"] {
 
 /* ===== Liquid glass styles (html[data-style]) — see design-preview/ ===== */
 :is([data-style="glass"], [data-style="glass-ios"]) {
-  --g-edge: rgba(255, 255, 255, 0.55);
-  --g-shadow: rgba(24, 27, 41, 0.16);
+  --g-edge: color-mix(in srgb, var(--color-outline-variant) 75%, transparent);
+  --g-shadow: rgba(24, 27, 41, 0.12);
   --g-blur: 24px;
   --g-sat: 1.8;
-  --g-a: 0.55;
-  --g-inner: 70%;
+  --g-a: 0.72;
+  --g-inner: 80%;
 }
 :is([data-style="glass"], [data-style="glass-ios"])[data-theme="dark"] {
   --g-edge: rgba(255, 255, 255, 0.2);
   --g-shadow: rgba(0, 0, 0, 0.45);
-  --g-a: 0.5;
+  --g-a: 0.65;
 }
 [data-style="glass-ios"] {
   --g-blur: 14px;
   --g-sat: 1.5;
-  --g-a: 0.42;
-  --g-inner: 30%;
-}
-
-/* Wallpaper */
-[data-style="glass"] body {
-  background: radial-gradient(ellipse 50% 45% at 20% 15%, #7aa8ff88, transparent),
-    radial-gradient(ellipse 45% 45% at 85% 55%, #ff9ec488, transparent),
-    radial-gradient(ellipse 45% 40% at 10% 95%, #8be0d088, transparent),
-    linear-gradient(135deg, #cfe0ff, #e6d9ff 50%, #ffe3ec) fixed;
-}
-[data-style="glass"][data-theme="dark"] body {
-  background: radial-gradient(ellipse 50% 45% at 20% 15%, #3b5bb088, transparent),
-    radial-gradient(ellipse 45% 45% at 85% 55%, #8a3b6a77, transparent),
-    linear-gradient(135deg, #131a33, #21173d 50%, #2f1730) fixed;
-}
-[data-style="glass-ios"] body {
-  background: #1c2226 url("/wallpaper-glass.svg") center / cover fixed no-repeat;
-}
-:is([data-style="glass"], [data-style="glass-ios"]) .bg-background {
-  background: transparent;
+  --g-a: 0.62;
+  --g-inner: 70%;
 }
 
 /* Outer glass surfaces */
@@ -551,7 +532,7 @@ button[class*="bg-emerald-600"] {
 :is([data-style="glass"], [data-style="glass-ios"]) :is(.text-on-error-container, .text-on-success-container, .text-on-warning-container) {
   filter: saturate(1.2);
 }
-/* Icons sit above the sheen/refraction layers and keep a faint lift on dark wallpapers. */
+/* Icons sit above the sheen/refraction layers. */
 [data-style="glass-ios"] svg.lucide {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
@@ -562,11 +543,7 @@ button[class*="bg-emerald-600"] {
   border-radius: 24px;
 }
 
-/* Legibility: stronger edges and a faint text lift on the wallpaper-backed styles */
+/* Legibility: stronger edges and stronger muted text */
 :is([data-style="glass"], [data-style="glass-ios"]) .text-on-surface-variant {
   color: color-mix(in srgb, var(--color-on-surface) 78%, transparent);
-}
-[data-style="glass-ios"] :is(.card-surface, aside.fixed, header.sticky, .auth-panel) {
-  --g-edge: rgba(255, 255, 255, 0.32);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
 }

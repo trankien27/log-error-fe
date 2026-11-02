@@ -15,8 +15,8 @@ const COLOR_MODE_OPTIONS: { value: ColorModePreference; label: string; icon: Luc
 
 const UI_STYLE_OPTIONS: { value: UiStyle; label: string; hint: string }[] = [
   { value: 'standard', label: 'Tiêu chuẩn', hint: 'Nền đặc, giao diện hiện tại.' },
-  { value: 'glass', label: 'Liquid glass nhạt', hint: 'Kính trong trên nền pastel, dùng được cả sáng và tối.' },
-  { value: 'glass-ios', label: 'Liquid glass iOS', hint: 'Kính khúc xạ trên nền tối. Mọi người dùng sẽ ở chế độ tối.' },
+  { value: 'glass', label: 'Liquid glass nhạt', hint: 'Kính mờ nhẹ, viền sáng.' },
+  { value: 'glass-ios', label: 'Liquid glass iOS', hint: 'Kính khúc xạ ở mép, bo góc lớn.' },
 ];
 
 function UiStyleSection() {
@@ -69,14 +69,13 @@ function UiStyleSection() {
 }
 
 function ColorModeSection() {
-  const isLocked = useThemeStore(state => state.uiStyle === 'glass-ios');
   const preference = useColorModeStore(state => state.preference);
   const setPreference = useColorModeStore(state => state.setPreference);
 
   return (
     <SectionCard
       title="Chế độ hiển thị"
-      description={isLocked ? 'Phong cách Liquid glass iOS luôn dùng chế độ tối.' : 'Áp dụng cho trình duyệt này của bạn.'}
+      description="Áp dụng cho trình duyệt này của bạn."
       icon={SunMoon}
     >
       <div
@@ -92,13 +91,12 @@ function ColorModeSection() {
               type="button"
               role="radio"
               aria-checked={active}
-              disabled={isLocked}
               onClick={() => setPreference(value)}
               className={`inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors cursor-pointer ${
                 active
                   ? 'bg-surface text-on-surface shadow-sm'
                   : 'text-on-surface-variant hover:text-on-surface'
-              } disabled:cursor-not-allowed disabled:opacity-60`}
+              }`}
             >
               <Icon className="h-4 w-4" />
               <span className="truncate">{label}</span>

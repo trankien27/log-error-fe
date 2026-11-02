@@ -11,7 +11,6 @@ import {
   UiStyle,
   DEFAULT_UI_STYLE,
 } from '../features/theme/theme.types';
-import { useColorModeStore } from './useColorModeStore';
 import { applyThemeSettings, HEX_COLOR_PATTERN } from '../features/theme/theme.utils';
 
 const THEME_CACHE_KEY = 'application_theme_settings_v2';
@@ -37,7 +36,6 @@ function applyUiStyle(style: UiStyle) {
   } catch {
     // Storage unavailable: the style still applies for this session.
   }
-  useColorModeStore.getState().syncWithStyle();
 }
 
 function isThemeSettings(value: unknown): value is ThemeSettings {
