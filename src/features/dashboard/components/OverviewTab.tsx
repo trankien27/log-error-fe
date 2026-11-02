@@ -23,7 +23,7 @@ import {
 } from '../../../services/api/dashboardService';
 import { ErrorLog, OvertimeRequestDto, RecentActivity, WorkScheduleDto } from '../../../types';
 import ServerMonitoringPanel from './ServerMonitoringPanel';
-import { EmptyState, PageHeader, SectionCard, Skeleton } from '../../../components/ui';
+import { AnimatedNumber, EmptyState, PageHeader, SectionCard, Skeleton } from '../../../components/ui';
 import { useAuthStore } from '../../../stores/useAuthStore';
 
 type RangePreset = 'today' | 'week' | 'month' | 'custom';
@@ -171,7 +171,9 @@ function StatCard({
         <ArrowRight className="h-4 w-4 text-on-surface-variant opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
       </div>
       <div>
-        <p className="text-3xl font-semibold text-on-surface tabular-nums leading-none">{value}</p>
+        <p className="text-3xl font-semibold text-on-surface tabular-nums leading-none">
+          {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
+        </p>
         <p className="mt-2 text-sm font-medium text-on-surface">{label}</p>
         {hint && <p className="mt-0.5 text-xs text-on-surface-variant">{hint}</p>}
       </div>
@@ -203,6 +205,8 @@ function DonutChart({ items }: { items: Array<{ label: string; count: number }> 
                 strokeWidth="12"
                 strokeDasharray={`${Math.max(length - 1.5, 0)} ${circumference}`}
                 strokeDashoffset={-offset}
+                className="donut-segment"
+                style={{ animationDelay: `${index * 60}ms` }}
               />
             );
             offset += length;
@@ -210,7 +214,7 @@ function DonutChart({ items }: { items: Array<{ label: string; count: number }> 
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-semibold text-on-surface tabular-nums">{total}</span>
+          <AnimatedNumber value={total} className="text-2xl font-semibold text-on-surface tabular-nums" />
           <span className="text-xs text-on-surface-variant">log lỗi</span>
         </div>
       </div>
@@ -219,7 +223,7 @@ function DonutChart({ items }: { items: Array<{ label: string; count: number }> 
           <li key={item.label} className="flex items-center gap-2.5 text-sm">
             <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: GROUP_COLORS[index % GROUP_COLORS.length] }} />
             <span className="flex-1 text-on-surface-variant truncate">{item.label}</span>
-            <span className="font-medium text-on-surface tabular-nums">{item.count}</span>
+            <AnimatedNumber value={item.count} className="font-medium text-on-surface tabular-nums" />
             <span className="w-10 text-right text-xs text-on-surface-variant tabular-nums">
               {total ? Math.round((item.count / total) * 100) : 0}%
             </span>
@@ -249,10 +253,10 @@ function RankingBars({
               </span>
               <span className="truncate text-on-surface">{item.label}</span>
             </span>
-            <span className="font-medium text-on-surface tabular-nums">{item.count}</span>
+            <AnimatedNumber value={item.count} className="font-medium text-on-surface tabular-nums" />
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-            <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.max((item.count / max) * 100, 6)}%`, background: color }} />
+            <div className="bar-grow h-full rounded-full transition-[width] duration-300" style={{ width: `${Math.max((item.count / max) * 100, 6)}%`, background: color }} />
           </div>
         </li>
       ))}

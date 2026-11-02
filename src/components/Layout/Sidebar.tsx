@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Tooltip } from 'antd';
+import { motion } from 'motion/react';
 import { ChevronsLeft, ChevronsRight, Headset, X } from 'lucide-react';
 import { useLogsStore } from '../../stores/useLogsStore';
 import { useTasksStore } from '../../stores/useTasksStore';
@@ -63,13 +64,22 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
             isCollapsed ? 'h-10 w-10 justify-center mx-auto' : 'h-10 px-3'
           } ${
             isActive
-              ? 'bg-primary-subtle text-primary font-semibold'
+              ? 'text-primary font-semibold'
               : 'text-on-surface-variant font-medium hover:bg-surface-2 hover:text-on-surface'
           }`
         }
       >
-        <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
-        {!isCollapsed && <span className="truncate">{item.label}</span>}
+        {({ isActive }) => (
+          <>
+            {isActive && (
+              <motion.span
+                layoutId={`nav-active-${variant}`}
+                className="absolute inset-0 rounded-xl bg-primary-subtle"
+                transition={{ type: 'tween', duration: 0.25, ease: [0.2, 0, 0, 1] }}
+              />
+            )}
+            <Icon className="relative h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+            {!isCollapsed && <span className="relative truncate">{item.label}</span>}
         {badgeCount > 0 && (
           isCollapsed ? (
             <span className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-surface ${badgeTone}`} />
@@ -78,6 +88,8 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
               {formatBadge(badgeCount)}
             </span>
           )
+        )}
+          </>
         )}
       </NavLink>
     );

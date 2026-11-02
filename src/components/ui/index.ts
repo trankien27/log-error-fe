@@ -4,3 +4,4 @@ export { default as SectionCard } from './SectionCard';
 export { default as FilterBar } from './FilterBar';
 export { Skeleton, TableSkeletonRows, ListSkeleton } from './Skeleton';
 export { confirmAction, type ConfirmOptions } from './confirm';
+export { default as AnimatedNumber } from './AnimatedNumber';

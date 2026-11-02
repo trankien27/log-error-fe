@@ -302,11 +302,92 @@
 .page-enter {
   animation: fadeIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* Motion tokens — Material 3 (material-components-android Motion.md) */
+:root {
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);            /* begin & end on screen */
+  --ease-out: cubic-bezier(0, 0, 0, 1);                   /* enter */
+  --ease-in: cubic-bezier(0.3, 0, 1, 1);                  /* exit */
+  --dur-short2: 100ms;
+  --dur-fast: 150ms;                                      /* short3 */
+  --dur-base: 200ms;                                      /* short4 */
+  --dur-enter: 300ms;                                     /* medium2 */
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes drawSegment {
+  from { stroke-dasharray: 0 264; }
+}
+@keyframes growBar {
+  from { transform: scaleX(0); }
+}
+.donut-segment {
+  animation: drawSegment 500ms var(--ease-out) both;
+}
+.bar-grow {
+  transform-origin: left;
+  animation: growBar 500ms var(--ease-out) both;
+}
+
+/* Page entrance: whole page fades up once, no per-item stagger (Ant Design / Material guidance) */
+.page-enter {
+  animation: slideUp var(--dur-enter) var(--ease-out) both;
+}
+
+/* Interactive cards only: small lift + shadow on hover */
+a.card-surface,
+button.card-surface,
+.card-surface[role='button'],
+.card-surface.cursor-pointer {
+  transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+}
+a.card-surface:hover,
+button.card-surface:hover,
+.card-surface[role='button']:hover,
+.card-surface.cursor-pointer:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--color-on-surface) 25%, transparent);
+}
+
+/* Table rows */
+tbody > tr {
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+/* Buttons: colour/shadow feedback already via transition-all; add tiny lift for primary */
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--color-button-primary) 55%, transparent);
+}
+
+/* Modals: quick scale-in; overlay fades */
+.modal-overlay > * {
+  animation: popIn var(--dur-base) var(--ease-out);
+}
+
+/* Sidebar links: smooth colour change only */
+nav a {
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-fadeIn,
-  .page-enter,
-  .modal-overlay {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  a.card-surface:hover,
+  button.card-surface:hover,
+  .card-surface[role='button']:hover,
+  .card-surface.cursor-pointer:hover {
+    transform: none;
   }
 }
 
@@ -360,3 +441,123 @@ button[class*="bg-emerald-600"] {
 .ai-chat-markdown li + li { margin-top: 0.15rem; }
 .ai-chat-markdown strong { font-weight: 600; }
 .ai-chat-markdown code { font-size: 0.8em; padding: 0 0.25rem; border-radius: 0.25rem; background: var(--color-surface); }
+
+
+/* ===== Liquid glass styles (html[data-style]) — see design-preview/ ===== */
+:is([data-style="glass"], [data-style="glass-ios"]) {
+  --g-edge: rgba(255, 255, 255, 0.55);
+  --g-shadow: rgba(24, 27, 41, 0.16);
+  --g-blur: 24px;
+  --g-sat: 1.8;
+  --g-a: 0.3;
+  --g-inner: 55%;
+}
+:is([data-style="glass"], [data-style="glass-ios"])[data-theme="dark"] {
+  --g-edge: rgba(255, 255, 255, 0.2);
+  --g-shadow: rgba(0, 0, 0, 0.45);
+  --g-a: 0.4;
+}
+[data-style="glass-ios"] {
+  --g-blur: 14px;
+  --g-sat: 1.5;
+  --g-a: 0.1;
+  --g-inner: 14%;
+}
+
+/* Wallpaper */
+[data-style="glass"] body {
+  background: radial-gradient(ellipse 50% 45% at 20% 15%, #7aa8ff88, transparent),
+    radial-gradient(ellipse 45% 45% at 85% 55%, #ff9ec488, transparent),
+    radial-gradient(ellipse 45% 40% at 10% 95%, #8be0d088, transparent),
+    linear-gradient(135deg, #cfe0ff, #e6d9ff 50%, #ffe3ec) fixed;
+}
+[data-style="glass"][data-theme="dark"] body {
+  background: radial-gradient(ellipse 50% 45% at 20% 15%, #3b5bb088, transparent),
+    radial-gradient(ellipse 45% 45% at 85% 55%, #8a3b6a77, transparent),
+    linear-gradient(135deg, #131a33, #21173d 50%, #2f1730) fixed;
+}
+[data-style="glass-ios"] body {
+  background: #1c2226 url("/wallpaper-glass.svg") center / cover fixed no-repeat;
+}
+:is([data-style="glass"], [data-style="glass-ios"]) .bg-background {
+  background: transparent;
+}
+
+/* Outer glass surfaces */
+:is([data-style="glass"], [data-style="glass-ios"]) :is(.card-surface, aside.fixed, .auth-panel, header.sticky, .modal-overlay > *, .glass-panel) {
+  background: color-mix(in srgb, var(--color-surface) calc(var(--g-a) * 100%), transparent);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  border-color: var(--g-edge);
+  box-shadow: 0 10px 30px -12px var(--g-shadow),
+    inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.75),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.35);
+}
+[data-style="glass-ios"] :is(.card-surface, .auth-panel, .modal-overlay > *) {
+  border-radius: 28px;
+}
+@supports (backdrop-filter: url(#lens)) {
+  [data-style="glass-ios"] :is(.card-surface, aside.fixed, .auth-panel, header.sticky, .modal-overlay > *) {
+    backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat)) url(#lens);
+  }
+}
+:is([data-style="glass"], [data-style="glass-ios"]) .card-surface:hover {
+  box-shadow: 0 14px 34px -12px var(--g-shadow), inset 1px 1px 1px -0.5px rgba(255, 255, 255, 0.75),
+    inset -1px -1px 1px -0.5px rgba(255, 255, 255, 0.35);
+}
+
+/* Nested surfaces: translucent only, no extra blur layer */
+:is([data-style="glass"], [data-style="glass-ios"]) .bg-surface:not(aside.fixed):not(.card-surface):not(.modal-overlay > *) {
+  background-color: color-mix(in srgb, var(--color-surface) var(--g-inner), transparent);
+}
+:is([data-style="glass"], [data-style="glass-ios"]) .bg-surface-2 {
+  background-color: color-mix(in srgb, var(--color-surface-2) var(--g-inner), transparent);
+}
+:is([data-style="glass"], [data-style="glass-ios"]) .border-outline-variant {
+  border-color: color-mix(in srgb, var(--g-edge) 70%, transparent);
+}
+
+/* Ant Design popups and form controls */
+:is([data-style="glass"], [data-style="glass-ios"]) :is(.ant-modal-content, .ant-drawer-content, .ant-dropdown-menu, .ant-select-dropdown, .ant-popover-inner, .ant-picker-panel-container) {
+  background: color-mix(in srgb, var(--color-surface) calc(var(--g-a) * 100% + 25%), transparent);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
+  border: 1px solid var(--g-edge);
+}
+:is([data-style="glass"], [data-style="glass-ios"]) :is(.ant-table, .ant-table-container, .ant-table-cell, .ant-card, .ant-tabs, .ant-pagination) {
+  background: transparent;
+}
+:is([data-style="glass"], [data-style="glass-ios"]) :is(.ant-input, .ant-input-affix-wrapper, .ant-select-selector, .ant-picker, .ant-input-number) {
+  background: color-mix(in srgb, var(--color-surface) var(--g-inner), transparent) !important;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :is([data-style="glass"], [data-style="glass-ios"]) :is(.card-surface, aside.fixed, .auth-panel, header.sticky, .modal-overlay > *, .ant-modal-content, .ant-dropdown-menu, .ant-select-dropdown) {
+    background: var(--color-surface);
+    backdrop-filter: none;
+  }
+}
+
+/* ===== Icons in glass styles ===== */
+/* Thinner outline strokes read as lighter, matching glass surfaces. */
+:is([data-style="glass"], [data-style="glass-ios"]) svg.lucide {
+  stroke-width: 1.75;
+}
+/* Icon chips: translucent tint instead of an opaque pastel block. */
+:is([data-style="glass"], [data-style="glass-ios"]) :is(.bg-primary-subtle, .bg-secondary-container, .bg-error-container, .bg-success-container, .bg-warning-container) {
+  background-color: color-mix(in srgb, currentColor 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+:is([data-style="glass"], [data-style="glass-ios"]) :is(.text-on-error-container, .text-on-success-container, .text-on-warning-container) {
+  filter: saturate(1.2);
+}
+/* Icons sit above the sheen/refraction layers and keep a faint lift on dark wallpapers. */
+[data-style="glass-ios"] svg.lucide {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+}
+
+:is([data-style="glass"], [data-style="glass-ios"]) .auth-panel {
+  padding: 2rem;
+  border: 1px solid var(--g-edge);
+  border-radius: 24px;
+}

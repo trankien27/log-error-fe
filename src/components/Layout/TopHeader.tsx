@@ -20,6 +20,7 @@ import { formatNotificationTime, useNotificationStore } from '../../stores/useNo
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLayoutStore } from '../../stores/useLayoutStore';
 import { useColorModeStore } from '../../stores/useColorModeStore';
+import { useThemeStore } from '../../stores/useThemeStore';
 import { getLunarYearName, solarToLunar } from '../../shared/utils/lunarCalendar';
 import { findNavEntry } from './navigation';
 
@@ -88,6 +89,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   const setCommandPaletteOpen = useLayoutStore(state => state.setCommandPaletteOpen);
   const colorMode = useColorModeStore(state => state.resolved);
   const toggleColorMode = useColorModeStore(state => state.toggle);
+  const isColorModeLocked = useThemeStore(state => state.uiStyle === 'glass-ios');
   const isAdmin = hasAnyRole([1, 'Admin']);
   const canBroadcast = hasAnyRole([1, 3, 'Admin', 'ITSupportManager']);
 
@@ -176,6 +178,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
 
         <HeaderDate />
 
+        {!isColorModeLocked && (
         <button
           type="button"
           onClick={toggleColorMode}
@@ -185,6 +188,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
         >
           {colorMode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </button>
+        )}
 
         <div className="relative" ref={quickNotifRef}>
           <button

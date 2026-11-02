@@ -203,7 +203,7 @@ export default function AuthPage() {
       </aside>
 
       <main className="flex items-center justify-center p-5 sm:p-10">
-      <div className="w-full max-w-sm space-y-7">
+      <div className="auth-panel w-full max-w-sm space-y-7">
         <div className="space-y-2">
           <span className="lg:hidden mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-on-primary shadow-brand">
             <Headset className="h-5 w-5" />

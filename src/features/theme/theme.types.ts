@@ -31,7 +31,14 @@ export type ThemeSettings = {
   onWarningContainerColor: string;
 };
 
+export type UiStyle = 'standard' | 'glass' | 'glass-ios';
+
+export const UI_STYLES: readonly UiStyle[] = ['standard', 'glass', 'glass-ios'];
+
+export const DEFAULT_UI_STYLE: UiStyle = 'standard';
+
 export type ThemeSettingResponse = ThemeSettings & {
+  uiStyle?: UiStyle;
   createdBy: string;
   createdAt: string;
   updatedBy?: string | null;

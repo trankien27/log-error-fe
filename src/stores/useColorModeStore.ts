@@ -20,6 +20,8 @@ function readPreference(): ColorModePreference {
 }
 
 function resolve(preference: ColorModePreference): ResolvedColorMode {
+  // The iOS glass style is designed on a dark wallpaper, so it always renders dark.
+  if (document.documentElement.dataset.style === 'glass-ios') return 'dark';
   if (preference !== 'system') return preference;
   return window.matchMedia?.(DARK_QUERY).matches ? 'dark' : 'light';
 }
@@ -29,6 +31,8 @@ type ColorModeState = {
   resolved: ResolvedColorMode;
   setPreference: (preference: ColorModePreference) => void;
   toggle: () => void;
+  /** Re-resolve after the system-wide UI style changed. */
+  syncWithStyle: () => void;
 };
 
 export const useColorModeStore = create<ColorModeState>((set, get) => ({
@@ -48,6 +52,13 @@ export const useColorModeStore = create<ColorModeState>((set, get) => ({
   },
 
   toggle: () => get().setPreference(get().resolved === 'dark' ? 'light' : 'dark'),
+
+  syncWithStyle: () => {
+    const resolved = resolve(get().preference);
+    if (resolved === get().resolved) return;
+    setResolvedColorMode(resolved);
+    set({ resolved });
+  },
 }));
 
 if (typeof window !== 'undefined' && window.matchMedia) {

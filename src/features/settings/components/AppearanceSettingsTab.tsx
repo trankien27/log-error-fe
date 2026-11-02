@@ -1,6 +1,10 @@
-import { Monitor, Moon, Palette, Sun, SunMoon, type LucideIcon } from 'lucide-react';
+import { Droplets, Monitor, Moon, Palette, Sun, SunMoon, type LucideIcon } from 'lucide-react';
 import { PageHeader, SectionCard } from '../../../components/ui';
 import { useColorModeStore, type ColorModePreference } from '../../../stores/useColorModeStore';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { useThemeStore } from '../../../stores/useThemeStore';
+import type { UiStyle } from '../../theme/theme.types';
 import ThemeSettingsSection from './ThemeSettingsSection';
 
 const COLOR_MODE_OPTIONS: { value: ColorModePreference; label: string; icon: LucideIcon }[] = [
@@ -9,14 +13,70 @@ const COLOR_MODE_OPTIONS: { value: ColorModePreference; label: string; icon: Luc
   { value: 'system', label: 'Theo hệ thống', icon: Monitor },
 ];
 
+const UI_STYLE_OPTIONS: { value: UiStyle; label: string; hint: string }[] = [
+  { value: 'standard', label: 'Tiêu chuẩn', hint: 'Nền đặc, giao diện hiện tại.' },
+  { value: 'glass', label: 'Liquid glass nhạt', hint: 'Kính trong trên nền pastel, dùng được cả sáng và tối.' },
+  { value: 'glass-ios', label: 'Liquid glass iOS', hint: 'Kính khúc xạ trên nền tối. Mọi người dùng sẽ ở chế độ tối.' },
+];
+
+function UiStyleSection() {
+  const uiStyle = useThemeStore(state => state.uiStyle);
+  const updateUiStyle = useThemeStore(state => state.updateUiStyle);
+  const [pending, setPending] = useState<UiStyle | null>(null);
+
+  const choose = async (value: UiStyle) => {
+    if (pending || value === uiStyle) return;
+    try {
+      setPending(value);
+      await updateUiStyle(value);
+      toast.success('Đã đổi phong cách giao diện cho cả hệ thống. Người dùng khác thấy sau khi tải lại trang.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể đổi phong cách giao diện.');
+    } finally {
+      setPending(null);
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Phong cách giao diện"
+      description="Áp dụng cho toàn hệ thống. Chỉ quản trị viên được đổi."
+      icon={Droplets}
+    >
+      <div role="radiogroup" aria-label="Phong cách giao diện" className="grid gap-3 sm:grid-cols-3">
+        {UI_STYLE_OPTIONS.map(({ value, label, hint }) => {
+          const active = uiStyle === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              disabled={pending !== null}
+              onClick={() => choose(value)}
+              className={`rounded-xl border p-3.5 text-left transition-colors cursor-pointer disabled:cursor-wait ${
+                active ? 'border-primary bg-primary-subtle' : 'border-outline-variant hover:bg-surface-2'
+              }`}
+            >
+              <span className="block text-sm font-semibold text-on-surface">{label}</span>
+              <span className="mt-0.5 block text-xs text-on-surface-variant">{hint}</span>
+            </button>
+          );
+        })}
+      </div>
+    </SectionCard>
+  );
+}
+
 function ColorModeSection() {
+  const isLocked = useThemeStore(state => state.uiStyle === 'glass-ios');
   const preference = useColorModeStore(state => state.preference);
   const setPreference = useColorModeStore(state => state.setPreference);
 
   return (
     <SectionCard
       title="Chế độ hiển thị"
-      description="Áp dụng cho trình duyệt này của bạn."
+      description={isLocked ? 'Phong cách Liquid glass iOS luôn dùng chế độ tối.' : 'Áp dụng cho trình duyệt này của bạn.'}
       icon={SunMoon}
     >
       <div
@@ -32,12 +92,13 @@ function ColorModeSection() {
               type="button"
               role="radio"
               aria-checked={active}
+              disabled={isLocked}
               onClick={() => setPreference(value)}
               className={`inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors cursor-pointer ${
                 active
                   ? 'bg-surface text-on-surface shadow-sm'
                   : 'text-on-surface-variant hover:text-on-surface'
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-60`}
             >
               <Icon className="h-4 w-4" />
               <span className="truncate">{label}</span>
@@ -59,6 +120,7 @@ export default function AppearanceSettingsTab() {
       />
 
       <div className="space-y-5">
+        <UiStyleSection />
         <ColorModeSection />
         <ThemeSettingsSection />
       </div>
