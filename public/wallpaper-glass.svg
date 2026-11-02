@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
     <defs>
-      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7f8a8c"/><stop offset=".45" stop-color="#b9bcb8"/><stop offset=".62" stop-color="#8b8f8e"/></linearGradient>
+      <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4b5558"/><stop offset=".45" stop-color="#6f7676"/><stop offset=".62" stop-color="#4a5051"/></linearGradient>
       <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4c5558"/><stop offset="1" stop-color="#15191b"/></linearGradient>
       <linearGradient id="mt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5d6b72"/><stop offset="1" stop-color="#1f282c"/></linearGradient>
       <filter id="soft"><feGaussianBlur stdDeviation="6"/></filter>
     </defs>
     <rect width="1600" height="900" fill="url(#sky)"/>
-    <g filter="url(#soft)" opacity=".5"><ellipse cx="300" cy="300" rx="320" ry="40" fill="#5a6468"/><ellipse cx="1200" cy="260" rx="380" ry="36" fill="#5a6468"/><ellipse cx="800" cy="370" rx="500" ry="30" fill="#d5d6d2"/></g>
+    <g filter="url(#soft)" opacity=".5"><ellipse cx="300" cy="300" rx="320" ry="40" fill="#5a6468"/><ellipse cx="1200" cy="260" rx="380" ry="36" fill="#5a6468"/><ellipse cx="800" cy="370" rx="500" ry="30" fill="#8f9494"/></g>
     <polygon points="480,560 700,330 760,300 840,320 1010,470 1250,540 1250,600 480,600" fill="url(#mt)"/>
     <polygon points="650,380 700,330 760,300 840,320 880,360 820,372 770,350 720,385 690,372" fill="#e4eaee" opacity=".9"/>
     <polygon points="0,520 260,470 520,545 820,520 1200,560 1600,500 1600,640 0,640" fill="#10161a"/>
