@@ -1,7 +1,7 @@
 import { Droplets, Monitor, Moon, Palette, Sun, SunMoon, type LucideIcon } from 'lucide-react';
 import { PageHeader, SectionCard } from '../../../components/ui';
 import { useColorModeStore, type ColorModePreference } from '../../../stores/useColorModeStore';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useThemeStore } from '../../../stores/useThemeStore';
 import type { UiStyle } from '../../theme/theme.types';
@@ -23,6 +23,28 @@ function UiStyleSection() {
   const uiStyle = useThemeStore(state => state.uiStyle);
   const updateUiStyle = useThemeStore(state => state.updateUiStyle);
   const [pending, setPending] = useState<UiStyle | null>(null);
+  const savedOpacity = useThemeStore(state => state.glassOpacity);
+  const previewOpacity = useThemeStore(state => state.previewGlassOpacity);
+  const updateOpacity = useThemeStore(state => state.updateGlassOpacity);
+  const [opacity, setOpacity] = useState(savedOpacity);
+  const [isSavingOpacity, setIsSavingOpacity] = useState(false);
+
+  useEffect(() => setOpacity(savedOpacity), [savedOpacity]);
+
+  const saveOpacity = async () => {
+    if (opacity === savedOpacity || isSavingOpacity) return;
+    try {
+      setIsSavingOpacity(true);
+      await updateOpacity(opacity);
+      toast.success('Đã lưu độ đục cho cả hệ thống.');
+    } catch (error: any) {
+      previewOpacity(savedOpacity);
+      setOpacity(savedOpacity);
+      toast.error(error?.message || 'Không thể lưu độ đục.');
+    } finally {
+      setIsSavingOpacity(false);
+    }
+  };
 
   const choose = async (value: UiStyle) => {
     if (pending || value === uiStyle) return;
@@ -64,6 +86,36 @@ function UiStyleSection() {
           );
         })}
       </div>
+
+      {uiStyle !== 'standard' && (
+        <div className="mt-5 rounded-xl border border-outline-variant p-4">
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="glass-opacity" className="text-sm font-semibold text-on-surface">Độ đục của kính</label>
+            <span className="text-sm font-medium tabular-nums text-on-surface">{opacity}%</span>
+          </div>
+          <input
+            id="glass-opacity"
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={opacity}
+            disabled={isSavingOpacity}
+            onChange={event => {
+              const value = Number(event.target.value);
+              setOpacity(value);
+              previewOpacity(value);
+            }}
+            onPointerUp={saveOpacity}
+            onKeyUp={saveOpacity}
+            onBlur={saveOpacity}
+            className="mt-3 w-full cursor-pointer accent-primary"
+          />
+          <p className="mt-1.5 text-xs text-on-surface-variant">
+            Thấp = trong suốt hơn, cao = đục hơn. Thả thanh kéo để lưu cho cả hệ thống.
+          </p>
+        </div>
+      )}
     </SectionCard>
   );
 }

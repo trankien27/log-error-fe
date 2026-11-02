@@ -10,11 +10,40 @@ import {
   UI_STYLES,
   UiStyle,
   DEFAULT_UI_STYLE,
+  DEFAULT_GLASS_OPACITY,
 } from '../features/theme/theme.types';
 import { applyThemeSettings, HEX_COLOR_PATTERN } from '../features/theme/theme.utils';
 
 const THEME_CACHE_KEY = 'application_theme_settings_v2';
 const UI_STYLE_CACHE_KEY = 'application_ui_style_v1';
+const GLASS_OPACITY_CACHE_KEY = 'application_glass_opacity_v1';
+
+function normalizeGlassOpacity(value: unknown): number {
+  const number = typeof value === 'string' ? Number(value) : (value as number);
+  return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number))) : DEFAULT_GLASS_OPACITY;
+}
+
+function readCachedGlassOpacity(): number {
+  try {
+    const cached = localStorage.getItem(GLASS_OPACITY_CACHE_KEY);
+    return cached === null ? DEFAULT_GLASS_OPACITY : normalizeGlassOpacity(cached);
+  } catch {
+    return DEFAULT_GLASS_OPACITY;
+  }
+}
+
+/** Glass surfaces read --g-a (outer) and --g-inner (nested) from the root element. */
+export function applyGlassOpacity(percent: number, persist = true) {
+  const root = document.documentElement;
+  root.style.setProperty('--g-a', String(percent / 100));
+  root.style.setProperty('--g-inner', `${Math.min(100, percent + 18)}%`);
+  if (!persist) return;
+  try {
+    localStorage.setItem(GLASS_OPACITY_CACHE_KEY, String(percent));
+  } catch {
+    // Storage unavailable: the opacity still applies for this session.
+  }
+}
 
 function normalizeUiStyle(value: unknown): UiStyle {
   return UI_STYLES.includes(value as UiStyle) ? (value as UiStyle) : DEFAULT_UI_STYLE;
@@ -68,21 +97,28 @@ function persistAndApply(theme: ThemeSettings) {
 
 const initialUiStyle = readCachedUiStyle();
 applyUiStyle(initialUiStyle);
+const initialGlassOpacity = readCachedGlassOpacity();
+applyGlassOpacity(initialGlassOpacity);
 const initialTheme = readCachedTheme();
 applyThemeSettings(initialTheme);
 
 interface ThemeState {
   theme: ThemeSettings;
   uiStyle: UiStyle;
+  glassOpacity: number;
   isLoading: boolean;
   loadTheme: () => Promise<void>;
   updateTheme: (theme: ThemeSettings) => Promise<ThemeSettings>;
   updateUiStyle: (style: UiStyle) => Promise<UiStyle>;
+  /** Live preview while dragging; nothing is saved. */
+  previewGlassOpacity: (percent: number) => void;
+  updateGlassOpacity: (percent: number) => Promise<number>;
 }
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   theme: initialTheme,
   uiStyle: initialUiStyle,
+  glassOpacity: initialGlassOpacity,
   isLoading: false,
 
   loadTheme: async () => {
@@ -93,9 +129,11 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       const response = await themeSettingsService.get();
       const theme = extractThemeSettings(response);
       const uiStyle = normalizeUiStyle(response.uiStyle);
+      const glassOpacity = normalizeGlassOpacity(response.glassOpacity);
       applyUiStyle(uiStyle);
+      applyGlassOpacity(glassOpacity);
       persistAndApply(theme);
-      set({ theme, uiStyle });
+      set({ theme, uiStyle, glassOpacity });
     } catch {
       applyThemeSettings(get().theme);
     } finally {
@@ -104,17 +142,27 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   updateTheme: async theme => {
-    const savedTheme = extractThemeSettings(await themeSettingsService.update(theme, get().uiStyle));
+    const savedTheme = extractThemeSettings(await themeSettingsService.update(theme, get().uiStyle, get().glassOpacity));
     persistAndApply(savedTheme);
     set({ theme: savedTheme });
     return savedTheme;
   },
 
   updateUiStyle: async style => {
-    const response = await themeSettingsService.update(get().theme, style);
+    const response = await themeSettingsService.update(get().theme, style, get().glassOpacity);
     const savedStyle = normalizeUiStyle(response.uiStyle);
     applyUiStyle(savedStyle);
     set({ uiStyle: savedStyle });
     return savedStyle;
+  },
+
+  previewGlassOpacity: percent => applyGlassOpacity(normalizeGlassOpacity(percent), false),
+
+  updateGlassOpacity: async percent => {
+    const response = await themeSettingsService.update(get().theme, get().uiStyle, normalizeGlassOpacity(percent));
+    const saved = normalizeGlassOpacity(response.glassOpacity);
+    applyGlassOpacity(saved);
+    set({ glassOpacity: saved });
+    return saved;
   },
 }));

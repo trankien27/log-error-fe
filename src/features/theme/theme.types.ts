@@ -37,8 +37,11 @@ export const UI_STYLES: readonly UiStyle[] = ['standard', 'glass', 'glass-ios'];
 
 export const DEFAULT_UI_STYLE: UiStyle = 'standard';
 
+export const DEFAULT_GLASS_OPACITY = 45;
+
 export type ThemeSettingResponse = ThemeSettings & {
   uiStyle?: UiStyle;
+  glassOpacity?: number;
   createdBy: string;
   createdAt: string;
   updatedBy?: string | null;

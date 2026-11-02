@@ -3,6 +3,6 @@ import { apiClient } from './apiClient';
 
 export const themeSettingsService = {
   get: () => apiClient.get<ThemeSettingResponse>('/api/theme-settings'),
-  update: (theme: ThemeSettings, uiStyle: UiStyle) =>
-    apiClient.put<ThemeSettingResponse>('/api/theme-settings', { ...theme, uiStyle }),
+  update: (theme: ThemeSettings, uiStyle: UiStyle, glassOpacity: number) =>
+    apiClient.put<ThemeSettingResponse>('/api/theme-settings', { ...theme, uiStyle, glassOpacity }),
 };
