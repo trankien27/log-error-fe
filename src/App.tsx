@@ -12,7 +12,6 @@ import UsersTab from './features/users/components/UsersTab';
 import RolesTab from './features/users/components/RolesTab';
 import StoresTab from './features/stores/components/StoresTab';
 import BoothsTab from './features/booths/components/BoothsTab';
-import RemoteBoothTab from './features/remote-booth/components/RemoteBoothTab';
 import PrintImageTab from './features/print-image/components/PrintImageTab';
 import RecreateImageTab from './features/recreate-image/components/RecreateImageTab';
 import ShiftsTab from './features/shifts/components/ShiftsTab';
@@ -137,7 +136,6 @@ export default function App() {
         />
         <Route path="stores" element={<StoresTab />} />
         <Route path="booths" element={<BoothsTab />} />
-        <Route path="remote-booth" element={<RemoteBoothTab />} />
         <Route path="print-image" element={<PrintImageTab />} />
         <Route path="recreate-image" element={<RecreateImageTab />} />
         <Route

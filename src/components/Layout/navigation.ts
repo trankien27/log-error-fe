@@ -15,7 +15,6 @@ import {
   NotebookTabs,
   Palette,
   Printer,
-  RadioTower,
   ScrollText,
   Shield,
   Store,
@@ -66,7 +65,6 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { path: '/stores', label: 'Cửa hàng', icon: Building2, keywords: 'store' },
       { path: '/booths', label: 'Booth', icon: Store, keywords: 'tram may' },
-      { path: '/remote-booth', label: 'Điều khiển từ xa', icon: RadioTower, keywords: 'remote booth deploy' },
     ],
   },
   {
