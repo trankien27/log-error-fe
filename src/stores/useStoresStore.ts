@@ -26,7 +26,7 @@ export const useStoresStore = create<StoresState>((set, get) => ({
   error: null,
   searchQuery: '',
   storePageIndex: 0,
-  storePageSize: 20,
+  storePageSize: 10,
   storeTotalItems: 0,
   storeTotalPages: 0,
   latestStoreSyncedAt: null,
