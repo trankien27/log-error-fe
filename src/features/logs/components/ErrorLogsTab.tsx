@@ -908,7 +908,7 @@ export default function ErrorLogsTab() {
             placeholder="Mọi cửa hàng"
             emptyText="Không tìm thấy cửa hàng."
             loadOptions={loadStores}
-            pageSize={20}
+            pageSize={10}
             onSelect={item => {
               setLogStoreFilter(item.name);
               setLogStoreFilterId(item.id);
@@ -1405,7 +1405,7 @@ export default function ErrorLogsTab() {
                     placeholder="Chọn cửa hàng..."
                     emptyText="Không tìm thấy cửa hàng."
                     loadOptions={loadStores}
-                    pageSize={20}
+                    pageSize={10}
                     onSelect={item => {
                       setStore(item.name);
                       setStoreId(item.id);
