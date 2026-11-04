@@ -58,7 +58,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
   totalItems: 0,
   totalPages: 0,
   logPageIndex: 1,
-  logPageSize: 20,
+  logPageSize: 10,
   isLoading: false,
   isExporting: false,
   isSyncingGoogleSheet: false,
@@ -216,8 +216,8 @@ export const useLogsStore = create<LogsState>((set, get) => ({
     return logs.filter(log => {
       const searchMatch = normalizedQuery
         ? [log.errorCode, log.store, log.description, log.assignedToName]
-            .filter(Boolean)
-            .some(value => String(value).toLowerCase().includes(normalizedQuery))
+          .filter(Boolean)
+          .some(value => String(value).toLowerCase().includes(normalizedQuery))
         : true;
       const storeMatch = logStoreFilter ? log.store === logStoreFilter : true;
       const boothMatch = logBoothFilter ? log.booth === logBoothFilter : true;
