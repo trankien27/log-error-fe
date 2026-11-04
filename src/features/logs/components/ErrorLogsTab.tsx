@@ -330,25 +330,25 @@ export default function ErrorLogsTab() {
   useEffect(() => {
     fetchLogs({
       store: logStoreFilter || undefined,
-      booth: logBoothFilter || undefined,
-      status: logStatusFilter || undefined,
-      fromDate: logFromDateFilter || undefined,
-      toDate: logToDateFilter || undefined,
-      errorGroup: logErrorGroupFilter || undefined,
+	      booth: logBoothFilter || undefined,
+	      status: logStatusFilter || undefined,
+	      fromDate: logFromDateFilter || undefined,
+	      toDate: logToDateFilter || undefined,
+	      errorGroup: logErrorGroupFilter || undefined,
       processingFlow: logProcessingFlowFilter || undefined,
       severity: logSeverityFilter || undefined,
       pageIndex: logPageIndex,
       pageSize: logPageSize,
     });
-  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logFromDateFilter, logToDateFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
+	  }, [fetchLogs, logStoreFilter, logBoothFilter, logStatusFilter, logFromDateFilter, logToDateFilter, logErrorGroupFilter, logProcessingFlowFilter, logSeverityFilter, logPageIndex, logPageSize]);
 
   const getFilterQuery = () => ({
     store: logStoreFilter || undefined,
-    booth: logBoothFilter || undefined,
-    status: logStatusFilter || undefined,
-    fromDate: logFromDateFilter || undefined,
-    toDate: logToDateFilter || undefined,
-    errorGroup: logErrorGroupFilter || undefined,
+	    booth: logBoothFilter || undefined,
+	    status: logStatusFilter || undefined,
+	    fromDate: logFromDateFilter || undefined,
+	    toDate: logToDateFilter || undefined,
+	    errorGroup: logErrorGroupFilter || undefined,
     processingFlow: logProcessingFlowFilter || undefined,
     severity: logSeverityFilter || undefined,
   });
@@ -835,10 +835,11 @@ export default function ErrorLogsTab() {
               updateReceivedDateFilterPosition();
               setIsReceivedDateFilterOpen(current => !current);
             }}
-            className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-sm transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30 ${logFromDateFilter || logToDateFilter
+            className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-sm transition-colors hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-primary/30 ${
+              logFromDateFilter || logToDateFilter
                 ? 'border-primary/50 bg-primary-subtle text-primary font-medium'
                 : 'border-outline-variant bg-surface text-on-surface-variant'
-              }`}
+            }`}
             aria-label="Lọc theo ngày tiếp nhận"
             aria-expanded={isReceivedDateFilterOpen}
             aria-controls="received-date-filter-panel"
@@ -983,66 +984,66 @@ export default function ErrorLogsTab() {
       </FilterBar>
 
       {isUploadModalOpen && (
-        <div className="modal-overlay">
-          <form
-            onSubmit={handleUploadTransactionImages}
-            className="w-full max-w-2xl rounded-2xl border border-outline-variant bg-surface p-5 shadow-elevated text-left"
-          >
-            <div className="mb-5 flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold text-on-surface">Tải ảnh lỗi giao dịch</h3>
-                <p className="mt-1 text-sm text-on-surface-variant">Ảnh sẽ được gắn với mã giao dịch tương ứng.</p>
-              </div>
-              <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer" aria-label="Đóng" title="Đóng">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-              <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
-                Mã giao dịch
-                <input
-                  value={uploadTransactionId}
-                  onChange={event => setUploadTransactionId(event.target.value)}
-                  placeholder="bf2b4b62-2785-466a-871c-8f41f68ceedb"
-                  className="mt-1.5 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </label>
-
-              <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
-                Ảnh lỗi
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  multiple
-                  onChange={event => setUploadImages(Array.from(event.target.files || []))}
-                  className="mt-1.5 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-primary-subtle/50 p-1.5 text-sm text-on-surface file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-                />
-              </label>
-
-              <button
-                type="submit"
-                disabled={isUploadingImages}
-                className="btn-primary"
-              >
-                {isUploadingImages ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {isUploadingImages ? 'Đang tải lên...' : 'Tải lên'}
-              </button>
-            </div>
-
-            {uploadImages.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {uploadImages.map(file => (
-                  <span
-                    key={`${file.name}_${file.size}_${file.lastModified}`}
-                    className="rounded-md border border-outline-variant bg-surface-2 px-2 py-1 text-xs font-medium text-on-surface-variant"
-                  >
-                    {file.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </form>
+      <div className="modal-overlay">
+      <form
+        onSubmit={handleUploadTransactionImages}
+        className="w-full max-w-2xl rounded-2xl border border-outline-variant bg-surface p-5 shadow-elevated text-left"
+      >
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-on-surface">Tải ảnh lỗi giao dịch</h3>
+            <p className="mt-1 text-sm text-on-surface-variant">Ảnh sẽ được gắn với mã giao dịch tương ứng.</p>
+          </div>
+          <button type="button" onClick={() => setIsUploadModalOpen(false)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer" aria-label="Đóng" title="Đóng">
+            <X className="h-5 w-5" />
+          </button>
         </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
+            Mã giao dịch
+            <input
+              value={uploadTransactionId}
+              onChange={event => setUploadTransactionId(event.target.value)}
+              placeholder="bf2b4b62-2785-466a-871c-8f41f68ceedb"
+              className="mt-1.5 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </label>
+
+          <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
+            Ảnh lỗi
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={event => setUploadImages(Array.from(event.target.files || []))}
+              className="mt-1.5 block w-full cursor-pointer rounded-lg border border-dashed border-primary/40 bg-primary-subtle/50 p-1.5 text-sm text-on-surface file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-on-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={isUploadingImages}
+            className="btn-primary"
+          >
+            {isUploadingImages ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            {isUploadingImages ? 'Đang tải lên...' : 'Tải lên'}
+          </button>
+        </div>
+
+        {uploadImages.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {uploadImages.map(file => (
+              <span
+                key={`${file.name}_${file.size}_${file.lastModified}`}
+                className="rounded-md border border-outline-variant bg-surface-2 px-2 py-1 text-xs font-medium text-on-surface-variant"
+              >
+                {file.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </form>
+      </div>
       )}
 
       <section className="card-surface overflow-hidden">
@@ -1377,13 +1378,8 @@ export default function ErrorLogsTab() {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface rounded-2xl shadow-elevated
-                 w-full max-w-5xl
-                 max-h-[calc(100dvh-2rem)]
-                 overflow-y-auto
-                 p-4 sm:p-6
-                 border border-outline-variant">
+        <div className="modal-overlay">
+          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
               <h3 className="text-lg font-semibold text-on-surface">
                 {currentEditingLog ? 'Chỉnh sửa log lỗi' : 'Thêm log lỗi'}
@@ -1492,10 +1488,11 @@ export default function ErrorLogsTab() {
                   <button
                     type="button"
                     onClick={toggleDescriptionDictation}
-                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${isListeningDescription
+                    className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium transition ${
+                      isListeningDescription
                         ? 'border-error bg-error-container text-on-error-container'
                         : 'border-outline-variant text-on-surface-variant hover:bg-surface-2'
-                      }`}
+                    }`}
                     title={isListeningDescription ? 'Dừng nhập giọng nói' : 'Nhập mô tả bằng giọng nói'}
                     aria-pressed={isListeningDescription}
                   >
