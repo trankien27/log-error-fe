@@ -1,5 +1,6 @@
 import { Dropdown } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, MoreHorizontal, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
@@ -1377,7 +1378,7 @@ export default function ErrorLogsTab() {
         </div>
       )}
 
-      {isModalOpen && (
+      {isModalOpen && createPortal((
         <div className="modal-overlay">
           <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
@@ -1638,9 +1639,9 @@ export default function ErrorLogsTab() {
             </form>
           </div>
         </div>
-      )}
+      ), document.body)}
 
-      {selectedLogDetails && (
+      {selectedLogDetails && createPortal((
         <div className="modal-overlay">
           <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
             <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
@@ -1804,7 +1805,7 @@ export default function ErrorLogsTab() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
     </div>
   );
 }
