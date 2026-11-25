@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Drawer, Steps } from 'antd';
+import { Button } from './ScheduleControls';
+import { Alert, Drawer, Steps } from './SchedulePresentation';
 import { Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { confirmAction } from '../../../components/ui';

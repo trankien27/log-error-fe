@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -272,9 +274,9 @@ export default function ThemeImageToolsTab() {
         icon={Images}
         className="!mb-0"
         actions={
-          <button type="button" onClick={() => void loadReferenceData()} disabled={loadingData} className="btn-secondary">
+          <UiButton variant="outline" type="button" onClick={() => void loadReferenceData()} disabled={loadingData} className="btn-secondary">
             <RefreshCw className={`h-4 w-4 ${loadingData ? 'animate-spin' : ''}`} /> Làm mới cấu hình
-          </button>
+          </UiButton>
         }
       />
 
@@ -291,12 +293,12 @@ export default function ThemeImageToolsTab() {
         <h3 className="mt-4 text-lg font-semibold text-on-surface">Kéo thả ảnh hoặc file ZIP vào đây</h3>
         <p className="mt-1 text-sm text-on-surface-variant">Hỗ trợ PNG, JPG, WEBP, ZIP và cả thư mục.</p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
-          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={processing || loadingData} className="btn-primary">
+          <UiButton variant="default" type="button" onClick={() => fileInputRef.current?.click()} disabled={processing || loadingData} className="btn-primary">
             <Upload className="h-4 w-4" /> Chọn ảnh / ZIP
-          </button>
-          <button type="button" onClick={() => folderInputRef.current?.click()} disabled={processing || loadingData} className="btn-secondary">
+          </UiButton>
+          <UiButton variant="outline" type="button" onClick={() => folderInputRef.current?.click()} disabled={processing || loadingData} className="btn-secondary">
             <FolderOpen className="h-4 w-4" /> Chọn thư mục
-          </button>
+          </UiButton>
         </div>
         <input ref={fileInputRef} hidden type="file" multiple accept=".zip,image/png,image/jpeg,image/webp" onChange={event => event.target.files && void processFiles(event.target.files)} />
         <input ref={folderInputRef} hidden type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={event => event.target.files && void processFiles(event.target.files)} />
@@ -310,12 +312,12 @@ export default function ThemeImageToolsTab() {
               <p className="mt-0.5 text-xs text-on-surface-variant">{mappedCount} ảnh đã khớp layout · {images.length - mappedCount} ảnh tùy chỉnh</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => void downloadAll()} disabled={processing} className="btn-secondary h-9 px-3">
+              <UiButton variant="outline" type="button" onClick={() => void downloadAll()} disabled={processing} className="btn-secondary h-9 px-3">
                 <Archive className="h-4 w-4" /> Tải ZIP
-              </button>
-              <button type="button" onClick={() => setUploadDialogOpen(true)} className="btn-primary h-9 px-3">
+              </UiButton>
+              <UiButton variant="default" type="button" onClick={() => setUploadDialogOpen(true)} className="btn-primary h-9 px-3">
                 <Rocket className="h-4 w-4" /> Tải theme lên
-              </button>
+              </UiButton>
               <button type="button" onClick={() => setImages([])} className="inline-flex h-9 items-center gap-2 rounded-lg border border-error/30 px-3 text-sm font-medium text-error hover:bg-error-container cursor-pointer">
                 <Trash2 className="h-4 w-4" /> Xóa tất cả
               </button>
@@ -332,7 +334,7 @@ export default function ThemeImageToolsTab() {
                     <span className="absolute right-2 top-2 rounded-lg border border-outline-variant bg-surface/90 p-1.5 text-on-surface opacity-0 shadow-sm transition group-hover:opacity-100"><Expand className="h-4 w-4" /></span>
                   </button>
                   <div className="space-y-3 p-4">
-                    <input value={image.name} onChange={event => updateImage(image.id, { name: event.target.value || 'image.png' })} className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" aria-label="Tên file" />
+                    <UiInput value={image.name} onChange={event => updateImage(image.id, { name: event.target.value || 'image.png' })} className="w-full rounded-lg border border-outline-variant bg-surface px-3 py-2 text-sm font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" aria-label="Tên file" />
                     {image.layout ? (
                       <div className="flex items-center justify-between gap-2 rounded-lg bg-success-container px-3 py-2 text-xs font-medium text-on-success-container">
                         <span className="truncate">{image.layout.code} · {image.layout.name}</span>

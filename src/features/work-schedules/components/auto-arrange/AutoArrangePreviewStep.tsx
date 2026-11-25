@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Button, Select, Table, Tag, Typography } from 'antd';
+import { Button, Select } from '../ScheduleControls';
+import { Table, Tag, Typography } from '../SchedulePresentation';
 import { Trash2 } from 'lucide-react';
-import { ColumnsType } from 'antd/es/table';
+import { type ColumnsType } from '../SchedulePresentation';
 import {
   AutoArrangeEmployeeRule,
   AutoArrangePreviewItem,

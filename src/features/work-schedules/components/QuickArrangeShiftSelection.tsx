@@ -1,4 +1,5 @@
-import { Button, InputNumber, Table, Typography } from 'antd';
+import { Button, InputNumber } from './ScheduleControls';
+import { Table, Typography } from './SchedulePresentation';
 import { QuickArrangeFormState, ShiftAllocationFormItem } from '../types/quickArrange.types';
 import { formatShiftTime } from '../utils/week.utils';
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, DatePicker, Drawer, Select, Tag, TimePicker } from 'antd';
+import { Button, DatePicker, Select, TimePicker } from './ScheduleControls';
+import { Alert, Drawer, Tag } from './SchedulePresentation';
 import { toast } from 'sonner';
 import { confirmAction } from '../../../components/ui';
 import dayjs, { Dayjs } from 'dayjs';

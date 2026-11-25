@@ -1,3 +1,4 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { ChangeEvent, useRef, useState } from 'react';
 import { Camera, Eye, EyeOff, Loader2, Lock, Save, Upload, UserCog } from 'lucide-react';
 import { toast } from 'sonner';
@@ -140,7 +141,7 @@ export default function SettingsTab() {
               className="hidden"
             />
 
-            <button
+            <UiButton variant="outline"
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploadingAvatar}
@@ -148,7 +149,7 @@ export default function SettingsTab() {
             >
               {isUploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               <span>Đổi ảnh đại diện</span>
-            </button>
+            </UiButton>
             <p className="mt-2 text-xs text-on-surface-variant">PNG, JPG, WEBP hoặc GIF, dưới 1MB.</p>
           </div>
         </section>
@@ -226,7 +227,7 @@ export default function SettingsTab() {
           </div>
 
           <div className="mt-6 flex justify-end border-t border-outline-variant pt-4 -mx-4 px-4 sm:-mx-5 sm:px-5">
-            <button
+            <UiButton variant="default"
               type="button"
               onClick={handlePasswordSubmit}
               disabled={isChangingPassword}
@@ -234,7 +235,7 @@ export default function SettingsTab() {
             >
               {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               <span>Lưu mật khẩu</span>
-            </button>
+            </UiButton>
           </div>
         </SectionCard>
 

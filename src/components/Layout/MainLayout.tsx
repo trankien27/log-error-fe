@@ -1,3 +1,6 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useEffect, useState } from 'react';
 /// <reference types="react" />
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -212,7 +215,7 @@ export default function MainLayout() {
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-outline-variant">
-                <button
+                <UiButton variant="ghost"
                   onClick={() => handleToggleReadState(selectedNotification.id)}
                   disabled={isLoading}
                   className="btn-ghost h-9 px-3"
@@ -226,11 +229,11 @@ export default function MainLayout() {
                       <Check className="w-4 h-4" /> Đánh dấu đã đọc
                     </>
                   )}
-                </button>
+                </UiButton>
 
                 <div className="flex flex-wrap gap-2 sm:justify-end">
                   {selectedNotification.actionUrl && (
-                    <button
+                    <UiButton variant="default"
                       type="button"
                       onClick={() => {
                         navigate(selectedNotification.actionUrl!);
@@ -239,15 +242,15 @@ export default function MainLayout() {
                       className="btn-primary"
                     >
                       Xem mục liên quan
-                    </button>
+                    </UiButton>
                   )}
-                  <button
+                  <UiButton variant="outline"
                     onClick={() => handleDeleteNotification(selectedNotification.id)}
                     disabled={isLoading}
                     className="inline-flex h-10 items-center gap-1.5 text-sm font-medium text-error hover:bg-error-container px-3 rounded-lg transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-4 h-4" /> Xóa
-                  </button>
+                  </UiButton>
                   <button
                     type="button"
                     onClick={() => setSelectedNotification(null)}
@@ -278,7 +281,7 @@ export default function MainLayout() {
             <form onSubmit={handleSendNotification} className="space-y-4 text-sm">
               <div>
                 <label className="block font-medium mb-1 text-on-surface">Tiêu đề *</label>
-                <input
+                <UiInput
                   type="text"
                   required
                   placeholder="Ví dụ: Bảo trì máy chủ tối nay"
@@ -289,7 +292,7 @@ export default function MainLayout() {
               </div>
               <div>
                 <label className="block font-medium mb-1 text-on-surface">Nội dung *</label>
-                <textarea
+                <UiTextarea
                   rows={4}
                   required
                   placeholder="Nội dung chi tiết cho người nhận…"
@@ -394,7 +397,7 @@ export default function MainLayout() {
                 </div>
                 <div>
                   <label className="block font-medium mb-1 text-on-surface">Nhãn người gửi</label>
-                  <input
+                  <UiInput
                     type="text"
                     value={notifTag}
                     onChange={e => setNotifTag(e.target.value)}
@@ -403,20 +406,20 @@ export default function MainLayout() {
                 </div>
               </div>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsNotificationModalOpen(false)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isLoading}
                   className="btn-primary"
                 >
                   <Send className="w-4 h-4" /> {isLoading ? 'Đang gửi…' : 'Gửi thông báo'}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>

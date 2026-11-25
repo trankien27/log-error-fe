@@ -1,3 +1,5 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, CircleAlert, Loader2, Palette, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -92,7 +94,7 @@ function FontSelect({
       </select>
 
       {showCustom && (
-        <input
+        <UiInput
           type="text"
           value={value}
           onChange={event => onChange(event.target.value)}
@@ -371,7 +373,7 @@ export default function ThemeSettingsSection() {
 
                   {field.kind === 'color' ? (
                     <div className="mt-3 flex items-center gap-2">
-                      <input
+                      <UiInput
                         type="color"
                         value={safeColor(draft[field.key], '#000000')}
                         onChange={event => updateDraft(field.key, event.target.value.toUpperCase())}
@@ -439,14 +441,14 @@ export default function ThemeSettingsSection() {
         </div>
 
         <div className="flex justify-end border-t border-outline-variant pt-4">
-          <button
+          <UiButton variant="default"
             type="submit"
             disabled={isSaving || isLoading || !isDirty}
             className="btn-primary h-10 w-full px-5 sm:w-auto"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             <span>{isSaving ? 'Đang lưu…' : 'Lưu theme'}</span>
-          </button>
+          </UiButton>
         </div>
       </form>
     </SectionCard>

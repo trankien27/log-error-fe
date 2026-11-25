@@ -1,4 +1,5 @@
-import { DatePicker, Form, Select, Typography } from 'antd';
+import { DatePicker, Form, Select } from './ScheduleControls';
+import { Typography } from './SchedulePresentation';
 import dayjs from 'dayjs';
 import { User } from '../../../types';
 import { QuickArrangeFormState } from '../types/quickArrange.types';

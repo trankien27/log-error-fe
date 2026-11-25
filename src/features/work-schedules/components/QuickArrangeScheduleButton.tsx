@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Zap } from 'lucide-react';
-import { Button } from 'antd';
+import { Button } from '@/components/ui/shadcn/button';
 import { User } from '../../../types';
 import QuickArrangeScheduleModal from './QuickArrangeScheduleModal';
 
@@ -16,12 +16,12 @@ export default function QuickArrangeScheduleButton({ users, disabled = false, on
   return (
     <>
       <Button
-        type="primary"
-        icon={<Zap className="h-4 w-4" />}
+        type="button"
         disabled={disabled}
         onClick={() => setOpen(true)}
         aria-label="Xếp lịch nhanh"
       >
+        <Zap className="h-4 w-4" />
         Xếp lịch nhanh
       </Button>
       <QuickArrangeScheduleModal

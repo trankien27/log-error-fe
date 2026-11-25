@@ -1,4 +1,5 @@
-import { Collapse, Form, Input, InputNumber, Switch, Typography } from 'antd';
+import { Form, Input, InputNumber, Switch } from './ScheduleControls';
+import { Collapse, Typography } from './SchedulePresentation';
 import { QuickArrangeFormState } from '../types/quickArrange.types';
 
 type Props = {

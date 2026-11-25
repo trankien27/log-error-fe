@@ -1,3 +1,5 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CalendarClock, Eye, EyeOff, Headset, KeyRound, MessageSquare, UserRound } from 'lucide-react';
@@ -220,7 +222,7 @@ export default function AuthPage() {
           <form onSubmit={handlePasswordLogin} className="space-y-4 text-left">
             <label className="block text-sm font-medium text-on-surface">
               Email
-              <input
+              <UiInput
                 type="email"
                 autoFocus
                 autoComplete="email"
@@ -267,9 +269,9 @@ export default function AuthPage() {
               </p>
             )}
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full h-11">
+            <UiButton variant="default" type="submit" disabled={isLoading} className="btn-primary w-full h-11">
               {isLoading ? 'Đang đăng nhập…' : 'Đăng nhập'}
-            </button>
+            </UiButton>
 
             <button
               type="button"
@@ -284,7 +286,7 @@ export default function AuthPage() {
           <form onSubmit={handleQuestionSubmit} className="space-y-4 text-left">
             <label className="block text-sm font-medium text-on-surface">
               {SECURITY_QUESTION}
-              <input
+              <UiInput
                 type="text"
                 autoFocus
                 autoComplete="off"
@@ -310,9 +312,9 @@ export default function AuthPage() {
               </p>
             )}
 
-            <button type="submit" disabled={isLocked} className="btn-primary w-full h-11">
+            <UiButton variant="default" type="submit" disabled={isLocked} className="btn-primary w-full h-11">
               Tiếp tục
-            </button>
+            </UiButton>
 
             <button
               type="button"
@@ -327,7 +329,7 @@ export default function AuthPage() {
             <form onSubmit={handleQuestionAccountSubmit} className="space-y-4 text-left">
               <label className="block text-sm font-medium text-on-surface">
                 Tên hiển thị
-                <input
+                <UiInput
                   type="text"
                   autoComplete="name"
                   placeholder="Chỉ cần nhập khi email chưa có tài khoản"
@@ -339,7 +341,7 @@ export default function AuthPage() {
 
               <label className="block text-sm font-medium text-on-surface">
                 Email
-                <input
+                <UiInput
                   type="email"
                   autoComplete="email"
                   placeholder="name@company.com"
@@ -385,9 +387,9 @@ export default function AuthPage() {
                 </p>
               )}
 
-              <button type="submit" disabled={isLoading} className="btn-primary w-full h-11">
+              <UiButton variant="default" type="submit" disabled={isLoading} className="btn-primary w-full h-11">
                 {isLoading ? 'Đang đăng nhập…' : 'Đăng nhập hoặc tạo tài khoản'}
-              </button>
+              </UiButton>
             </form>
 
             <button

@@ -1,3 +1,6 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCheck,
@@ -246,7 +249,7 @@ export default function ChatTab() {
           <div className="p-3 border-b border-outline-variant space-y-2.5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-              <input
+              <UiInput
                 value={searchQuery}
                 onChange={event => setSearchQuery(event.target.value)}
                 placeholder="Tìm hội thoại…"
@@ -354,7 +357,7 @@ export default function ChatTab() {
                   </div>
                 </div>
                 {activeConversationId && (
-                  <button
+                  <UiButton variant="ghost"
                     type="button"
                     onClick={() => markAsRead(activeConversationId).catch((err: any) => toast.error(err.message))}
                     className="btn-ghost h-8 px-3 text-sm"
@@ -362,7 +365,7 @@ export default function ChatTab() {
                   >
                     <CheckCheck className="w-4 h-4" />
                     <span className="hidden sm:inline">Đã đọc</span>
-                  </button>
+                  </UiButton>
                 )}
               </header>
 
@@ -385,7 +388,7 @@ export default function ChatTab() {
               </div>
 
               <form onSubmit={handleSubmit} className="border-t border-outline-variant p-3 sm:p-4 flex items-end gap-2">
-                <textarea
+                <UiTextarea
                   value={content}
                   onChange={event => setContent(event.target.value)}
                   onKeyDown={event => {

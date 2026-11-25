@@ -1,4 +1,76 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* The Standard appearance uses shadcn/ui Neutral. Glass modes use the saved theme. */
+:root:not([data-style]) {
+  --neutral-background: oklch(1 0 0);
+  --neutral-foreground: oklch(0.145 0 0);
+  --neutral-primary: oklch(0.205 0 0);
+  --neutral-primary-foreground: oklch(0.985 0 0);
+  --neutral-muted: oklch(0.97 0 0);
+  --neutral-muted-foreground: oklch(0.556 0 0);
+  --neutral-border: oklch(0.922 0 0);
+  --neutral-ring: oklch(0.708 0 0);
+  --neutral-card: var(--neutral-background);
+
+  --font-sans: ui-sans-serif, system-ui, sans-serif !important;
+  --font-mono: ui-monospace, monospace !important;
+  --color-background: var(--neutral-background) !important;
+  --color-surface: var(--neutral-card) !important;
+  --color-surface-2: var(--neutral-muted) !important;
+  --color-on-surface: var(--neutral-foreground) !important;
+  --color-on-surface-variant: var(--neutral-muted-foreground) !important;
+  --color-outline-variant: var(--neutral-border) !important;
+  --color-primary: var(--neutral-primary) !important;
+  --color-primary-hover: color-mix(in oklch, var(--neutral-primary) 85%, var(--neutral-background)) !important;
+  --color-primary-active: color-mix(in oklch, var(--neutral-primary) 75%, var(--neutral-background)) !important;
+  --color-primary-disabled: var(--neutral-muted-foreground) !important;
+  --color-primary-subtle: var(--neutral-muted) !important;
+  --color-primary-container: var(--neutral-muted) !important;
+  --color-on-primary-container: var(--neutral-foreground) !important;
+  --color-on-primary: var(--neutral-primary-foreground) !important;
+  --color-secondary: var(--neutral-muted) !important;
+  --color-on-secondary: var(--neutral-foreground) !important;
+  --color-secondary-container: var(--neutral-muted) !important;
+  --color-on-secondary-container: var(--neutral-foreground) !important;
+  --color-button-primary: var(--neutral-primary) !important;
+  --color-on-button-primary: var(--neutral-primary-foreground) !important;
+  --color-button-secondary: var(--neutral-card) !important;
+  --color-on-button-secondary: var(--neutral-foreground) !important;
+  --color-ring: var(--neutral-ring) !important;
+}
+
+:root:not([data-style])[data-theme="dark"] {
+  --neutral-background: oklch(0.145 0 0);
+  --neutral-foreground: oklch(0.985 0 0);
+  --neutral-primary: oklch(0.922 0 0);
+  --neutral-primary-foreground: oklch(0.205 0 0);
+  --neutral-muted: oklch(0.269 0 0);
+  --neutral-muted-foreground: oklch(0.708 0 0);
+  --neutral-border: oklch(1 0 0 / 10%);
+  --neutral-ring: oklch(0.556 0 0);
+  --neutral-card: oklch(0.205 0 0);
+}
+
+@theme inline {
+  --color-primary-foreground: var(--color-on-primary);
+  --color-secondary-foreground: var(--color-on-secondary);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-on-surface);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-on-surface);
+  --color-foreground: var(--color-on-surface);
+  --color-muted: var(--color-surface-2);
+  --color-muted-foreground: var(--color-on-surface-variant);
+  --color-accent: var(--color-surface-2);
+  --color-accent-foreground: var(--color-on-surface);
+  --color-border: var(--color-outline-variant);
+  --color-input: var(--color-outline-variant);
+  --color-ring: var(--neutral-ring, var(--color-primary));
+  --color-destructive: var(--color-error);
+}
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
@@ -516,22 +588,15 @@ button[class*="bg-emerald-600"] {
   border-color: color-mix(in srgb, var(--g-edge) 70%, transparent);
 }
 
-/* Ant Design popups and form controls */
-:is([data-style="glass"], [data-style="glass-ios"]) :is(.ant-modal-content, .ant-drawer-content, .ant-dropdown-menu, .ant-select-dropdown, .ant-popover-inner, .ant-picker-panel-container) {
+/* Floating surfaces in glass mode */
+:is([data-style="glass"], [data-style="glass-ios"]) :is([data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="alert-dialog-content"], [role="menu"]) {
   background: color-mix(in srgb, var(--color-surface) calc(var(--g-a) * 100% + 25%), transparent);
   -webkit-backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
   backdrop-filter: blur(var(--g-blur)) saturate(var(--g-sat));
   border: 1px solid var(--g-edge);
 }
-:is([data-style="glass"], [data-style="glass-ios"]) :is(.ant-table, .ant-table-container, .ant-table-cell, .ant-card, .ant-tabs, .ant-pagination) {
-  background: transparent;
-}
-:is([data-style="glass"], [data-style="glass-ios"]) :is(.ant-input, .ant-input-affix-wrapper, .ant-select-selector, .ant-picker, .ant-input-number) {
-  background: color-mix(in srgb, var(--color-surface) var(--g-inner), transparent) !important;
-}
-
 @media (prefers-reduced-transparency: reduce) {
-  :is([data-style="glass"], [data-style="glass-ios"]) :is(.card-surface, aside.fixed, .auth-panel, header.sticky, .modal-overlay > *, .ant-modal-content, .ant-dropdown-menu, .ant-select-dropdown) {
+  :is([data-style="glass"], [data-style="glass-ios"]) :is(.card-surface, aside.fixed, .auth-panel, header.sticky, .modal-overlay > *, [data-slot="dialog-content"], [data-slot="popover-content"], [data-slot="alert-dialog-content"], [role="menu"]) {
     background: var(--color-surface);
     backdrop-filter: none;
   }

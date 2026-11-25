@@ -1,3 +1,4 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useState } from 'react';
 import { AlertTriangle, Bell, BellOff, Info, Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,14 +42,14 @@ export default function NotificationsTab() {
         description="Tin nhắn và cảnh báo gửi đến đội kỹ thuật."
         icon={Bell}
         actions={canBroadcast ? (
-          <button
+          <UiButton variant="default"
             type="button"
             onClick={() => setIsNotificationModalOpen(true)}
             disabled={isLoading}
             className="btn-primary"
           >
             <Send className="w-4 h-4" /> Gửi thông báo
-          </button>
+          </UiButton>
         ) : undefined}
       />
 

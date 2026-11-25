@@ -1,3 +1,4 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Clock3, Filter, History, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -131,9 +132,9 @@ export default function RecentActivities() {
               className={`${inputClass} w-32`}
             />
           </label>
-          <button type="submit" disabled={isLoading} className="btn-primary h-9 px-3 text-sm">
+          <UiButton variant="default" type="submit" disabled={isLoading} className="btn-primary h-9 px-3 text-sm">
             <Filter className="h-4 w-4" /> Lọc
-          </button>
+          </UiButton>
         </FilterBar>
       </form>
 

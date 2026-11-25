@@ -1,6 +1,7 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Modal } from 'antd';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/shadcn/dialog';
 import { CornerDownLeft, Search } from 'lucide-react';
 import { useLayoutStore } from '../../stores/useLayoutStore';
 import { getVisibleNavGroups, type NavItem } from './navigation';
@@ -85,20 +86,20 @@ export default function CommandPalette() {
   };
 
   return (
-    <Modal
-      open={isOpen}
-      onCancel={() => setOpen(false)}
-      footer={null}
-      closable={false}
-      width={560}
-      style={{ top: 96 }}
-      destroyOnHidden
-      afterOpenChange={open => open && inputRef.current?.focus()}
-      styles={{ container: { padding: 0, overflow: 'hidden', borderRadius: 16 } }}
-    >
+    <Dialog open={isOpen} onOpenChange={setOpen}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className="top-24 translate-y-0 gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[560px]"
+        onOpenAutoFocus={event => {
+          event.preventDefault();
+          inputRef.current?.focus();
+        }}
+      >
+      <DialogTitle className="sr-only">Tìm trang hoặc chức năng</DialogTitle>
       <div className="flex items-center gap-3 px-4 h-14 border-b border-outline-variant">
         <Search className="h-5 w-5 text-on-surface-variant shrink-0" />
-        <input
+        <UiInput
           ref={inputRef}
           value={query}
           onChange={event => setQuery(event.target.value)}
@@ -145,6 +146,7 @@ export default function CommandPalette() {
           })
         )}
       </div>
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

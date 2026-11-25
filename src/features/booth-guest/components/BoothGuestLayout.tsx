@@ -1,3 +1,4 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { LogOut, MonitorSmartphone, Printer, Wand2 } from 'lucide-react';
 import { useBoothGuestStore } from '../../../stores/useBoothGuestStore';
@@ -47,7 +48,7 @@ export default function BoothGuestLayout() {
             </NavLink>
           </nav>
 
-          <button
+          <UiButton variant="outline"
             type="button"
             onClick={() => {
               exit();
@@ -57,7 +58,7 @@ export default function BoothGuestLayout() {
           >
             <LogOut className="w-5 h-5" />
             Thoát
-          </button>
+          </UiButton>
         </div>
       </header>
 

@@ -14,7 +14,7 @@ const COLOR_MODE_OPTIONS: { value: ColorModePreference; label: string; icon: Luc
 ];
 
 const UI_STYLE_OPTIONS: { value: UiStyle; label: string; hint: string }[] = [
-  { value: 'standard', label: 'Tiêu chuẩn', hint: 'Nền đặc, giao diện hiện tại.' },
+  { value: 'standard', label: 'Tiêu chuẩn', hint: 'Bảng màu neutral mặc định của shadcn/ui.' },
   { value: 'glass', label: 'Liquid glass nhạt', hint: 'Kính mờ nhẹ, viền sáng.' },
   { value: 'glass-ios', label: 'Liquid glass iOS', hint: 'Kính khúc xạ ở mép, bo góc lớn.' },
 ];

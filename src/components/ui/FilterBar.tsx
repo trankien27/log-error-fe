@@ -1,5 +1,6 @@
 import React from 'react';
 import { RotateCcw } from 'lucide-react';
+import { Button } from './shadcn/button';
 
 type FilterBarProps = {
   children: React.ReactNode;
@@ -17,14 +18,15 @@ export default function FilterBar({ children, onReset, actions, className = '' }
       <div className="flex flex-1 flex-wrap items-center gap-2">
         {children}
         {onReset && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={onReset}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Xóa bộ lọc
-          </button>
+          </Button>
         )}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -1,4 +1,4 @@
-import { Alert, List, Typography } from 'antd';
+import { Alert, List, Typography } from './SchedulePresentation';
 import { QuickArrangeWorkScheduleResponse } from '../types/quickArrange.types';
 import { formatShiftTime, formatWorkDateLabel } from '../utils/week.utils';
 

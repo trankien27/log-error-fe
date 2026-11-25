@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Tooltip } from 'antd';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadcn/tooltip';
 import { motion } from 'motion/react';
 import { ChevronsLeft, ChevronsRight, Headset, X } from 'lucide-react';
 import { useLogsStore } from '../../stores/useLogsStore';
@@ -97,9 +97,14 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
     return (
       <li key={item.path}>
         {isCollapsed ? (
-          <Tooltip title={badgeCount > 0 ? `${item.label} (${formatBadge(badgeCount)})` : item.label} placement="right">
-            {link}
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right">
+                {badgeCount > 0 ? `${item.label} (${formatBadge(badgeCount)})` : item.label}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
           link
         )}
@@ -121,15 +126,15 @@ export default function Sidebar({ variant = 'desktop', open = false, onClose }: 
       <aside
         aria-hidden={isMobile && !open}
         style={{ width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH }}
-        className={`bg-surface border-r border-outline-variant flex-col fixed left-0 top-0 h-full transition-[width,transform] duration-200 ${
+        className={`bg-muted/40 border-r border-border flex-col fixed left-0 top-0 h-full transition-[width,transform] duration-200 ${
           isMobile
             ? `z-50 flex lg:hidden shadow-elevated ${open ? 'translate-x-0' : '-translate-x-full'}`
             : 'z-20 hidden lg:flex'
         }`}
       >
-        <div className={`h-16 flex items-center shrink-0 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
+        <div className={`h-14 flex items-center shrink-0 ${isCollapsed ? 'justify-center px-2' : 'justify-between px-4'}`}>
           <div className="flex items-center gap-3 min-w-0">
-            <span className="h-9 w-9 shrink-0 rounded-xl bg-primary text-on-primary inline-flex items-center justify-center shadow-brand">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <Headset className="h-5 w-5" />
             </span>
             {!isCollapsed && (

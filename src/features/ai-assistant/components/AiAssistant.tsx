@@ -1,3 +1,5 @@
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -218,7 +220,7 @@ export default function AiAssistant() {
 
           <div className="p-3 border-t border-outline-variant">
             <div className="flex items-end gap-2">
-              <textarea
+              <UiTextarea
                 ref={inputRef}
                 rows={1}
                 value={input}
@@ -289,12 +291,12 @@ function ActionCard({ action, state, result, onConfirm, onCancel }: ActionCardPr
         {state === 'cancelled' && <p className="text-on-surface-variant">Đã huỷ, chưa ghi gì.</p>}
         {(state === 'pending' || state === 'saving') && (
           <div className="flex gap-2">
-            <button type="button" onClick={onConfirm} disabled={state === 'saving'} className="btn-primary h-9 px-4">
+            <UiButton variant="default" type="button" onClick={onConfirm} disabled={state === 'saving'} className="btn-primary h-9 px-4">
               {state === 'saving' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Lưu
-            </button>
-            <button type="button" onClick={onCancel} disabled={state === 'saving'} className="btn-secondary h-9 px-4">
+            </UiButton>
+            <UiButton variant="outline" type="button" onClick={onCancel} disabled={state === 'saving'} className="btn-secondary h-9 px-4">
               Huỷ
-            </button>
+            </UiButton>
           </div>
         )}
       </div>

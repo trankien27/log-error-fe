@@ -1,5 +1,6 @@
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { Card } from './shadcn/card';
 
 type SectionCardProps = {
   title?: React.ReactNode;
@@ -24,7 +25,7 @@ export default function SectionCard({
   const hasHeader = Boolean(title || actions);
 
   return (
-    <section className={`card-surface overflow-hidden ${className}`}>
+    <Card className={`card-surface block gap-0 overflow-hidden p-0 ${className}`}>
       {hasHeader && (
         <header className="flex items-start justify-between gap-3 border-b border-outline-variant px-4 py-3.5 sm:px-5">
           <div className="flex items-start gap-3 min-w-0">
@@ -42,6 +43,6 @@ export default function SectionCard({
         </header>
       )}
       <div className={bodyClassName}>{children}</div>
-    </section>
+    </Card>
   );
 }

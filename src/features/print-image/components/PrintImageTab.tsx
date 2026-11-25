@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Loader2, Printer, RefreshCw } from 'lucide-react';
@@ -120,7 +122,7 @@ export default function PrintImageTab() {
         icon={Printer}
         className="!mb-0"
         actions={
-          <button
+          <UiButton variant="outline"
             type="button"
             onClick={handleReload}
             disabled={boothLocalStatus === 'checking' || booth.isLoadingTransactions}
@@ -130,7 +132,7 @@ export default function PrintImageTab() {
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <RefreshCw className="w-4 h-4" />}
             Tải lại
-          </button>
+          </UiButton>
         }
       />
 
@@ -146,7 +148,7 @@ export default function PrintImageTab() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-on-surface mb-1.5">Mã giao dịch</label>
-              <input
+              <UiInput
                 readOnly
                 value={booth.selectedTransactionId}
                 placeholder="Chọn một ảnh bên dưới"
@@ -197,7 +199,7 @@ export default function PrintImageTab() {
                 ? `Sẽ in ${numberOfImage} ảnh · layout ${layoutId} · ${selectedTransaction.code || selectedTransaction.transactionId}`
                 : 'Chưa chọn ảnh nào.'}
             </p>
-            <button
+            <UiButton variant="default"
               type="submit"
               disabled={printMutation.isPending || boothLocalStatus === 'checking'}
               className="btn-primary h-12 sm:h-11 px-6 text-base sm:text-sm"
@@ -206,7 +208,7 @@ export default function PrintImageTab() {
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Printer className="w-4 h-4" />}
               {printMutation.isPending ? 'Đang gửi lệnh in…' : 'In ảnh'}
-            </button>
+            </UiButton>
           </div>
         </div>
       </form>

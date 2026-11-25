@@ -2,6 +2,10 @@ import { useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AlertTriangle, Building2, ChevronLeft, ChevronRight, Clock, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/shadcn/button';
+import { Input } from '@/components/ui/shadcn/input';
+import { NativeSelect } from '@/components/ui/shadcn/native-select';
+import { Table, TableHeader, TableBody } from '@/components/ui/shadcn/table';
 import { storesService } from '../../../services/api/storesService';
 import { useStoresStore } from '../../../stores/useStoresStore';
 import { EmptyState, FilterBar, PageHeader, SectionCard, TableSkeletonRows } from '../../../components/ui';
@@ -66,16 +70,17 @@ export default function StoresTab() {
         description="Danh sách cửa hàng và chi nhánh đồng bộ từ FunStudio."
         actions={
           <>
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={() => void fetchStores()}
               disabled={isLoading || syncStoresMutation.isPending}
               className="btn-secondary"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               Làm mới
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => syncStoresMutation.mutate()}
               disabled={syncStoresMutation.isPending || isLoading}
@@ -83,7 +88,7 @@ export default function StoresTab() {
             >
               <RefreshCw className={`w-4 h-4 ${syncStoresMutation.isPending ? 'animate-spin' : ''}`} />
               Đồng bộ cửa hàng
-            </button>
+            </Button>
           </>
         }
       />
@@ -101,7 +106,7 @@ export default function StoresTab() {
       >
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-          <input
+          <Input
             type="search"
             placeholder="Tìm theo tên cửa hàng..."
             value={searchQuery}
@@ -120,16 +125,15 @@ export default function StoresTab() {
       )}
 
       <SectionCard bodyClassName="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm border-collapse">
-            <thead>
+          <Table className="min-w-[640px] text-left border-collapse">
+            <TableHeader>
               <tr className="border-b border-outline-variant select-none">
                 <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60 w-44">Mã cửa hàng</th>
                 <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Tên cửa hàng / chi nhánh</th>
                 <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60 w-56">Đồng bộ lần cuối</th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant">
+            </TableHeader>
+            <TableBody className="divide-y divide-outline-variant">
               {isLoading ? (
                 <TableSkeletonRows rows={6} columns={3} />
               ) : stores.length === 0 ? (
@@ -161,23 +165,23 @@ export default function StoresTab() {
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
 
         <div className="border-t border-outline-variant px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-on-surface-variant">
             <span>Hiển thị</span>
-            <select
+            <NativeSelect
+              size="sm"
               value={storePageSize}
               onChange={event => setStorePageSize(Number(event.target.value))}
-              className="h-8 px-2 border border-outline-variant rounded-lg bg-surface text-sm text-on-surface"
+              className="h-8 pl-2 border-outline-variant rounded-lg bg-surface text-on-surface"
               aria-label="Số cửa hàng mỗi trang"
             >
               {[10, 20, 50, 100].map(size => (
                 <option key={size} value={size}>{size}</option>
               ))}
-            </select>
+            </NativeSelect>
             <span>mỗi trang</span>
           </div>
 
@@ -186,8 +190,10 @@ export default function StoresTab() {
               Trang {storeTotalPages === 0 ? 0 : storePageIndex + 1}/{storeTotalPages}
             </span>
             <div className="flex items-center gap-1">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => setStorePageIndex(Math.max(storePageIndex - 1, 0))}
                 disabled={isLoading || storePageIndex <= 0}
                 className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -195,9 +201,11 @@ export default function StoresTab() {
                 title="Trang trước"
               >
                 <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
                 onClick={() => setStorePageIndex(storePageIndex + 1)}
                 disabled={isLoading || storeTotalPages === 0 || storePageIndex + 1 >= storeTotalPages}
                 className="h-8 w-8 inline-flex items-center justify-center border border-outline-variant rounded-lg bg-surface hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -205,7 +213,7 @@ export default function StoresTab() {
                 title="Trang sau"
               >
                 <ChevronRight className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>

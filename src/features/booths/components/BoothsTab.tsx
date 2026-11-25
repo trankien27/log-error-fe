@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { AlertTriangle, ChevronLeft, ChevronRight, Clock, Plus, Search, Copy, Edit2, KeyRound, Loader2, RefreshCw, Store, Trash2, X } from 'lucide-react';
@@ -202,7 +204,7 @@ export default function BoothsTab() {
         description="Danh sách booth tại cửa hàng kèm ID UltraView để kết nối hỗ trợ nhanh."
         actions={
           <>
-            <button
+            <UiButton variant="outline"
               type="button"
               onClick={() => fetchBooths()}
               disabled={isLoading || syncBoothsMutation.isPending}
@@ -210,8 +212,8 @@ export default function BoothsTab() {
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
               Làm mới
-            </button>
-            <button
+            </UiButton>
+            <UiButton variant="outline"
               type="button"
               onClick={() => syncBoothsMutation.mutate()}
               disabled={syncBoothsMutation.isPending || isLoading}
@@ -219,10 +221,10 @@ export default function BoothsTab() {
             >
               <RefreshCw className={`w-4 h-4 ${syncBoothsMutation.isPending ? 'animate-spin' : ''}`} />
               Đồng bộ booth
-            </button>
-            <button type="button" onClick={() => handleOpenBoothModal()} className="btn-primary">
+            </UiButton>
+            <UiButton variant="default" type="button" onClick={() => handleOpenBoothModal()} className="btn-primary">
               <Plus className="w-4 h-4" /> Thêm booth
-            </button>
+            </UiButton>
           </>
         }
       />
@@ -240,7 +242,7 @@ export default function BoothsTab() {
       >
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-          <input
+          <UiInput
             type="text"
             placeholder="Tìm theo tên hoặc mã booth..."
             value={searchQuery}
@@ -260,7 +262,7 @@ export default function BoothsTab() {
 
       <SectionCard bodyClassName="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm border-collapse">
+          <UiTable scrollContainer={false} className="w-full min-w-[900px] text-left text-sm border-collapse">
             <thead>
               <tr className="border-b border-outline-variant select-none">
                 <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Mã booth</th>
@@ -349,7 +351,7 @@ export default function BoothsTab() {
                 ))
               )}
             </tbody>
-          </table>
+          </UiTable>
         </div>
 
         <div className="border-t border-outline-variant px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -434,7 +436,7 @@ export default function BoothsTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Mã booth <span className="text-error">*</span></label>
-                  <input
+                  <UiInput
                     type="text"
                     required
                     placeholder="BTH-00X"
@@ -446,7 +448,7 @@ export default function BoothsTab() {
                 </div>
                 <div>
                   <label className={labelClass}>ID UltraView <span className="text-error">*</span></label>
-                  <input
+                  <UiInput
                     type="text"
                     required
                     placeholder="Ví dụ: 12 345 678"
@@ -458,7 +460,7 @@ export default function BoothsTab() {
               </div>
               <div>
                 <label className={labelClass}>Tên booth <span className="text-error">*</span></label>
-                <input
+                <UiInput
                   type="text"
                   required
                   placeholder="Ví dụ: Kiosk tự phục vụ tầng G"
@@ -479,20 +481,20 @@ export default function BoothsTab() {
                 />
               </div>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsBoothModalOpen(false)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isLoading}
                   className="btn-primary"
                 >
                   {isLoading ? 'Đang lưu...' : 'Lưu'}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>
@@ -538,15 +540,15 @@ export default function BoothsTab() {
                     </div>
                   </div>
                   <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                    <button
+                    <UiButton variant="outline"
                       type="button"
                       onClick={closeAgentKeyModal}
                       disabled={generateAgentKeyMutation.isPending}
                       className="btn-secondary"
                     >
                       Đóng
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton variant="outline"
                       type="button"
                       onClick={handleGenerateAgentKey}
                       disabled={generateAgentKeyMutation.isPending}
@@ -554,8 +556,8 @@ export default function BoothsTab() {
                     >
                       {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
                       Tạo nếu chưa có
-                    </button>
-                    <button
+                    </UiButton>
+                    <UiButton variant="default"
                       type="button"
                       onClick={() => copyToClipboard(viewAgentKey, 'Đã sao chép AgentKey.')}
                       disabled={generateAgentKeyMutation.isPending}
@@ -563,7 +565,7 @@ export default function BoothsTab() {
                     >
                       <Copy className="w-4 h-4" />
                       Sao chép
-                    </button>
+                    </UiButton>
                   </div>
                 </div>
               ) : (
@@ -572,7 +574,7 @@ export default function BoothsTab() {
                   icon={KeyRound}
                   title="Booth này chưa có AgentKey"
                   action={
-                    <button
+                    <UiButton variant="default"
                       type="button"
                       onClick={handleGenerateAgentKey}
                       disabled={generateAgentKeyMutation.isPending}
@@ -580,7 +582,7 @@ export default function BoothsTab() {
                     >
                       {generateAgentKeyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
                       Tạo AgentKey
-                    </button>
+                    </UiButton>
                   }
                 />
               )}
@@ -591,3 +593,4 @@ export default function BoothsTab() {
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

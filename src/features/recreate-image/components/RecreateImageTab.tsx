@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ClipboardList, ImageOff, Loader2, RefreshCw, Search, Wand2, X } from 'lucide-react';
@@ -182,7 +184,7 @@ export default function RecreateImageTab() {
         icon={Wand2}
         className="!mb-0"
         actions={
-          <button
+          <UiButton variant="outline"
             type="button"
             onClick={() => {
               setFormError('');
@@ -196,7 +198,7 @@ export default function RecreateImageTab() {
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <RefreshCw className="w-4 h-4" />}
             Tải lại
-          </button>
+          </UiButton>
         }
       />
 
@@ -218,7 +220,7 @@ export default function RecreateImageTab() {
           <label className="relative block w-full sm:w-72">
             <span className="sr-only">Tìm giao dịch</span>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-            <input
+            <UiInput
               value={booth.transactionSearch}
               onChange={event => booth.setTransactionSearch(event.target.value)}
               placeholder="Tìm theo mã giao dịch / code…"
@@ -465,7 +467,7 @@ export default function RecreateImageTab() {
               ? `Sẽ tạo lại ảnh cho ${selectedTransaction.transactionId} với ${selectedListImages.length} ảnh đã chọn.`
               : 'Chưa chọn giao dịch nào.'}
           </p>
-          <button
+          <UiButton variant="default"
             type="button"
             onClick={() => void handleRecreate()}
             disabled={
@@ -479,7 +481,7 @@ export default function RecreateImageTab() {
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <Wand2 className="w-4 h-4" />}
             {processMutation.isPending ? 'Đang tạo lại ảnh…' : 'Tạo lại ảnh'}
-          </button>
+          </UiButton>
         </div>
       </div>
     </div>

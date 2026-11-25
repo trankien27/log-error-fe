@@ -126,7 +126,7 @@ export default function TopHeader({ onOpenSidebar }: TopHeaderProps) {
   };
 
   return (
-    <header className="h-16 bg-surface/85 backdrop-blur-md border-b border-outline-variant flex items-center gap-3 px-3 sm:px-4 lg:px-6 sticky top-0 z-10 w-full shrink-0">
+    <header className="sticky top-0 z-10 flex h-14 w-full shrink-0 items-center gap-3 border-b border-border bg-background px-3 sm:px-4 lg:px-6">
       <button
         type="button"
         onClick={onOpenSidebar}

@@ -1,3 +1,6 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useEffect, useRef, useState } from 'react';
 import { Plus, Clock, Paperclip, Edit2, Paperclip as PaperclipIcon, Columns3, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, ArrowRight, Check, ZoomIn, ZoomOut, ClipboardList, Inbox, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -726,9 +729,9 @@ export default function TasksTab() {
                 );
               })}
             </div>
-            <button type="button" onClick={() => handleOpenTaskModal()} className="btn-primary">
+            <UiButton variant="default" type="button" onClick={() => handleOpenTaskModal()} className="btn-primary">
               <Plus className="w-4 h-4" /> Tạo công việc
-            </button>
+            </UiButton>
           </>
         }
       />
@@ -814,7 +817,7 @@ export default function TasksTab() {
                 >
                   <ZoomOut className="w-4 h-4" />
                 </button>
-                <input
+                <UiInput
                   type="range"
                   min="0.7"
                   max="1.6"
@@ -1100,7 +1103,7 @@ export default function TasksTab() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-on-surface mb-1.5">Mô tả</label>
-                <textarea
+                <UiTextarea
                   rows={3}
                   placeholder="Mô tả ngắn gọn công việc cần làm"
                   value={taskDescription}
@@ -1219,20 +1222,20 @@ export default function TasksTab() {
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsTaskModalOpen(false)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isLoading}
                   className="btn-primary"
                 >
                   {isLoading ? 'Đang lưu…' : 'Lưu công việc'}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>
@@ -1363,7 +1366,7 @@ export default function TasksTab() {
               {/* Notes Area */}
               <div className="space-y-1.5 text-left">
                 <span className="text-sm font-medium text-on-surface">Ghi chú</span>
-                <textarea
+                <UiTextarea
                   rows={3}
                   value={taskNotesInput}
                   onChange={e => setTaskNotesInput(e.target.value)}
@@ -1371,14 +1374,14 @@ export default function TasksTab() {
                   className="w-full text-sm p-3 border border-outline-variant rounded-lg focus:outline-none focus:border-primary bg-surface text-on-surface transition-colors resize-none"
                 />
                 <div className="flex justify-end">
-                  <button
+                  <UiButton variant="default"
                     type="button"
                     onClick={handleSaveNotes}
                     disabled={isLoading}
                     className="btn-primary"
                   >
                     {isLoading ? 'Đang lưu…' : 'Lưu ghi chú'}
-                  </button>
+                  </UiButton>
                 </div>
               </div>
 
@@ -1431,13 +1434,13 @@ export default function TasksTab() {
               </div>
 
               <div className="flex sm:justify-end gap-2.5 pt-4 border-t border-outline-variant">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setSelectedTaskDetails(null)}
                   className="btn-secondary w-full sm:w-auto"
                 >
                   Đóng
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>

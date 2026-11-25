@@ -1,3 +1,4 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import { useState } from 'react';
 import { ImageOff, Images, Search, X } from 'lucide-react';
 import { EmptyState, Skeleton } from '../../components/ui';
@@ -64,7 +65,7 @@ export default function TransactionPickerGrid({
         <label className="relative block w-full sm:w-72">
           <span className="sr-only">Tìm giao dịch</span>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-          <input
+          <UiInput
             value={search}
             onChange={event => onSearchChange(event.target.value)}
             placeholder="Tìm theo code / mã giao dịch…"

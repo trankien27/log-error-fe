@@ -1,3 +1,5 @@
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Loader2, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -540,7 +542,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                     {selected && (
                       <label className="mt-3 block text-xs font-medium text-on-surface-variant">
                         Ngày/ca không muốn làm
-                        <textarea
+                        <UiTextarea
                           value={rule.ruleText}
                           onChange={event => updateRule(user.id, current => ({ ...current, ruleText: event.target.value }))}
                           rows={5}
@@ -563,22 +565,22 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                 {preview ? `${preview.month}/${preview.year}` : 'Chưa có bản xem trước'}
               </div>
               <div className="flex gap-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={handlePreview}
                   disabled={isPreviewing}
                   className="btn-secondary"
                 >
                   {isPreviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} Xem trước
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="button"
                   onClick={handleApply}
                   disabled={!preview || isApplying}
                   className="btn-primary"
                 >
                   {isApplying ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Áp dụng lịch
-                </button>
+                </UiButton>
               </div>
             </div>
 
@@ -641,7 +643,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                     </div>
                   </div>
                 )}
-                <table className="w-max min-w-full border-collapse text-left">
+                <UiTable scrollContainer={false} className="w-max min-w-full border-collapse text-left">
                   <thead>
                     <tr className="bg-surface-2 text-xs font-medium text-on-surface-variant">
                       <th className="sticky left-0 top-[65px] z-20 w-[170px] bg-surface-2 px-3 py-3 shadow-[1px_0_0_var(--color-outline-variant)]">Nhân viên</th>
@@ -662,7 +664,7 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
                   <tbody>
                     {preview.users.map(renderWeeklyPreviewRow)}
                   </tbody>
-                </table>
+                </UiTable>
               </div>
             )}
           </div>
@@ -671,3 +673,4 @@ export default function MonthlySuggestionModal({ open, users, shifts, initialDat
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Modal, Skeleton, Space, Typography } from 'antd';
+import { Button } from './ScheduleControls';
+import { Alert, Modal, Skeleton, Space, Typography } from './SchedulePresentation';
 import { toast } from 'sonner';
 import { confirmAction } from '../../../components/ui';
 import { ApiError } from '../../../services/api/apiClient';

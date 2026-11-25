@@ -1,5 +1,6 @@
-import { Alert, InputNumber, Table, Typography } from 'antd';
-import { ColumnsType } from 'antd/es/table';
+import { InputNumber } from '../ScheduleControls';
+import { Alert, Table, Typography } from '../SchedulePresentation';
+import { type ColumnsType } from '../SchedulePresentation';
 import { AutoArrangeShiftDemand, AutoArrangeShiftOption } from '../../types/workScheduleArrange.types';
 import { formatShiftTime, formatWorkDateLabel } from '../../utils/week.utils';
 
@@ -56,7 +57,7 @@ export default function AutoArrangeDemandStep({ weekDates, shifts, demands, onDe
           precision={0}
           className="w-full"
           value={getDemand(row.workDate, shift.id)}
-          addonAfter="người"
+          suffix="người"
           onChange={value => onDemandChange(row.workDate, shift.id, value ?? 0)}
         />
       ),

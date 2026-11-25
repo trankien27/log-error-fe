@@ -1,5 +1,6 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'antd';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/shadcn/alert';
 import { Database, Download, Loader2, RefreshCw, Upload, type LucideIcon } from 'lucide-react';
 import { PageHeader, SectionCard, Skeleton } from '../../../components/ui';
 import { r2UsageService } from '../../../services/api/r2UsageService';
@@ -177,32 +178,28 @@ export default function R2UsageTab() {
         icon={Database}
         className="!mb-0"
         actions={(
-          <button type="button" className="btn-secondary" disabled={isLoading} onClick={() => void loadUsage()}>
+          <UiButton variant="outline" type="button" className="btn-secondary" disabled={isLoading} onClick={() => void loadUsage()}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Làm mới
-          </button>
+          </UiButton>
         )}
       />
 
       {error && (
-        <Alert
-          type="error"
-          showIcon
-          title="Không thể tải dữ liệu hạn mức"
-          description={error}
-        />
+        <Alert variant="destructive">
+          <AlertTitle>Không thể tải dữ liệu hạn mức</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {usage && !isEnabled && (
-        <Alert
-          type="info"
-          showIcon
-          title="Chưa cấu hình Cloudflare R2 — đang dùng phương án dự phòng"
-          description={
-            'Tệp đính kèm và ảnh tài liệu vẫn được lưu bình thường qua Telegram / base64 trong cơ sở dữ liệu. '
-            + 'Các chỉ số bên dưới sẽ chạy ngay khi bạn điền thông tin kết nối R2.'
-          }
-        />
+        <Alert>
+          <AlertTitle>Chưa cấu hình Cloudflare R2 — đang dùng phương án dự phòng</AlertTitle>
+          <AlertDescription>
+            Tệp đính kèm và ảnh tài liệu vẫn được lưu bình thường qua Telegram / base64 trong cơ sở dữ liệu.
+            Các chỉ số bên dưới sẽ chạy ngay khi bạn điền thông tin kết nối R2.
+          </AlertDescription>
+        </Alert>
       )}
 
       {usage && (

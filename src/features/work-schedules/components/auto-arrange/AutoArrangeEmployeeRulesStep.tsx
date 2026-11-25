@@ -1,5 +1,6 @@
-import { InputNumber, Select, Table, Tag, Typography } from 'antd';
-import { ColumnsType } from 'antd/es/table';
+import { InputNumber, Select } from '../ScheduleControls';
+import { Table, Tag, Typography } from '../SchedulePresentation';
+import { type ColumnsType } from '../SchedulePresentation';
 import { AutoArrangeEmployeeRule, AutoArrangeShiftOption } from '../../types/workScheduleArrange.types';
 import { formatWorkDateLabel } from '../../utils/week.utils';
 

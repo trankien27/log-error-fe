@@ -1,3 +1,6 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
@@ -1672,7 +1675,7 @@ export default function ScheduleTab() {
               Nghỉ
             </button>
             {activeShifts.map(shift => (
-              <button
+              <UiButton variant="outline"
                 key={shift.id}
                 type="button"
                 disabled={isSaving}
@@ -1684,7 +1687,7 @@ export default function ScheduleTab() {
                 className={`w-full border-t px-2 py-2 text-center text-[11px] font-semibold hover:brightness-95 disabled:opacity-60 ${getShiftClass(shift.code)}`}
               >
                 {renderShiftBadgeText(shift.code, getShiftTitle(shift), getShiftHours(shift))}
-              </button>
+              </UiButton>
             ))}
           </div>
         )}
@@ -2040,7 +2043,7 @@ export default function ScheduleTab() {
 
               <div className="relative w-full sm:w-auto">
                 <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-                <input
+                <UiInput
                   value={keyword}
                   onChange={event => setKeyword(event.target.value)}
                   onKeyDown={event => {
@@ -2054,7 +2057,7 @@ export default function ScheduleTab() {
 
             </div>
 
-            <button
+            <UiButton variant="default"
               type="button"
               onClick={() => setIsOvertimeExportModalOpen(true)}
               disabled={isExportingOvertime}
@@ -2062,12 +2065,12 @@ export default function ScheduleTab() {
             >
               {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               Xuất Excel
-            </button>
+            </UiButton>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             {scheduleViewMode !== 'month' && <div className="flex flex-wrap gap-2">
-              <button
+              <UiButton variant="outline"
                 type="button"
                 onClick={() => setIsCopyWeekOpen(true)}
                 disabled={!canManageSchedule}
@@ -2075,8 +2078,8 @@ export default function ScheduleTab() {
               >
                 <Copy className="w-4 h-4" />
                 Sao chép tuần
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="outline"
                 type="button"
                 onClick={() => setIsWeeklySuggestionOpen(true)}
                 disabled={!canManageSchedule}
@@ -2084,7 +2087,7 @@ export default function ScheduleTab() {
               >
                 <Sparkles className="w-4 h-4" />
                 Gợi ý lịch tuần
-              </button>
+              </UiButton>
               <button
                 type="button"
                 onClick={deleteAllCurrentWeekSchedules}
@@ -2525,14 +2528,14 @@ export default function ScheduleTab() {
                     className="w-16 bg-transparent text-right font-semibold outline-none"
                   />
                 </label>
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => openOvertimeModal(selectedDate)}
                   className="btn-secondary"
                 >
                   <Clock3 className="w-4 h-4" />
                   Ghi tăng ca
-                </button>
+                </UiButton>
               </div>
 
               {hasPendingChanges && (
@@ -2540,22 +2543,22 @@ export default function ScheduleTab() {
                   <span className="text-sm font-medium text-primary">
                     {pendingChangesCount} thay đổi chưa lưu
                   </span>
-                  <button
+                  <UiButton variant="outline"
                     type="button"
                     onClick={discardPendingChanges}
                     disabled={isSaving}
                     className="btn-secondary disabled:opacity-60"
                   >
                     Hủy thay đổi
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="default"
                     type="button"
                     onClick={submitPendingChanges}
                     disabled={isSaving}
                     className="btn-primary"
                   >
                     {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
+                  </UiButton>
                 </div>
               )}
 
@@ -2645,7 +2648,7 @@ export default function ScheduleTab() {
                   {panel.mode === 'create' && (
                     <div className="relative mt-2">
                       <Search className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-                      <input
+                      <UiInput
                         value={employeeSearch}
                         onChange={event => setEmployeeSearch(event.target.value)}
                         placeholder="Tìm nhân viên..."
@@ -2682,7 +2685,7 @@ export default function ScheduleTab() {
 
                 <label className="block text-sm font-medium">
                   Ghi chú
-                  <textarea
+                  <UiTextarea
                     value={panel.note}
                     onChange={event => setPanel(current => current ? { ...current, note: event.target.value } : current)}
                     placeholder="Ghi chú cho ca này (không bắt buộc)"
@@ -2692,22 +2695,22 @@ export default function ScheduleTab() {
                 </label>
 
                 <div className="grid grid-cols-2 gap-3 pt-2">
-                  <button
+                  <UiButton variant="outline"
                     type="button"
                     onClick={() => setPanel(null)}
                     disabled={isSaving}
                     className="btn-secondary disabled:opacity-60"
                   >
                     Hủy
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="default"
                     type="button"
                     onClick={savePanel}
                     disabled={isSaving}
                     className="btn-primary"
                   >
                     {isSaving ? 'Đang lưu...' : 'Lưu'}
-                  </button>
+                  </UiButton>
                 </div>
 
                 {panel.mode === 'edit' && (
@@ -2809,7 +2812,7 @@ export default function ScheduleTab() {
               </div>
 
               <div className="flex justify-end">
-                <button
+                <UiButton variant="default"
                   type="button"
                   onClick={loadMonthlyStats}
                   disabled={isStatsLoading}
@@ -2817,7 +2820,7 @@ export default function ScheduleTab() {
                 >
                   {isStatsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
                   Xem thống kê
-                </button>
+                </UiButton>
               </div>
 
               {monthlyStats.length > 0 ? (
@@ -2965,15 +2968,15 @@ export default function ScheduleTab() {
               </label>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsOvertimeExportModalOpen(false)}
                   disabled={isExportingOvertime}
                   className="btn-secondary disabled:opacity-60"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="button"
                   onClick={exportExcel}
                   disabled={isExportingOvertime}
@@ -2981,7 +2984,7 @@ export default function ScheduleTab() {
                 >
                   {isExportingOvertime ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   Xuất báo cáo
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>
@@ -3055,7 +3058,7 @@ export default function ScheduleTab() {
 
               <label className="block text-sm font-medium">
                 Lý do
-                <textarea
+                <UiTextarea
                   value={overtimeDraft.reason}
                   onChange={event => setOvertimeDraft(current => current ? { ...current, reason: event.target.value } : current)}
                   rows={4}
@@ -3065,21 +3068,21 @@ export default function ScheduleTab() {
               </label>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setOvertimeDraft(null)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="button"
                   onClick={saveOvertime}
                   disabled={isSaving}
                   className="btn-primary"
                 >
                   {isSaving ? 'Đang lưu...' : 'Ghi tăng ca'}
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>
@@ -3167,13 +3170,13 @@ export default function ScheduleTab() {
                 ))}
               </div>
               <div className="flex justify-end">
-                <button
+                <UiButton variant="default"
                   type="button"
                   onClick={() => setScheduleViewPreview(null)}
                   className="btn-primary"
                 >
                   Đóng
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>
@@ -3203,13 +3206,13 @@ export default function ScheduleTab() {
                 {scheduleNotePreview.note}
               </p>
               <div className="mt-4 flex justify-end">
-                <button
+                <UiButton variant="default"
                   type="button"
                   onClick={() => setScheduleNotePreview(null)}
                   className="btn-primary"
                 >
                   Đóng
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>

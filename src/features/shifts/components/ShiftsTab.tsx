@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Clock3, Eye, Plus, Power, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -143,14 +145,14 @@ export default function ShiftsTab() {
         description="Tạo ca và bật tắt các ca dùng khi xếp lịch."
         icon={Clock3}
         actions={(
-          <button
+          <UiButton variant="default"
             type="button"
             onClick={openCreateModal}
             className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             Thêm ca
-          </button>
+          </UiButton>
         )}
       />
 
@@ -174,19 +176,19 @@ export default function ShiftsTab() {
           <FilterBar
             className="!mb-0"
             actions={(
-              <button
+              <UiButton variant="outline"
                 type="submit"
                 disabled={isLoading}
                 className="btn-secondary"
               >
                 <Search className="w-4 h-4" />
                 Tìm kiếm
-              </button>
+              </UiButton>
             )}
           >
             <div className="relative w-full sm:w-72">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-              <input
+              <UiInput
                 type="text"
                 value={keyword}
                 onChange={event => setKeyword(event.target.value)}
@@ -211,7 +213,7 @@ export default function ShiftsTab() {
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-5">
           <SectionCard bodyClassName="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-sm border-collapse">
+              <UiTable scrollContainer={false} className="w-full min-w-[860px] text-left text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-outline-variant">
                     <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Mã ca</th>
@@ -294,7 +296,7 @@ export default function ShiftsTab() {
                     ))
                   )}
                 </tbody>
-              </table>
+              </UiTable>
             </div>
           </SectionCard>
 
@@ -363,7 +365,7 @@ export default function ShiftsTab() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className={labelClass}>
                   Mã ca <span className="text-error">*</span>
-                  <input
+                  <UiInput
                     value={form.code}
                     onChange={event => setForm(current => ({ ...current, code: event.target.value }))}
                     placeholder="CA-SANG"
@@ -372,7 +374,7 @@ export default function ShiftsTab() {
                 </label>
                 <label className={labelClass}>
                   Tên ca <span className="text-error">*</span>
-                  <input
+                  <UiInput
                     value={form.name}
                     onChange={event => setForm(current => ({ ...current, name: event.target.value }))}
                     placeholder="Ca sáng"
@@ -456,20 +458,20 @@ export default function ShiftsTab() {
               </label>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isSaving}
                   className="btn-primary"
                 >
                   {isSaving ? 'Đang lưu...' : 'Tạo ca'}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>
@@ -478,3 +480,4 @@ export default function ShiftsTab() {
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

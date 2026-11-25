@@ -1,3 +1,4 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Loader2, Search, X } from 'lucide-react';
 import { LookupItem, PagedResult } from '../../types';
@@ -129,7 +130,7 @@ export default function LazySearchDropdown({
           <div className="p-2 border-b border-outline-variant bg-surface-2">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-on-surface-variant" />
-              <input
+              <UiInput
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}

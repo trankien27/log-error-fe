@@ -1,3 +1,5 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Delete, KeyRound, Loader2 } from 'lucide-react';
@@ -70,7 +72,7 @@ export default function BoothPinPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <input
+            <UiInput
               autoFocus
               type="text"
               inputMode="numeric"
@@ -159,14 +161,14 @@ export default function BoothPinPage() {
             </button>
           </div>
 
-          <button
+          <UiButton variant="default"
             type="submit"
             disabled={isVerifying || pin.length !== PIN_LENGTH}
             className="btn-primary w-full h-14 rounded-xl text-base"
           >
             {isVerifying ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
             {isVerifying ? 'Đang kiểm tra…' : 'Xác nhận'}
-          </button>
+          </UiButton>
         </form>
 
         <button

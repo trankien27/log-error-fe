@@ -1,3 +1,6 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { DatePicker } from '@/components/ui/DatePicker';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, CalendarDays, Copy, Loader2, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -173,17 +176,17 @@ export default function CopyWeekScheduleModal({ open, initialSourceDate, users, 
         {step === 'select' ? (
           <div className="overflow-y-auto p-5 sm:p-8">
             <div className="mx-auto grid max-w-3xl items-end gap-4 md:grid-cols-[1fr_auto_1fr]">
-              <label className="block text-sm font-medium text-on-surface">
-                Tuần nguồn
-                <input type="date" value={sourceDate} onChange={event => setSourceDate(getMonday(event.target.value))} className="mt-2 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-on-surface" />
+              <div className="text-sm font-medium text-on-surface">
+                <label htmlFor="copy-week-source">Tuần nguồn</label>
+                <DatePicker id="copy-week-source" label="Tuần nguồn" value={sourceDate} onChange={day => setSourceDate(getMonday(day))} />
                 <span className="mt-2 block text-xs text-on-surface-variant">{getWeekLabel(getMonday(sourceDate))}</span>
-              </label>
+              </div>
               <ArrowRight className="mb-8 hidden h-5 w-5 text-primary md:block" />
-              <label className="block text-sm font-medium text-on-surface">
-                Tuần đích
-                <input type="date" value={targetDate} onChange={event => setTargetDate(getMonday(event.target.value))} className="mt-2 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-on-surface" />
+              <div className="text-sm font-medium text-on-surface">
+                <label htmlFor="copy-week-target">Tuần đích</label>
+                <DatePicker id="copy-week-target" label="Tuần đích" value={targetDate} onChange={day => setTargetDate(getMonday(day))} />
                 <span className="mt-2 block text-xs text-on-surface-variant">{getWeekLabel(getMonday(targetDate))}</span>
-              </label>
+              </div>
             </div>
             <div className="mx-auto mt-7 max-w-3xl rounded-xl border border-primary/20 bg-primary-subtle p-4 text-sm text-on-surface-variant">
               <CalendarDays className="mb-2 h-5 w-5 text-primary" />
@@ -203,7 +206,7 @@ export default function CopyWeekScheduleModal({ open, initialSourceDate, users, 
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-outline-variant">
-              <table className="w-full min-w-[850px] text-left text-sm">
+              <UiTable scrollContainer={false} className="w-full min-w-[850px] text-left text-sm">
                 <thead className="bg-surface-2/60 text-xs font-medium text-on-surface-variant">
                   <tr><th className="px-4 py-3 font-medium">Lịch gốc</th><th className="px-4 py-3 font-medium">Nhân viên</th><th className="px-4 py-3 font-medium">Ngày mới</th><th className="px-4 py-3 font-medium">Ca làm việc</th><th className="px-4 py-3 font-medium">Ghi chú</th><th className="w-12 px-4 py-3" /></tr>
                 </thead>
@@ -216,28 +219,29 @@ export default function CopyWeekScheduleModal({ open, initialSourceDate, users, 
                         <td className="px-4 py-3"><select value={item.userId} onChange={event => updateItem(item.key, { userId: event.target.value })} className="h-10 w-full min-w-44 rounded-lg border border-outline-variant bg-surface px-2 text-on-surface"><option value="">Chọn người</option>{users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}</select></td>
                         <td className="px-4 py-3"><input type="date" min={targetDate} max={addDays(targetDate, 6)} value={item.workDate} onChange={event => updateItem(item.key, { workDate: event.target.value })} className="h-10 rounded-lg border border-outline-variant bg-surface px-2 text-on-surface" /></td>
                         <td className="px-4 py-3"><select value={item.shiftId || ''} onChange={event => updateItem(item.key, { shiftId: Number(event.target.value) || null })} className="h-10 w-full min-w-48 rounded-lg border border-outline-variant bg-surface px-2 text-on-surface"><option value="">Chọn ca</option>{activeShifts.map(shift => <option key={shift.id} value={shift.id}>{shift.code} - {shift.name} ({shift.startTime.slice(0, 5)}-{shift.endTime.slice(0, 5)})</option>)}</select></td>
-                        <td className="px-4 py-3"><input value={item.note} onChange={event => updateItem(item.key, { note: event.target.value })} placeholder="Ghi chú" className="h-10 w-full min-w-40 rounded-lg border border-outline-variant bg-surface px-2 text-on-surface" /></td>
+                        <td className="px-4 py-3"><UiInput value={item.note} onChange={event => updateItem(item.key, { note: event.target.value })} placeholder="Ghi chú" className="h-10 w-full min-w-40 rounded-lg border border-outline-variant bg-surface px-2 text-on-surface" /></td>
                         <td className="px-4 py-3"><button type="button" onClick={() => setPreviewItems(current => current.filter(row => row.key !== item.key))} className="rounded-lg p-2 text-error hover:bg-error-container" title="Bỏ dòng này" aria-label="Bỏ dòng này"><Trash2 className="h-4 w-4" /></button></td>
                       </tr>
                     );
                   })}
                 </tbody>
-              </table>
+              </UiTable>
               {previewItems.length === 0 && <EmptyState compact icon={CalendarDays} title="Không còn ca nào để sao chép" />}
             </div>
           </div>
         )}
 
         <div className="flex items-center justify-end gap-3 border-t border-outline-variant px-5 py-4 sm:px-6">
-          {step === 'preview' && <button type="button" onClick={() => setStep('select')} disabled={isSaving} className="btn-secondary">Chọn lại tuần</button>}
-          <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary">Hủy</button>
+          {step === 'preview' && <UiButton variant="outline" type="button" onClick={() => setStep('select')} disabled={isSaving} className="btn-secondary">Chọn lại tuần</UiButton>}
+          <UiButton variant="outline" type="button" onClick={onClose} disabled={isSaving} className="btn-secondary">Hủy</UiButton>
           {step === 'select' ? (
-            <button type="button" onClick={loadPreview} disabled={isLoading} className="btn-primary">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />} Xem trước</button>
+            <UiButton variant="default" type="button" onClick={loadPreview} disabled={isLoading} className="btn-primary">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />} Xem trước</UiButton>
           ) : (
-            <button type="button" onClick={submit} disabled={isSaving || previewItems.length === 0} className="btn-primary disabled:opacity-50">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Xác nhận sao chép</button>
+            <UiButton variant="default" type="button" onClick={submit} disabled={isSaving || previewItems.length === 0} className="btn-primary disabled:opacity-50">{isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Copy className="h-4 w-4" />} Xác nhận sao chép</UiButton>
           )}
         </div>
       </div>
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

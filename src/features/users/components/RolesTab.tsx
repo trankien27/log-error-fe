@@ -1,3 +1,6 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useState } from 'react';
 import { Layers, Pencil, Plus, Shield, ShieldCheck, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -66,9 +69,9 @@ export default function RolesTab() {
         icon={Shield}
         description="Nhóm quyền và mức bảo mật cho từng loại tài khoản."
         actions={
-          <button type="button" onClick={() => handleOpenRoleModal()} className="btn-primary">
+          <UiButton variant="default" type="button" onClick={() => handleOpenRoleModal()} className="btn-primary">
             <Plus className="w-4 h-4" /> Thêm vai trò
-          </button>
+          </UiButton>
         }
       />
 
@@ -109,7 +112,7 @@ export default function RolesTab() {
 
       <SectionCard title="Danh sách vai trò" bodyClassName="p-0">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm border-collapse">
+          <UiTable scrollContainer={false} className="w-full min-w-[760px] text-left text-sm border-collapse">
             <thead>
               <tr className="border-b border-outline-variant select-none">
                 <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Vai trò</th>
@@ -166,7 +169,7 @@ export default function RolesTab() {
                 ))
               )}
             </tbody>
-          </table>
+          </UiTable>
         </div>
       </SectionCard>
 
@@ -190,7 +193,7 @@ export default function RolesTab() {
             <form onSubmit={handleSaveRoleSubmit} className="space-y-4 text-sm p-5">
               <div>
                 <label className="block text-sm font-medium text-on-surface mb-1.5">Tên vai trò <span className="text-error">*</span></label>
-                <input
+                <UiInput
                   type="text"
                   required
                   placeholder="Ví dụ: DevOps, Security officer"
@@ -202,7 +205,7 @@ export default function RolesTab() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-on-surface mb-1.5">Mô tả <span className="text-error">*</span></label>
-                <textarea
+                <UiTextarea
                   rows={3}
                   required
                   placeholder="Vai trò này được phép làm gì..."
@@ -224,20 +227,20 @@ export default function RolesTab() {
                 </select>
               </div>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsRoleModalOpen(false)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isLoading}
                   className="btn-primary"
                 >
                   {isLoading ? 'Đang lưu...' : 'Lưu'}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>
@@ -246,3 +249,4 @@ export default function RolesTab() {
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

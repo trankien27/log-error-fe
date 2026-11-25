@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
@@ -409,16 +411,16 @@ export default function DocumentsTab() {
             description="Hướng dẫn, quy trình và ghi chú dùng chung."
             icon={NotebookTabs}
             actions={
-              <button type="button" onClick={startCreating} className="btn-primary">
+              <UiButton variant="default" type="button" onClick={startCreating} className="btn-primary">
                 <Plus className="h-4 w-4" /> Tạo tài liệu
-              </button>
+              </UiButton>
             }
           />
 
           <FilterBar>
             <label className="relative block w-full max-w-md">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-              <input
+              <UiInput
                 value={keyword}
                 onChange={event => setKeyword(event.target.value)}
                 placeholder="Tìm theo tiêu đề hoặc nội dung…"
@@ -446,9 +448,9 @@ export default function DocumentsTab() {
                   title="Chưa có tài liệu"
                   description="Tạo tài liệu đầu tiên để bắt đầu ghi chú."
                   action={
-                    <button type="button" onClick={startCreating} className="btn-primary">
+                    <UiButton variant="default" type="button" onClick={startCreating} className="btn-primary">
                       <Plus className="h-4 w-4" /> Tạo tài liệu
-                    </button>
+                    </UiButton>
                   }
                 />
               )
@@ -517,9 +519,9 @@ export default function DocumentsTab() {
               <div className="mx-auto max-w-6xl">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={goBackToList} disabled={isSaving} className="btn-ghost h-9 px-3">
+                    <UiButton variant="ghost" type="button" onClick={goBackToList} disabled={isSaving} className="btn-ghost h-9 px-3">
                       <ArrowLeft className="h-4 w-4" /> Danh sách
-                    </button>
+                    </UiButton>
                     {(isCreating || selectedDocument?.canManageAccess) ? (
                       <>
                         <select
@@ -557,13 +559,13 @@ export default function DocumentsTab() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => void cancelEditing()} disabled={isSaving} className="btn-secondary h-9 px-3">
+                    <UiButton variant="outline" type="button" onClick={() => void cancelEditing()} disabled={isSaving} className="btn-secondary h-9 px-3">
                       Hủy
-                    </button>
-                    <button type="submit" disabled={isSaving} className="btn-primary h-9 px-4">
+                    </UiButton>
+                    <UiButton variant="default" type="submit" disabled={isSaving} className="btn-primary h-9 px-4">
                       {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                       {isSaving ? 'Đang lưu…' : 'Lưu tài liệu'}
-                    </button>
+                    </UiButton>
                   </div>
                 </div>
 
@@ -578,7 +580,7 @@ export default function DocumentsTab() {
                           Đã chọn {draft.editorIds.length} người. Họ sửa được nội dung nhưng không thể xóa hay đổi quyền.
                         </p>
                       </div>
-                      <input
+                      <UiInput
                         value={editorSearch}
                         onChange={event => setEditorSearch(event.target.value)}
                         placeholder="Tìm theo tên hoặc email…"
@@ -614,7 +616,7 @@ export default function DocumentsTab() {
                   </div>
                 )}
 
-                <input
+                <UiInput
                   autoFocus
                   value={draft.title}
                   onChange={event => setDraft(current => ({ ...current, title: event.target.value }))}
@@ -651,9 +653,9 @@ export default function DocumentsTab() {
               <div className="mx-auto max-w-5xl">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={goBackToList} className="btn-ghost h-9 px-3">
+                    <UiButton variant="ghost" type="button" onClick={goBackToList} className="btn-ghost h-9 px-3">
                       <ArrowLeft className="h-4 w-4" /> Danh sách
-                    </button>
+                    </UiButton>
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
                       selectedDocument.visibility === 1
                         ? 'bg-primary-subtle text-primary'
@@ -670,13 +672,13 @@ export default function DocumentsTab() {
                   {selectedDocument.canEdit && (
                     <div className="flex items-center gap-2">
                       {selectedDocument.canManageAccess && (
-                        <button type="button" onClick={() => void deleteDocument()} className="btn-danger h-9 px-3">
+                        <UiButton variant="destructive" type="button" onClick={() => void deleteDocument()} className="btn-danger h-9 px-3">
                           <Trash2 className="h-4 w-4" /> Xóa
-                        </button>
+                        </UiButton>
                       )}
-                      <button type="button" onClick={startEditing} className="btn-primary h-9 px-4">
+                      <UiButton variant="default" type="button" onClick={startEditing} className="btn-primary h-9 px-4">
                         <Edit3 className="h-4 w-4" /> Chỉnh sửa
-                      </button>
+                      </UiButton>
                     </div>
                   )}
                 </div>
@@ -701,9 +703,9 @@ export default function DocumentsTab() {
             title="Chưa chọn tài liệu"
             description="Quay lại danh sách để mở hoặc tạo tài liệu mới."
             action={
-              <button type="button" onClick={startCreating} className="btn-primary">
+              <UiButton variant="default" type="button" onClick={startCreating} className="btn-primary">
                 <Plus className="h-4 w-4" /> Tạo tài liệu
-              </button>
+              </UiButton>
             }
             className="min-h-[560px]"
           />

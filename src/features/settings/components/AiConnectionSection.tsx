@@ -1,3 +1,5 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useEffect, useState } from 'react';
 import { Bot, Check, Copy, KeyRound, Loader2, Plus, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
@@ -163,7 +165,7 @@ export default function AiConnectionSection() {
         <form onSubmit={handleCreate} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <label className="flex-1 text-sm font-medium text-on-surface">
             Tên token
-            <input
+            <UiInput
               value={tokenName}
               onChange={event => setTokenName(event.target.value)}
               placeholder="Ví dụ: Claude trên laptop"
@@ -183,10 +185,10 @@ export default function AiConnectionSection() {
               ))}
             </select>
           </label>
-          <button type="submit" disabled={isCreating} className="btn-primary">
+          <UiButton variant="default" type="submit" disabled={isCreating} className="btn-primary">
             {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Tạo token
-          </button>
+          </UiButton>
         </form>
 
         {newToken && (

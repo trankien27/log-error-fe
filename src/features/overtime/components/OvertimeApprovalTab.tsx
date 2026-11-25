@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Loader2, Search, TimerReset, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -165,16 +167,16 @@ export default function OvertimeApprovalTab() {
                 {users.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
               </select>
             </label>
-            <button type="button" onClick={loadRequests} disabled={isLoading} className="btn-primary mt-auto">
+            <UiButton variant="default" type="button" onClick={loadRequests} disabled={isLoading} className="btn-primary mt-auto">
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               Lọc
-            </button>
+            </UiButton>
           </div>
         </SectionCard>
 
         <SectionCard bodyClassName="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[940px] text-sm">
+            <UiTable scrollContainer={false} className="w-full min-w-[940px] text-sm">
               <thead>
                 <tr className="border-b border-outline-variant">
                   <th className="px-4 py-3 text-left text-xs font-medium text-on-surface-variant bg-surface-2/60">Nhân viên</th>
@@ -235,7 +237,7 @@ export default function OvertimeApprovalTab() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </UiTable>
           </div>
         </SectionCard>
       </div>
@@ -261,7 +263,7 @@ export default function OvertimeApprovalTab() {
               </p>
               <label className={labelClass}>
                 Lý do từ chối
-                <textarea
+                <UiTextarea
                   value={rejectReason}
                   onChange={event => setRejectReason(event.target.value)}
                   rows={4}
@@ -270,8 +272,8 @@ export default function OvertimeApprovalTab() {
                 />
               </label>
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                <button type="button" onClick={() => setRejecting(null)} className="btn-secondary">Hủy</button>
-                <button type="button" onClick={reject} className="btn-danger">Từ chối</button>
+                <UiButton variant="outline" type="button" onClick={() => setRejecting(null)} className="btn-secondary">Hủy</UiButton>
+                <UiButton variant="destructive" type="button" onClick={reject} className="btn-danger">Từ chối</UiButton>
               </div>
             </div>
           </div>
@@ -280,3 +282,4 @@ export default function OvertimeApprovalTab() {
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

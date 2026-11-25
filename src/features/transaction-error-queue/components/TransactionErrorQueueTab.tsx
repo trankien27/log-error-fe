@@ -1,3 +1,6 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Eye, ListX, Loader2, RefreshCw, Search, X, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -190,7 +193,7 @@ export default function TransactionErrorQueueTab() {
         description="Giao dịch booth hôm nay chưa hoàn tất, chờ IT kiểm tra và tạo log lỗi."
         icon={ListX}
         actions={(
-          <button
+          <UiButton variant="outline"
             type="button"
             onClick={fetchItems}
             disabled={isLoading}
@@ -198,14 +201,14 @@ export default function TransactionErrorQueueTab() {
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Làm mới
-          </button>
+          </UiButton>
         )}
       />
 
       <FilterBar onReset={hasFilters ? resetFilters : undefined}>
         <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
-          <input
+          <UiInput
             aria-label="Tìm booth"
             value={boothCode}
             onChange={event => {
@@ -230,7 +233,7 @@ export default function TransactionErrorQueueTab() {
           <option value={2}>Đã tạo log</option>
           <option value={3}>Đã bỏ qua</option>
         </select>
-        <input
+        <UiInput
           aria-label="Mã trạng thái giao dịch"
           value={transactionStatus}
           onChange={event => {
@@ -272,7 +275,7 @@ export default function TransactionErrorQueueTab() {
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-[1100px] w-full text-sm">
+          <UiTable scrollContainer={false} className="min-w-[1100px] w-full text-sm">
             <thead className="bg-surface-2/60 text-xs text-on-surface-variant">
               <tr>
                 <th className="px-4 py-3 text-left font-medium">Booth</th>
@@ -330,7 +333,7 @@ export default function TransactionErrorQueueTab() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </UiTable>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-outline-variant bg-surface-2/60 px-4 py-3 text-sm text-on-surface-variant">
           <span>{totalItems} giao dịch</span>
@@ -383,7 +386,7 @@ export default function TransactionErrorQueueTab() {
               <section className="space-y-3">
                 <h3 className="text-[15px] font-semibold text-on-surface">Dữ liệu giao dịch gốc</h3>
                 <div className="border border-outline-variant rounded-xl overflow-auto max-h-[420px]">
-                  <table className="min-w-[620px] w-full text-xs">
+                  <UiTable scrollContainer={false} className="min-w-[620px] w-full text-xs">
                     <tbody className="divide-y divide-outline-variant">
                       {selectedRows.length === 0 ? (
                         <tr><td className="px-3 py-4 text-sm text-on-surface-variant">Không có dữ liệu gốc.</td></tr>
@@ -394,7 +397,7 @@ export default function TransactionErrorQueueTab() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </UiTable>
                 </div>
               </section>
 
@@ -407,11 +410,11 @@ export default function TransactionErrorQueueTab() {
                   </label>
                   <label className="space-y-1.5">
                     <span className={labelClass}>Cửa hàng</span>
-                    <input value={form.store} onChange={e => updateForm('store', e.target.value)} className={fieldClass} />
+                    <UiInput value={form.store} onChange={e => updateForm('store', e.target.value)} className={fieldClass} />
                   </label>
                   <label className="space-y-1.5">
                     <span className={labelClass}>Booth</span>
-                    <input value={form.booth ?? ''} onChange={e => updateForm('booth', e.target.value)} className={fieldClass} />
+                    <UiInput value={form.booth ?? ''} onChange={e => updateForm('booth', e.target.value)} className={fieldClass} />
                   </label>
                   <label className="space-y-1.5">
                     <span className={labelClass}>Nhóm lỗi</span>
@@ -434,25 +437,25 @@ export default function TransactionErrorQueueTab() {
                 </div>
                 <label className="space-y-1.5 block">
                   <span className={labelClass}>Mô tả lỗi</span>
-                  <textarea value={form.description} onChange={e => updateForm('description', e.target.value)} rows={3} className={textareaClass} />
+                  <UiTextarea value={form.description} onChange={e => updateForm('description', e.target.value)} rows={3} className={textareaClass} />
                 </label>
                 <label className="space-y-1.5 block">
                   <span className={labelClass}>Nguyên nhân sơ bộ</span>
-                  <textarea value={form.preliminaryCause ?? ''} onChange={e => updateForm('preliminaryCause', e.target.value)} rows={2} className={textareaClass} />
+                  <UiTextarea value={form.preliminaryCause ?? ''} onChange={e => updateForm('preliminaryCause', e.target.value)} rows={2} className={textareaClass} />
                 </label>
                 <label className="space-y-1.5 block">
                   <span className={labelClass}>Cách xử lý</span>
-                  <textarea value={form.solution ?? ''} onChange={e => updateForm('solution', e.target.value)} rows={2} className={textareaClass} />
+                  <UiTextarea value={form.solution ?? ''} onChange={e => updateForm('solution', e.target.value)} rows={2} className={textareaClass} />
                 </label>
                 <label className="space-y-1.5 block">
                   <span className={labelClass}>Ghi chú</span>
-                  <textarea value={form.note ?? ''} onChange={e => updateForm('note', e.target.value)} rows={2} className={textareaClass} />
+                  <UiTextarea value={form.note ?? ''} onChange={e => updateForm('note', e.target.value)} rows={2} className={textareaClass} />
                 </label>
               </section>
             </div>
 
             <div className="sticky bottom-0 bg-surface border-t border-outline-variant px-5 py-4 flex flex-col-reverse sm:flex-row gap-2 justify-end">
-              <button
+              <UiButton variant="outline"
                 type="button"
                 onClick={() => handleIgnore(selectedItem)}
                 disabled={isSubmitting}
@@ -460,15 +463,15 @@ export default function TransactionErrorQueueTab() {
               >
                 <XCircle className="w-4 h-4" />
                 Bỏ qua
-              </button>
-              <button
+              </UiButton>
+              <UiButton variant="default"
                 type="submit"
                 disabled={isSubmitting}
                 className="btn-primary"
               >
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Tạo log lỗi
-              </button>
+              </UiButton>
             </div>
           </form>
         </div>
@@ -476,3 +479,4 @@ export default function TransactionErrorQueueTab() {
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

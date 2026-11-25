@@ -1,3 +1,4 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -361,10 +362,10 @@ export default function OverviewTab() {
         title={`${getGreeting()}${firstName ? `, ${firstName}` : ''} 👋`}
         description="Đây là tình hình vận hành trong khoảng thời gian bạn chọn."
         actions={
-          <button type="button" onClick={() => void fetchSummary()} disabled={isLoading} className="btn-secondary">
+          <UiButton variant="outline" type="button" onClick={() => void fetchSummary()} disabled={isLoading} className="btn-secondary">
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Làm mới
-          </button>
+          </UiButton>
         }
       >
         <div className="flex flex-col gap-3 md:flex-row md:items-center">

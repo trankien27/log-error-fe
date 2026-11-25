@@ -18,13 +18,13 @@ export default function PageHeader({ title, description, icon: Icon, actions, ch
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 min-w-0">
           {Icon && (
-            <span className="hidden sm:inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-subtle text-primary">
+            <span className="hidden size-9 shrink-0 items-center justify-center rounded-md border bg-muted text-foreground sm:inline-flex">
               <Icon className="h-5 w-5" />
             </span>
           )}
           <div className="min-w-0">
-            <h2 className="text-xl font-semibold text-on-surface leading-tight truncate">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-on-surface-variant">{description}</p>}
+            <h2 className="truncate text-2xl font-semibold leading-tight tracking-tight text-foreground">{title}</h2>
+            {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
           </div>
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">{actions}</div>}

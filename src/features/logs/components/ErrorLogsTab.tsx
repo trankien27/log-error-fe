@@ -1,4 +1,9 @@
-import { Dropdown } from 'antd';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Textarea as UiTextarea } from '@/components/ui/shadcn/textarea';
+import { Table as UiTable } from '@/components/ui/shadcn/table';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/shadcn/sheet';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/shadcn/dropdown-menu';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, Calendar, ChevronLeft, ChevronRight, ClipboardCopy, Download, Edit2, Eye, FileText, ImagePlus, Mic, MicOff, MoreHorizontal, Paperclip, Plus, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
@@ -756,70 +761,64 @@ export default function ErrorLogsTab() {
     'inline-flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer';
 
   return (
-    <div className="animate-fadeIn text-left">
+    <div className="text-left">
       <PageHeader
         title="Log lỗi"
         description="Theo dõi và xử lý các lỗi được ghi nhận tại booth."
-        icon={AlertTriangle}
         actions={(
           <>
-            <button
+            <UiButton variant="outline"
               type="button"
               onClick={() => setIsUploadModalOpen(true)}
-              className="btn-secondary"
             >
               <ImagePlus className="h-4 w-4 shrink-0" />
               <span>Tải ảnh</span>
-            </button>
+            </UiButton>
             {isAdmin && (
-              <button
+              <UiButton variant="outline"
                 type="button"
                 onClick={handleSyncGoogleSheet}
                 disabled={isSyncingGoogleSheet || isLoading}
-                className="btn-secondary"
               >
                 <RefreshCw className={`w-4 h-4 ${isSyncingGoogleSheet ? 'animate-spin' : ''}`} />
                 {isSyncingGoogleSheet ? 'Đang đồng bộ...' : 'Đồng bộ Google Sheet'}
-              </button>
+              </UiButton>
             )}
-            <button
+            <UiButton variant="outline"
               type="button"
               onClick={handleExport}
               disabled={isExporting}
-              className="btn-secondary"
             >
               <Download className="h-4 w-4 shrink-0" />
               <span>{isExporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
-            </button>
-            <button
+            </UiButton>
+            <UiButton variant="outline"
               type="button"
               onClick={handleGenerateReportText}
               disabled={isReportLoading || selectedLogIds.length === 0}
               title={selectedLogIds.length === 0 ? 'Chọn ít nhất một log lỗi để xuất báo cáo.' : 'Xuất báo cáo văn bản từ các log đã chọn.'}
-              className="btn-secondary"
             >
               <FileText className="h-4 w-4 shrink-0" />
               <span>{isReportLoading ? 'Đang xuất...' : `Báo cáo (${selectedLogIds.length})`}</span>
-            </button>
-            <button
+            </UiButton>
+            <UiButton variant="default"
               type="button"
               onClick={() => handleOpenModal()}
-              className="btn-primary"
             >
               <Plus className="w-4 h-4" /> Thêm log lỗi
-            </button>
+            </UiButton>
           </>
         )}
       />
 
-      <SectionCard className="overflow-visible!" bodyClassName="p-0">
+      <SectionCard className="overflow-visible! rounded-lg border-border shadow-none" bodyClassName="p-0">
       <FilterBar
-        className="mb-0! border-b border-outline-variant px-4 py-3 sm:px-5"
+        className="mb-0! rounded-t-lg border-b border-border bg-muted/35 px-4 py-3 sm:px-5"
         onReset={hasActiveFilters ? handleResetFilters : undefined}
       >
         <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-          <input
+          <UiInput
             type="text"
             id="log-search-input"
             aria-label="Tìm log lỗi"
@@ -1006,7 +1005,7 @@ export default function ErrorLogsTab() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <label className="block text-sm font-medium text-on-surface-variant lg:flex-1">
             Mã giao dịch
-            <input
+            <UiInput
               value={uploadTransactionId}
               onChange={event => setUploadTransactionId(event.target.value)}
               placeholder="bf2b4b62-2785-466a-871c-8f41f68ceedb"
@@ -1025,14 +1024,14 @@ export default function ErrorLogsTab() {
             />
           </label>
 
-          <button
+          <UiButton variant="default"
             type="submit"
             disabled={isUploadingImages}
             className="btn-primary"
           >
             {isUploadingImages ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             {isUploadingImages ? 'Đang tải lên...' : 'Tải lên'}
-          </button>
+          </UiButton>
         </div>
 
         {uploadImages.length > 0 && (
@@ -1139,7 +1138,7 @@ export default function ErrorLogsTab() {
         </div>
 
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full min-w-[780px] table-fixed text-left text-sm border-collapse">
+          <UiTable scrollContainer={false} className="w-full min-w-[780px] table-fixed text-left text-sm border-collapse">
             <colgroup>
               <col className="w-11" />
               <col />
@@ -1260,22 +1259,8 @@ export default function ErrorLogsTab() {
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
-                          <Dropdown
-                            trigger={['click']}
-                            placement="bottomRight"
-                            menu={{
-                              items: [
-                                { key: 'view', icon: <Eye className="w-4 h-4" />, label: 'Xem chi tiết' },
-                                { type: 'divider' },
-                                { key: 'delete', icon: <Trash2 className="w-4 h-4" />, label: 'Xóa', danger: true },
-                              ],
-                              onClick: ({ key, domEvent }) => {
-                                domEvent.stopPropagation();
-                                if (key === 'view') setSelectedLogDetails(log);
-                                if (key === 'delete') handleDelete(log);
-                              },
-                            }}
-                          >
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
                             <button
                               type="button"
                               className={`${iconButtonClass} hover:bg-surface-2 hover:text-on-surface`}
@@ -1284,7 +1269,19 @@ export default function ErrorLogsTab() {
                             >
                               <MoreHorizontal className="w-4 h-4" />
                             </button>
-                          </Dropdown>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
+                              <DropdownMenuItem onSelect={() => setSelectedLogDetails(log)}>
+                                <Eye className="size-4" />
+                                Xem chi tiết
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => void handleDelete(log)}>
+                                <Trash2 className="size-4" />
+                                Xóa
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -1292,7 +1289,7 @@ export default function ErrorLogsTab() {
                 })
               )}
             </tbody>
-          </table>
+          </UiTable>
         </div>
 
         <div className="bg-surface-2/60 rounded-b-2xl border-t border-outline-variant px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1350,7 +1347,7 @@ export default function ErrorLogsTab() {
             <div className="space-y-4 text-sm text-left">
               <div>
                 <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nội dung báo cáo</label>
-                <textarea
+                <UiTextarea
                   value={reportText}
                   onChange={e => setReportText(e.target.value)}
                   rows={8}
@@ -1360,21 +1357,21 @@ export default function ErrorLogsTab() {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={handleCopyReportText}
                   disabled={!reportText}
                   className="btn-secondary"
                 >
                   <ClipboardCopy className="w-4 h-4" /> Sao chép
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="button"
                   onClick={() => setIsReportModalOpen(false)}
                   className="btn-primary"
                 >
                   Đóng
-                </button>
+                </UiButton>
               </div>
             </div>
           </div>
@@ -1504,7 +1501,7 @@ export default function ErrorLogsTab() {
                     {isListeningDescription ? 'Đang nghe' : 'Giọng nói'}
                   </button>
                 </div>
-                <textarea
+                <UiTextarea
                   rows={3}
                   required
                   value={description}
@@ -1516,7 +1513,7 @@ export default function ErrorLogsTab() {
 
               <div>
                 <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nguyên nhân sơ bộ</label>
-                <textarea
+                <UiTextarea
                   rows={3}
                   value={preliminaryCause}
                   onChange={e => setPreliminaryCause(e.target.value)}
@@ -1527,7 +1524,7 @@ export default function ErrorLogsTab() {
 
               <div>
                 <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Cách xử lý</label>
-                <textarea
+                <UiTextarea
                   rows={3}
                   value={solution}
                   onChange={e => setSolution(e.target.value)}
@@ -1538,7 +1535,7 @@ export default function ErrorLogsTab() {
 
               <div>
                 <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Ghi chú</label>
-                <textarea
+                <UiTextarea
                   rows={3}
                   value={note}
                   onChange={e => setNote(e.target.value)}
@@ -1624,38 +1621,38 @@ export default function ErrorLogsTab() {
               </div>
 
               <div className="lg:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="btn-secondary"
                 >
                   Hủy
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isLoading || isUploadingAttachments}
                   className="btn-primary"
                 >
                   {isUploadingAttachments ? 'Đang tải tệp...' : isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
+                </UiButton>
               </div>
             </form>
           </div>
         </div>
       ), document.body)}
 
-      {selectedLogDetails && createPortal((
-        <div className="modal-overlay">
-          <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant text-left">
-            <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
+      {selectedLogDetails && (
+        <Sheet open onOpenChange={open => { if (!open) setSelectedLogDetails(null); }}>
+          <SheetContent className="w-full max-w-full gap-0 overflow-y-auto p-0 text-left sm:max-w-xl">
+            <div className="sticky top-0 z-10 border-b border-border bg-background px-5 py-5 pr-12 sm:px-6">
               <div>
-                <h3 className="text-lg font-semibold text-on-surface">Chi tiết log lỗi</h3>
-                <p className="text-xs text-on-surface-variant mt-1">{selectedLogDetails.errorCode || selectedLogDetails.id}</p>
+                <SheetTitle>Chi tiết log lỗi</SheetTitle>
+                <SheetDescription className="mt-1 font-mono">{selectedLogDetails.errorCode || selectedLogDetails.id}</SheetDescription>
               </div>
-              <button type="button" onClick={() => setSelectedLogDetails(null)} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-2 hover:text-on-surface cursor-pointer" aria-label="Đóng" title="Đóng"><X className="h-5 w-5" /></button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="px-5 py-5 sm:px-6">
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-muted/35 p-4 text-sm">
               <div>
                 <span className="block text-xs font-medium text-on-surface-variant mb-1">Ngày tiếp nhận</span>
                 <p className="font-medium text-on-surface">{formatDate(selectedLogDetails.receivedDate)}</p>
@@ -1798,17 +1795,17 @@ export default function ErrorLogsTab() {
             </div>
 
             <div className="flex justify-end gap-2 pt-5 mt-5 border-t border-outline-variant">
-              <button
+              <UiButton variant="outline"
                 type="button"
                 onClick={() => setSelectedLogDetails(null)}
-                className="btn-secondary"
               >
                 Đóng
-              </button>
+              </UiButton>
             </div>
-          </div>
-        </div>
-      ), document.body)}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

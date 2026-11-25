@@ -1,3 +1,5 @@
+import { Button as UiButton } from '@/components/ui/shadcn/button';
+import { Input as UiInput } from '@/components/ui/shadcn/input';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -227,7 +229,7 @@ export default function ApiAuditLogsTab() {
         description="Xem ai đã gọi API nào, kết quả ra sao và mất bao lâu."
         icon={ScrollText}
         actions={(
-          <button
+          <UiButton variant="outline"
             type="button"
             onClick={() => void loadAuditLogs()}
             disabled={isLoading}
@@ -235,7 +237,7 @@ export default function ApiAuditLogsTab() {
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Làm mới
-          </button>
+          </UiButton>
         )}
         className="mb-0!"
       />
@@ -244,7 +246,7 @@ export default function ApiAuditLogsTab() {
         <FilterBar onReset={isLoading ? undefined : clearFilters} className="mb-0!">
           <div className="relative w-full sm:w-64">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-            <input
+            <UiInput
               type="search"
               aria-label="Tìm route"
               value={routeSearch}
@@ -285,7 +287,7 @@ export default function ApiAuditLogsTab() {
             <option value="PATCH">PATCH</option>
             <option value="DELETE">DELETE</option>
           </select>
-          <input
+          <UiInput
             type="text"
             aria-label="Hành động"
             value={action}
@@ -303,10 +305,10 @@ export default function ApiAuditLogsTab() {
             placeholder="Mã (200, 500…)"
             className={`${inputClass} w-32`}
           />
-          <button type="submit" disabled={isLoading} className="btn-primary h-9 px-3 text-sm">
+          <UiButton variant="default" type="submit" disabled={isLoading} className="btn-primary h-9 px-3 text-sm">
             <Filter className="h-4 w-4" />
             Lọc
-          </button>
+          </UiButton>
         </FilterBar>
       </form>
 
@@ -343,7 +345,7 @@ export default function ApiAuditLogsTab() {
 
       <section className="card-surface overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-sm">
+          <UiTable scrollContainer={false} className="w-full min-w-[1100px] text-left text-sm">
             <thead>
               <tr className="border-b border-outline-variant bg-surface-2/60 text-xs text-on-surface-variant">
                 <th className="px-4 py-3 font-medium">Thời gian</th>
@@ -426,7 +428,7 @@ export default function ApiAuditLogsTab() {
                 </React.Fragment>
               ))}
             </tbody>
-          </table>
+          </UiTable>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-outline-variant bg-surface-2/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -461,3 +463,4 @@ export default function ApiAuditLogsTab() {
     </div>
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';

@@ -1,4 +1,4 @@
-import { Alert, Statistic } from 'antd';
+import { Alert, Statistic } from '../SchedulePresentation';
 import { AutoArrangeSummary } from '../../types/workScheduleArrange.types';
 
 type Props = {

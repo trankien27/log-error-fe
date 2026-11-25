@@ -1,3 +1,5 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Save, Search, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -340,7 +342,7 @@ export default function ThemeUploadDialog({
               </button>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input value={newProfileName} onChange={event => setNewProfileName(event.target.value)} placeholder="Tên profile mới" aria-label="Tên profile" className="h-10 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+              <UiInput value={newProfileName} onChange={event => setNewProfileName(event.target.value)} placeholder="Tên profile mới" aria-label="Tên profile" className="h-10 rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
               <button type="button" onClick={() => void saveProfile()} disabled={savingProfile || loadingProfiles} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-secondary-container px-3 text-sm font-medium text-on-secondary-container hover:brightness-95 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
                 <Save className="h-4 w-4" /> {savingProfile ? 'Đang lưu…' : 'Lưu profile'}
               </button>
@@ -350,14 +352,14 @@ export default function ThemeUploadDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="sm:col-span-2">
               <span className="mb-1.5 block text-sm font-medium text-on-surface">Tên theme <span className="text-error">*</span></span>
-              <input value={name} onChange={event => setName(event.target.value)} className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+              <UiInput value={name} onChange={event => setName(event.target.value)} className="h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
             </label>
 
             <label>
               <span className="mb-1.5 block text-sm font-medium text-on-surface">Màu chủ đạo</span>
               <div className="flex gap-2">
                 <input type="color" value={color} onChange={event => setColor(event.target.value)} className="h-10 w-12 cursor-pointer rounded-lg border border-outline-variant bg-surface p-1" />
-                <input value={color} onChange={event => setColor(event.target.value)} aria-label="Mã màu" className="h-10 min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface px-3 font-mono text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                <UiInput value={color} onChange={event => setColor(event.target.value)} aria-label="Mã màu" className="h-10 min-w-0 flex-1 rounded-lg border border-outline-variant bg-surface px-3 font-mono text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
               </div>
             </label>
 
@@ -395,7 +397,7 @@ export default function ThemeUploadDialog({
                 <div className="mt-1 overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-elevated">
                   <div className="relative border-b border-outline-variant p-2">
                     <Search className="absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant" />
-                    <input
+                    <UiInput
                       ref={categorySearchRef}
                       type="search"
                       role="combobox"
@@ -456,7 +458,7 @@ export default function ThemeUploadDialog({
                 <span className="text-sm font-medium text-on-surface">Danh sách theme</span>
                 <span className="text-xs text-on-surface-variant">Đã chọn {selectedThemeListIds.length}</span>
               </div>
-              <input value={themeListSearch} onChange={event => setThemeListSearch(event.target.value)} placeholder="Tìm danh sách theme…" aria-label="Tìm danh sách theme" className="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+              <UiInput value={themeListSearch} onChange={event => setThemeListSearch(event.target.value)} placeholder="Tìm danh sách theme…" aria-label="Tìm danh sách theme" className="mb-2 h-10 w-full rounded-lg border border-outline-variant bg-surface px-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
               <div className="grid max-h-44 gap-1 overflow-y-auto rounded-lg border border-outline-variant p-2 sm:grid-cols-2">
                 {visibleThemeLists.map(item => {
                   const selected = selectedThemeListIds.includes(item.id);
@@ -481,10 +483,10 @@ export default function ThemeUploadDialog({
         </div>
 
         <div className="flex justify-end gap-3 border-t border-outline-variant px-5 py-4 sm:px-6">
-          <button type="button" onClick={onClose} disabled={loading} className="btn-secondary">Hủy</button>
-          <button type="button" onClick={() => void submit()} disabled={loading} className="btn-primary">
+          <UiButton variant="outline" type="button" onClick={onClose} disabled={loading} className="btn-secondary">Hủy</UiButton>
+          <UiButton variant="default" type="button" onClick={() => void submit()} disabled={loading} className="btn-primary">
             <Upload className="h-4 w-4" /> {loading ? 'Đang tải lên…' : 'Tải theme lên'}
-          </button>
+          </UiButton>
         </div>
       </div>
     </div>

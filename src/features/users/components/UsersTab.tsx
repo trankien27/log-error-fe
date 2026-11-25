@@ -1,3 +1,5 @@
+import { Input as UiInput } from '@/components/ui/shadcn/input';
+import { Button as UiButton } from '@/components/ui/shadcn/button';
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import {
@@ -412,7 +414,7 @@ export default function UsersTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Họ và tên</label>
-                  <input
+                  <UiInput
                     type="text"
                     required
                     value={profileName}
@@ -422,7 +424,7 @@ export default function UsersTab() {
                 </div>
                 <div>
                   <label className={labelClass}>Email</label>
-                  <input
+                  <UiInput
                     type="email"
                     readOnly
                     disabled
@@ -436,7 +438,7 @@ export default function UsersTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className={labelClass}>Số điện thoại</label>
-                  <input
+                  <UiInput
                     type="text"
                     required
                     value={profilePhone}
@@ -460,7 +462,7 @@ export default function UsersTab() {
 
               <div>
                 <label className={labelClass}>Phòng ban</label>
-                <input
+                <UiInput
                   type="text"
                   required
                   value={profileDept}
@@ -470,21 +472,21 @@ export default function UsersTab() {
               </div>
 
               <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-outline-variant">
-                <button
+                <UiButton variant="outline"
                   type="button"
                   onClick={() => setSelectedUserProfileUser(null)}
                   className="btn-secondary"
                 >
                   Quay lại
-                </button>
-                <button
+                </UiButton>
+                <UiButton variant="default"
                   type="submit"
                   disabled={isLoading}
                   className="btn-primary"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
-                </button>
+                </UiButton>
               </div>
             </form>
           </SectionCard>
@@ -570,9 +572,9 @@ export default function UsersTab() {
           description="Quản lý tài khoản, vai trò và trạng thái của đội ngũ."
           actions={
             canCreateUser ? (
-              <button type="button" onClick={() => handleOpenUserModal()} className="btn-primary">
+              <UiButton variant="default" type="button" onClick={() => handleOpenUserModal()} className="btn-primary">
                 <Plus className="w-4 h-4" /> Thêm người dùng
-              </button>
+              </UiButton>
             ) : undefined
           }
         />
@@ -580,7 +582,7 @@ export default function UsersTab() {
         <FilterBar>
           <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
-            <input
+            <UiInput
               type="text"
               placeholder="Tìm theo tên hoặc email..."
               value={searchQuery}
@@ -630,7 +632,7 @@ export default function UsersTab() {
 
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm border-collapse">
+            <UiTable scrollContainer={false} className="w-full min-w-[820px] text-left text-sm border-collapse">
               <thead>
                 <tr className="border-b border-outline-variant select-none">
                   <th className="px-4 py-3 text-xs font-medium text-on-surface-variant bg-surface-2/60">Người dùng</th>
@@ -671,7 +673,7 @@ export default function UsersTab() {
                   ))
                 )}
               </tbody>
-            </table>
+            </UiTable>
           </div>
 
           <div className="border-t border-outline-variant px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -704,7 +706,7 @@ export default function UsersTab() {
               <form onSubmit={handleSaveUserSubmit} className="space-y-4 text-sm text-left p-5">
                 <div>
                   <label className={labelClass}>Họ và tên <span className="text-error">*</span></label>
-                  <input
+                  <UiInput
                     type="text"
                     required
                     placeholder="Nguyễn Thị Mai"
@@ -715,7 +717,7 @@ export default function UsersTab() {
                 </div>
                 <div>
                   <label className={labelClass}>Email <span className="text-error">*</span></label>
-                  <input
+                  <UiInput
                     type="email"
                     required
                     placeholder="mai.nguyen@company.vn"
@@ -727,7 +729,7 @@ export default function UsersTab() {
                 {!currentEditingUser && (
                   <div>
                     <label className={labelClass}>Mật khẩu ban đầu <span className="text-error">*</span></label>
-                    <input
+                    <UiInput
                       type="password"
                       required
                       placeholder="Nhập mật khẩu ban đầu"
@@ -763,20 +765,20 @@ export default function UsersTab() {
                   </div>
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                  <button
+                  <UiButton variant="outline"
                     type="button"
                     onClick={() => setIsUserModalOpen(false)}
                     className="btn-secondary"
                   >
                     Hủy
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="default"
                     type="submit"
                     disabled={isLoading}
                     className="btn-primary"
                   >
                     {isLoading ? 'Đang lưu...' : 'Lưu'}
-                  </button>
+                  </UiButton>
                 </div>
               </form>
             </div>
@@ -808,7 +810,7 @@ export default function UsersTab() {
               <form onSubmit={handleResetUserPassword} className="space-y-4 text-sm p-5">
                 <div>
                   <label className={labelClass}>Mật khẩu mới <span className="text-error">*</span></label>
-                  <input
+                  <UiInput
                     type="password"
                     required
                     minLength={6}
@@ -821,7 +823,7 @@ export default function UsersTab() {
                 </div>
                 <div>
                   <label className={labelClass}>Nhập lại mật khẩu <span className="text-error">*</span></label>
-                  <input
+                  <UiInput
                     type="password"
                     required
                     minLength={6}
@@ -833,22 +835,22 @@ export default function UsersTab() {
                   />
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
-                  <button
+                  <UiButton variant="outline"
                     type="button"
                     onClick={() => setPasswordTargetUser(null)}
                     disabled={isResettingPassword}
                     className="btn-secondary"
                   >
                     Hủy
-                  </button>
-                  <button
+                  </UiButton>
+                  <UiButton variant="default"
                     type="submit"
                     disabled={isResettingPassword}
                     className="btn-primary"
                   >
                     {isResettingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
                     {isResettingPassword ? 'Đang đổi...' : 'Đổi mật khẩu'}
-                  </button>
+                  </UiButton>
                 </div>
               </form>
             </div>
@@ -858,3 +860,4 @@ export default function UsersTab() {
     )
   );
 }
+import { Table as UiTable } from '@/components/ui/shadcn/table';
