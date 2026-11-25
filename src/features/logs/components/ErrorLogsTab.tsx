@@ -9,7 +9,7 @@ import { logsService } from '../../../services/api/logsService';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { ErrorGroup, ErrorLog, ErrorLogAttachment, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
-import { EmptyState, FilterBar, ListSkeleton, PageHeader, TableSkeletonRows, confirmAction } from '../../../components/ui';
+import { EmptyState, FilterBar, ListSkeleton, PageHeader, SectionCard, TableSkeletonRows, confirmAction } from '../../../components/ui';
 
 const errorGroupLabels: Record<ErrorGroup, string> = {
   1: 'Phần cứng',
@@ -812,7 +812,11 @@ export default function ErrorLogsTab() {
         )}
       />
 
-      <FilterBar onReset={hasActiveFilters ? handleResetFilters : undefined}>
+      <SectionCard className="overflow-visible!" bodyClassName="p-0">
+      <FilterBar
+        className="mb-0! border-b border-outline-variant px-4 py-3 sm:px-5"
+        onReset={hasActiveFilters ? handleResetFilters : undefined}
+      >
         <div className="relative w-full sm:w-64">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
           <input
@@ -984,7 +988,7 @@ export default function ErrorLogsTab() {
         </select>
       </FilterBar>
 
-      {isUploadModalOpen && (
+      {isUploadModalOpen && createPortal((
       <div className="modal-overlay">
       <form
         onSubmit={handleUploadTransactionImages}
@@ -1045,9 +1049,8 @@ export default function ErrorLogsTab() {
         )}
       </form>
       </div>
-      )}
+      ), document.body)}
 
-      <section className="card-surface overflow-hidden">
         {/* Mobile card list */}
         <div className="md:hidden">
           {filteredLogs.length > 0 && !isLoading && (
@@ -1292,7 +1295,7 @@ export default function ErrorLogsTab() {
           </table>
         </div>
 
-        <div className="bg-surface-2/60 border-t border-outline-variant px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-surface-2/60 rounded-b-2xl border-t border-outline-variant px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span className="text-sm text-on-surface-variant">
             Hiển thị {filteredLogs.length} / {totalItems} log · Đã chọn {selectedLogIds.length}
           </span>
@@ -1334,7 +1337,7 @@ export default function ErrorLogsTab() {
             </button>
           </div>
         </div>
-      </section>
+      </SectionCard>
 
       {isReportModalOpen && (
         <div className="modal-overlay">
