@@ -255,6 +255,7 @@ export default function ErrorLogsTab() {
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
   const [selectedLogDetails, setSelectedLogDetails] = useState<ErrorLog | null>(null);
+  const [similarLogsDismissed, setSimilarLogsDismissed] = useState(false);
   const [currentEditingLog, setCurrentEditingLog] = useState<ErrorLog | null>(null);
   const [receivedDate, setReceivedDate] = useState(toDateTimeInputValue(new Date().toISOString()));
   const [store, setStore] = useState('CH Quận 1');
@@ -464,6 +465,17 @@ export default function ErrorLogsTab() {
       recognitionRef.current?.stop();
     };
   }, []);
+
+  const applySimilarLog = (log: ErrorLog) => {
+    stopDescriptionDictation();
+    setDescription(log.description || '');
+    setErrorGroup(log.errorGroup);
+    setProcessingFlow(log.processingFlow);
+    setSeverity(log.severity);
+    setPreliminaryCause(log.preliminaryCause || '');
+    setSolution(log.solution || '');
+    setSimilarLogsDismissed(true);
+  };
 
   const handleOpenModal = (log: ErrorLog | null = null) => {
     setAttachmentFiles([]);
@@ -1382,7 +1394,7 @@ export default function ErrorLogsTab() {
         </div>
       )}
 
-      {isModalOpen && !selectedLogDetails && createPortal((
+      {isModalOpen && createPortal((
         <div className="modal-overlay">
           <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
@@ -1505,25 +1517,38 @@ export default function ErrorLogsTab() {
                     {isListeningDescription ? 'Đang nghe' : 'Giọng nói'}
                   </button>
                 </div>
-                <textarea
+                <div
+                  className="group/similar-logs relative"
+                  onKeyDown={event => {
+                    if (event.key === 'Escape' && !similarLogsDismissed) {
+                      setSimilarLogsDismissed(true);
+                    }
+                  }}
+                >
+                  <textarea
                   rows={3}
                   required
                   value={description}
-                  onChange={e => setDescription(e.target.value)}
+                  onFocus={() => setSimilarLogsDismissed(false)}
+                  onChange={e => {
+                    setDescription(e.target.value);
+                    setSimilarLogsDismissed(false);
+                  }}
                   placeholder="Nhập mô tả lỗi chi tiết..."
                   className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
+                  {!currentEditingLog && (
+                    <SimilarLogs
+                      store={store}
+                      booth={booth}
+                      description={description}
+                      formatDate={formatDate}
+                      onSelect={applySimilarLog}
+                      dismissed={similarLogsDismissed}
+                    />
+                  )}
+                </div>
               </div>
-
-              {!currentEditingLog && (
-                <SimilarLogs
-                  store={store}
-                  booth={booth}
-                  description={description}
-                  formatDate={formatDate}
-                  onOpen={setSelectedLogDetails}
-                />
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nguyên nhân sơ bộ</label>
