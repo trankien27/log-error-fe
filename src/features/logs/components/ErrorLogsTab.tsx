@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import LazySearchDropdown from '../../../components/Shared/LazySearchDropdown';
 import { lookupService } from '../../../services/api/lookupService';
 import { logsService } from '../../../services/api/logsService';
+import SimilarLogs from './SimilarLogs';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLogsStore } from '../../../stores/useLogsStore';
 import { ErrorGroup, ErrorLog, ErrorLogAttachment, ErrorLogStatus, ProcessingFlow, Severity } from '../../../types';
@@ -1378,7 +1379,7 @@ export default function ErrorLogsTab() {
         </div>
       )}
 
-      {isModalOpen && createPortal((
+      {isModalOpen && !selectedLogDetails && createPortal((
         <div className="modal-overlay">
           <div className="bg-surface rounded-2xl shadow-elevated w-full max-w-5xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 border border-outline-variant">
             <div className="flex justify-between items-center gap-3 mb-4 pb-3 border-b border-outline-variant">
@@ -1510,6 +1511,16 @@ export default function ErrorLogsTab() {
                   className="w-full px-3 py-2 border border-outline-variant rounded-lg bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
                 />
               </div>
+
+              {!currentEditingLog && (
+                <SimilarLogs
+                  store={store}
+                  booth={booth}
+                  description={description}
+                  formatDate={formatDate}
+                  onOpen={setSelectedLogDetails}
+                />
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-on-surface-variant mb-1.5">Nguyên nhân sơ bộ</label>
