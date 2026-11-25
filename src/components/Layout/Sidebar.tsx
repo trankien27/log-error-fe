@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/shadcn/tooltip';
 import { motion } from 'motion/react';
 import { ChevronsLeft, ChevronsRight, Headset, X } from 'lucide-react';
-import { useLogsStore } from '../../stores/useLogsStore';
 import { useTasksStore } from '../../stores/useTasksStore';
 import { useNotificationStore } from '../../stores/useNotificationStore';
 import { useUsersStore } from '../../stores/useUsersStore';
@@ -21,10 +20,9 @@ type SidebarProps = {
 };
 
 function useBadgeCounts(): Record<NavBadgeKey, number> {
-  const newLogs = useLogsStore(state => state.logs.filter(log => log.status === 1).length);
   const pendingTasks = useTasksStore(state => state.tasks.filter(task => task.status === 'pending').length);
   const unreadNotifications = useNotificationStore(state => state.notifications.filter(n => !n.isRead).length);
-  return { newLogs, pendingTasks, unreadNotifications };
+  return { pendingTasks, unreadNotifications };
 }
 
 function formatBadge(count: number) {
