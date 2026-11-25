@@ -31,7 +31,7 @@ export type NavPermissions = {
   canViewShifts: boolean;
 };
 
-export type NavBadgeKey = 'newLogs' | 'pendingTasks' | 'unreadNotifications';
+export type NavBadgeKey = 'pendingTasks' | 'unreadNotifications';
 
 export type NavItem = {
   path: string;
@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Vận hành',
     items: [
       { path: '/overview', label: 'Tổng quan', icon: LayoutDashboard, keywords: 'dashboard trang chu' },
-      { path: '/error-logs', label: 'Log lỗi', icon: AlertTriangle, badge: 'newLogs', keywords: 'error log loi' },
+      { path: '/error-logs', label: 'Log lỗi', icon: AlertTriangle, keywords: 'error log loi' },
       { path: '/transaction-error-queue', label: 'Hàng đợi lỗi', icon: ListX, keywords: 'queue giao dich transaction' },
       { path: '/tasks', label: 'Công việc', icon: ClipboardList, badge: 'pendingTasks', keywords: 'task kanban viec' },
     ],
