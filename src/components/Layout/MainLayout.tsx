@@ -7,6 +7,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Clock, CheckCircle, Check, Trash2, Users, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 import Sidebar, { SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from './Sidebar';
+import WhatsNewDialog from './WhatsNewDialog';
 import TopHeader from './TopHeader';
 import CommandPalette from './CommandPalette';
 import AiAssistant from '../../features/ai-assistant/components/AiAssistant';
@@ -150,6 +151,7 @@ export default function MainLayout() {
 
       <CommandPalette />
       <AiAssistant />
+      <WhatsNewDialog />
 
       {/* Global Overlay Modals */}
 
