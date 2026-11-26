@@ -19,8 +19,41 @@ import { useTasksStore } from '../../stores/useTasksStore';
 import { useUsersStore } from '../../stores/useUsersStore';
 import { useBoothsStore } from '../../stores/useBoothsStore';
 import { useScheduleStore } from '../../stores/useScheduleStore';
+import { apiClient } from '../../services/api/apiClient';
 
 export default function MainLayout() {
+  useEffect(() => {
+    const heartbeatIntervalMs = 15_000;
+    let lastAttemptAt = -Infinity;
+    let heartbeatPending = false;
+
+    const recordActivity = (event: Event) => {
+      if (!event.isTrusted || document.visibilityState !== 'visible' || heartbeatPending) return;
+
+      const now = performance.now();
+      if (now - lastAttemptAt < heartbeatIntervalMs) return;
+
+      lastAttemptAt = now;
+      heartbeatPending = true;
+      void apiClient.post('/api/account/heartbeat')
+        .catch(() => undefined)
+        .finally(() => {
+          heartbeatPending = false;
+        });
+    };
+
+    const activityEvents = ['click', 'keydown', 'wheel', 'touchmove'];
+    for (const event of activityEvents) {
+      window.addEventListener(event, recordActivity, { capture: true, passive: true });
+    }
+
+    return () => {
+      for (const event of activityEvents) {
+        window.removeEventListener(event, recordActivity, true);
+      }
+    };
+  }, []);
+
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
